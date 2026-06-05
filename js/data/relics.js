@@ -1,74 +1,74 @@
 export const relics = {
-  holy_grail: {
-    id: "holy_grail",
+  wanderer_compass: {
+    id: "wanderer_compass",
+    category: "melee",
+    tags: ["job", "cycling"],
+    rules: [{ type: "preserve_job_xp", ratio: 0.3 }]
+  },
+  hero_oath: {
+    id: "hero_oath",
     category: "holy",
-    tags: ["holy"],
-    modifiers: [{ type: "tag_damage", tag: "holy", multiplier: 1.22 }, { type: "tag_heal", tag: "holy", multiplier: 1.18 }]
+    tags: ["focus", "damage"],
+    rules: [{ type: "same_job_damage", perAction: 0.05 }]
   },
-  sun_censer: {
-    id: "sun_censer",
-    category: "holy",
-    tags: ["holy"],
-    modifiers: [{ type: "activation", tag: "holy", amount: 0.08 }]
+  forbidden_tome: {
+    id: "forbidden_tome",
+    category: "magic",
+    tags: ["mastery", "risk"],
+    rules: [{ type: "focused_mastery", maxBonus: 1.5 }]
   },
-  dragon_scale: {
-    id: "dragon_scale",
+  explorer_journal: {
+    id: "explorer_journal",
     category: "dragon",
-    tags: ["dragon"],
-    modifiers: [{ type: "stat", stat: "PD", amount: 6 }, { type: "stat", stat: "HP", amount: 18 }]
+    tags: ["mastery", "cycling"],
+    rules: [{ type: "mastered_job_damage", perJob: 0.04 }, { type: "mastered_job_event_xp", perJob: 0.03 }]
   },
-  dragon_heart: {
-    id: "dragon_heart",
+  ancient_map: {
+    id: "ancient_map",
     category: "dragon",
-    tags: ["dragon"],
-    modifiers: [{ type: "tag_damage", tag: "dragon", multiplier: 1.35 }, { type: "stat", stat: "PA", amount: 3 }]
+    tags: ["event", "advanced"],
+    rules: [{ type: "advanced_event_weight", multiplier: 2.2 }]
+  },
+  golden_dice: {
+    id: "golden_dice",
+    category: "magic",
+    tags: ["event", "risk"],
+    rules: [{ type: "double_event_rewards" }]
   },
   berserker_blood: {
     id: "berserker_blood",
     category: "melee",
-    tags: ["physical", "melee"],
-    modifiers: [{ type: "tag_damage", tag: "melee", multiplier: 1.18 }, { type: "stat", stat: "CRT", amount: 5 }]
-  },
-  iron_medal: {
-    id: "iron_medal",
-    category: "melee",
-    tags: ["physical", "guard"],
-    modifiers: [{ type: "stat", stat: "PA", amount: 3 }, { type: "stat", stat: "PD", amount: 3 }]
+    tags: ["risk", "damage"],
+    rules: [{ type: "missing_hp_damage", maxBonus: 0.6 }]
   },
   dark_contract: {
     id: "dark_contract",
     category: "dark",
-    tags: ["dark"],
-    modifiers: [{ type: "tag_damage", tag: "dark", multiplier: 1.3 }, { type: "xp", tag: "dark", multiplier: 1.15 }]
+    tags: ["boss", "risk"],
+    rules: [{ type: "boss_damage", multiplier: 1.55 }, { type: "normal_loss_xp", multiplier: 0 }]
   },
-  shadow_coin: {
-    id: "shadow_coin",
+  ascetic_beads: {
+    id: "ascetic_beads",
+    category: "holy",
+    tags: ["ap", "focus"],
+    rules: [{ type: "low_ap_mastery", threshold: 5, multiplier: 1.35 }]
+  },
+  mirror_shard: {
+    id: "mirror_shard",
     category: "dark",
-    tags: ["dark", "critical"],
-    modifiers: [{ type: "stat", stat: "CRD", amount: 15 }, { type: "activation", tag: "critical", amount: 0.06 }]
+    tags: ["hybrid", "activation"],
+    rules: [{ type: "off_theme_activation_bonus", amount: 0.04 }]
   },
-  glass_orb: {
-    id: "glass_orb",
-    category: "magic",
-    tags: ["magic"],
-    modifiers: [{ type: "stat", stat: "MA", amount: 5 }, { type: "tag_damage", tag: "magic", multiplier: 1.12 }]
-  },
-  storm_quill: {
-    id: "storm_quill",
-    category: "magic",
-    tags: ["magic"],
-    modifiers: [{ type: "activation", tag: "magic", amount: 0.07 }, { type: "stat", stat: "SPD", amount: 2 }]
-  },
-  viper_fang: {
-    id: "viper_fang",
+  blood_hourglass: {
+    id: "blood_hourglass",
     category: "poison",
-    tags: ["poison"],
-    modifiers: [{ type: "tag_damage", tag: "poison", multiplier: 1.2 }, { type: "poison", multiplier: 1.35 }]
+    tags: ["tempo", "risk"],
+    rules: [{ type: "elite_reward_damage", rewardMultiplier: 1.35, incomingDamageMultiplier: 1.18 }]
   },
-  toxic_vial: {
-    id: "toxic_vial",
-    category: "poison",
-    tags: ["poison"],
-    modifiers: [{ type: "activation", tag: "poison", amount: 0.1 }, { type: "stat", stat: "ACC", amount: 3 }]
+  sealed_badge: {
+    id: "sealed_badge",
+    category: "holy",
+    tags: ["ap", "mastery"],
+    rules: [{ type: "mastered_skill_ap_discount", amount: 1, minimumCost: 1 }]
   }
 };

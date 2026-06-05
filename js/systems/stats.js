@@ -1,5 +1,4 @@
 import { skills } from "../data/skills.js";
-import { relics } from "../data/relics.js";
 
 export const statKeys = ["HP", "PA", "PD", "MA", "MD", "SPD", "ACC", "EVA", "CRT", "CRD"];
 
@@ -31,15 +30,6 @@ export function getEffectiveStats(state) {
     const skill = skills[skillId];
     if (skill?.type === "passive") {
       addStats(effective, skill.passiveStats ?? {});
-    }
-  }
-
-  for (const relicId of state.player.relics) {
-    const relic = relics[relicId];
-    for (const modifier of relic?.modifiers ?? []) {
-      if (modifier.type === "stat") {
-        effective[modifier.stat] = (effective[modifier.stat] ?? 0) + modifier.amount;
-      }
     }
   }
 

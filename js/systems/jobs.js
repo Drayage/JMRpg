@@ -1,6 +1,7 @@
 import { jobs } from "../data/jobs.js";
-import { addStats } from "./stats.js";
+import { addStats, statKeys } from "./stats.js";
 import { addSkillMasteryFromXp, learnSkill } from "./skills.js";
+import { getJobXpPreserveRatio } from "./relics.js";
 
 export function isJobUnlocked(state, jobId) {
   return state.unlockedJobs.includes(jobId);
@@ -23,13 +24,17 @@ export function changeJob(state, jobId) {
     return false;
   }
 
+  const previousXp = state.player.currentJobXp;
+  const preserveRatio = getJobXpPreserveRatio(state);
+  const preservedXp = Math.floor(previousXp * preserveRatio);
   state.currentJobId = jobId;
-  state.player.currentJobXp = 0;
+  state.player.currentJobXp = preservedXp;
+  state.actionsSinceJobChange = 0;
   if (!state.visitedJobs.includes(jobId)) {
     state.visitedJobs.push(jobId);
   }
   state.activeJobEvent = null;
-  state.log.unshift({ type: "job", text: `Changed job to ${jobId}. Unfinished job XP was reset.` });
+  state.log.unshift({ type: "job", text: `Changed job to ${jobId}. Preserved ${preservedXp} job XP.` });
   if (state.pendingJobXp > 0) {
     const pendingXp = state.pendingJobXp;
     state.pendingJobXp = 0;
@@ -46,6 +51,22 @@ export function getCurrentJobProgress(state) {
 export function grantJobXp(state, xp, tag = null) {
   let remaining = Math.max(0, Math.round(xp));
   const messages = [];
+  const summary = {
+    jobId: state.currentJobId,
+    xpGained: Math.round(xp),
+    jobXpBefore: state.player.currentJobXp,
+    jobXpAfter: state.player.currentJobXp,
+    statChanges: {},
+    skillMasteryChanges: {},
+    skillsUnlocked: [],
+    skillsMastered: [],
+    jobsUnlocked: [],
+    jobMastered: null,
+    apGained: 0,
+    pendingJobXp: 0
+  };
+  const beforeStats = { ...state.player.stats };
+  const beforeMastery = { ...state.player.skillMastery };
 
   while (remaining > 0) {
     const job = jobs[state.currentJobId];
@@ -64,6 +85,7 @@ export function grantJobXp(state, xp, tag = null) {
     addStats(state.player.stats, job.growth, growthRatio);
 
     for (const masteredSkillId of addSkillMasteryFromXp(state, applied)) {
+      summary.skillsMastered.push(masteredSkillId);
       messages.push(`Mastered skill ${masteredSkillId}.`);
     }
 
@@ -72,18 +94,36 @@ export function grantJobXp(state, xp, tag = null) {
       if (beforePercent < milestone.percent && afterPercent >= milestone.percent) {
         if (milestone.type === "skill") {
           learnSkill(state, milestone.skillId);
+          if (!summary.skillsUnlocked.includes(milestone.skillId)) {
+            summary.skillsUnlocked.push(milestone.skillId);
+          }
           messages.push(`Unlocked skill ${milestone.skillId}.`);
         }
       }
     }
 
     if (state.player.currentJobXp >= job.xpRequired) {
-      masterCurrentJob(state, messages);
+      masterCurrentJob(state, messages, summary);
       if (remaining > 0) {
         state.pendingJobXp += remaining;
+        summary.pendingJobXp += remaining;
         messages.push(`${remaining} job XP will carry over to the next selected job.`);
         remaining = 0;
       }
+    }
+  }
+
+  summary.jobXpAfter = state.player.currentJobXp;
+  for (const key of statKeys) {
+    const diff = Math.round((state.player.stats[key] ?? 0) - (beforeStats[key] ?? 0));
+    if (diff !== 0) {
+      summary.statChanges[key] = diff;
+    }
+  }
+  for (const [skillId, after] of Object.entries(state.player.skillMastery)) {
+    const diff = Math.round(after - (beforeMastery[skillId] ?? 0));
+    if (diff !== 0) {
+      summary.skillMasteryChanges[skillId] = diff;
     }
   }
 
@@ -91,18 +131,27 @@ export function grantJobXp(state, xp, tag = null) {
   for (const message of messages.reverse()) {
     state.log.unshift({ type: "reward", text: message });
   }
+  markChanges(state, summary);
+  return summary;
 }
 
-function masterCurrentJob(state, messages) {
+function masterCurrentJob(state, messages, summary = null) {
   const job = jobs[state.currentJobId];
   if (!state.masteredJobs.includes(job.id)) {
     state.masteredJobs.push(job.id);
     state.player.ap += job.apReward;
+    if (summary) {
+      summary.jobMastered = job.id;
+      summary.apGained += job.apReward;
+    }
     messages.push(`Mastered ${job.id}. AP +${job.apReward}.`);
   }
   for (const unlockedJobId of getJobsUnlockedByConditions(state)) {
     if (!state.unlockedJobs.includes(unlockedJobId)) {
       state.unlockedJobs.push(unlockedJobId);
+      if (summary) {
+        summary.jobsUnlocked.push(unlockedJobId);
+      }
       messages.push(`Added ${unlockedJobId} to the job candidate pool.`);
     }
   }
@@ -144,4 +193,25 @@ function canChangeJobFromActiveEvent(state, jobId) {
     return job.tier > 1 && isJobUnlocked(state, jobId);
   }
   return false;
+}
+
+function markChanges(state, summary) {
+  state.changed = {
+    ...state.changed,
+    jobXp: true,
+    stats: { ...(state.changed.stats ?? {}) },
+    skills: { ...(state.changed.skills ?? {}) },
+    relics: { ...(state.changed.relics ?? {}) },
+    jobs: { ...(state.changed.jobs ?? {}) },
+    ap: summary.apGained > 0 || state.changed.ap === true
+  };
+  for (const key of Object.keys(summary.statChanges)) {
+    state.changed.stats[key] = true;
+  }
+  for (const skillId of [...Object.keys(summary.skillMasteryChanges), ...summary.skillsUnlocked, ...summary.skillsMastered]) {
+    state.changed.skills[skillId] = true;
+  }
+  for (const jobId of [...summary.jobsUnlocked, summary.jobMastered].filter(Boolean)) {
+    state.changed.jobs[jobId] = true;
+  }
 }

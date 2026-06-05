@@ -1,10 +1,10 @@
 import { bosses } from "../data/bosses.js";
 import { eventTemplates } from "../data/events.js";
 import { monsters } from "../data/monsters.js";
-import { addRelic, getRandomRelic, getXpMultiplier } from "./relics.js";
+import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomRelic } from "./relics.js";
 import { addStats } from "./stats.js";
 import { getAvailableAdvancedJobs, getAvailableBasicJobs, grantJobXp } from "./jobs.js";
-import { estimateWinRate, runBattle } from "./battle.js";
+import { createBattle, estimateWinRate, getBattleReward } from "./battle.js";
 
 export function generateChoices(state) {
   if (state.gameOver) {
@@ -22,7 +22,7 @@ export function generateChoices(state) {
 
   const choices = [];
   while (choices.length < 3) {
-    const template = weightedTemplate();
+    const template = weightedTemplate(state);
     const choice = createChoiceFromTemplate(state, template);
     if (!choice) {
       continue;
@@ -47,49 +47,89 @@ export function resolveChoice(state, choiceId) {
   }
 
   if (choice.type === "training") {
-    grantJobXp(state, choice.xp);
+    const xp = Math.round(choice.xp * getEventXpMultiplier(state));
+    const xpSummary = grantJobXp(state, xp);
+    setActionResult(state, choice, { xpSummary });
   }
   if (choice.type === "hunt" || choice.type === "boss") {
     const enemy = choice.type === "boss" ? bosses[choice.monsterId] : monsters[choice.monsterId];
-    const result = runBattle(state, enemy, { category: choice.category });
-    grantJobXp(state, result.xp, choice.category);
-    if (result.won && choice.type === "hunt") {
-      const relicId = addRelic(state, getRandomRelic(choice.category));
-      state.log.unshift({ type: "relic", text: `Found relic ${relicId}.` });
-    }
-    if (result.won && choice.type === "boss") {
-      state.defeatedBosses.push(choice.monsterId);
-      if (choice.final) {
-        state.gameOver = true;
-        state.victory = true;
-      }
-    }
-    if (!result.won && choice.final) {
-      state.gameOver = true;
-      state.victory = false;
-    }
+    state.battle = createBattle(state, enemy, { category: choice.category, elite: choice.elite, boss: choice.type === "boss", final: choice.final });
+    state.pendingBattleChoice = choice;
+    state.busy = true;
+    return { battle: state.battle };
   }
   if (choice.type === "relic") {
     const relicId = addRelic(state, getRandomRelic(choice.category));
+    markRelicChanged(state, relicId);
     state.log.unshift({ type: "relic", text: `Found relic ${relicId}.` });
+    setActionResult(state, choice, { relicId });
   }
   if (choice.type === "stats") {
-    addStats(state.player.stats, choice.growth);
+    const before = { ...state.player.stats };
+    const growth = multiplyGrowth(choice.growth, getPositiveEventRewardMultiplier(state));
+    addStats(state.player.stats, growth);
+    const statChanges = diffStats(before, state.player.stats);
+    markStatsChanged(state, statChanges);
     state.log.unshift({ type: "stats", text: `Gained stats from ${choice.id}.` });
+    setActionResult(state, choice, { statChanges });
   }
   if (choice.type === "directional") {
-    const xp = Math.round(choice.xp * getXpMultiplier(state, choice.category));
-    grantJobXp(state, xp, choice.category);
+    const xp = Math.round(choice.xp * getEventXpMultiplier(state, choice.category));
+    const xpSummary = grantJobXp(state, xp, choice.category);
+    let relicId = null;
     if (Math.random() < 0.45) {
-      const relicId = addRelic(state, getRandomRelic(choice.category));
+      relicId = addRelic(state, getRandomRelic(choice.category));
+      markRelicChanged(state, relicId);
       state.log.unshift({ type: "relic", text: `Found relic ${relicId}.` });
     }
+    setActionResult(state, choice, { xpSummary, relicId });
   }
-
-  advanceTime(state);
 }
 
-export function advanceTime(state) {
+export function finishBattleAction(state) {
+  if (!state.battle?.finished || !state.pendingBattleChoice) {
+    return;
+  }
+  const choice = state.pendingBattleChoice;
+  const reward = getBattleReward(state, state.battle);
+  const xp = Math.round(reward.xp * getEventXpMultiplier(state, choice.category, { elite: choice.elite }));
+  const xpSummary = grantJobXp(state, xp, choice.category);
+  let relicId = null;
+
+  if (reward.won && choice.type === "hunt") {
+    relicId = addRelic(state, getRandomRelic(choice.category));
+    markRelicChanged(state, relicId);
+    state.log.unshift({ type: "relic", text: `Found relic ${relicId}.` });
+  }
+  if (reward.won && choice.type === "boss") {
+    state.defeatedBosses.push(choice.monsterId);
+    if (choice.final) {
+      state.gameOver = true;
+      state.victory = true;
+    }
+  }
+  if (!reward.won && choice.final) {
+    state.gameOver = true;
+    state.victory = false;
+  }
+
+  state.log.unshift({ type: reward.won ? "win" : "loss", text: `${reward.won ? "Won" : "Lost"} battle against ${choice.monsterId}.` });
+  setActionResult(state, choice, { battle: state.battle, xpSummary, relicId, bossWon: reward.won });
+  state.pendingBattleChoice = null;
+  state.busy = false;
+}
+
+export function continueAction(state) {
+  const changedJob = Boolean(state.actionResult?.jobChangedTo);
+  state.actionResult = null;
+  state.battle = null;
+  state.pendingBattleChoice = null;
+  state.activeJobEvent = null;
+  state.changed = {};
+  advanceTime(state, { changedJob });
+}
+
+export function advanceTime(state, options = {}) {
   if (state.gameOver) {
     state.choices = [];
     return;
@@ -105,6 +145,9 @@ export function advanceTime(state) {
     state.actionInDay = 1;
   } else {
     state.actionInDay += 1;
+  }
+  if (!options.changedJob) {
+    state.actionsSinceJobChange += 1;
   }
   state.choices = generateChoices(state);
 }
@@ -127,6 +170,8 @@ function createChoiceFromTemplate(state, template) {
       elite: template.elite,
       category,
       xp: monster.xp,
+      enemyDamageType: monster.stats.MA > monster.stats.PA ? "magic" : "physical",
+      enemyDefenseProfile: monster.stats.MD > monster.stats.PD ? "high_magic_defense" : "high_physical_defense",
       winRate: estimateWinRate(state, monster)
     };
   }
@@ -178,6 +223,8 @@ function createBossChoice(bossId, final = false) {
     final,
     category: boss.relicCategories[0],
     xp: boss.xp,
+    enemyDamageType: boss.stats.MA > boss.stats.PA ? "magic" : "physical",
+    enemyDefenseProfile: boss.stats.MD > boss.stats.PD ? "high_magic_defense" : "high_physical_defense",
     winRate: null
   };
 }
@@ -188,11 +235,15 @@ function chooseMonster(state, elite) {
   return pool[Math.floor(Math.random() * pool.length)] ?? Object.values(monsters)[0];
 }
 
-function weightedTemplate() {
-  const total = eventTemplates.reduce((sum, template) => sum + template.weight, 0);
+function weightedTemplate(state) {
+  const weighted = eventTemplates.map((template) => ({
+    template,
+    weight: template.id === "advanced_job_training" ? template.weight * getAdvancedEventWeightMultiplier(state) : template.weight
+  }));
+  const total = weighted.reduce((sum, item) => sum + item.weight, 0);
   let roll = Math.random() * total;
-  for (const template of eventTemplates) {
-    roll -= template.weight;
+  for (const { template, weight } of weighted) {
+    roll -= weight;
     if (roll <= 0) {
       return template;
     }
@@ -220,4 +271,40 @@ function sampleJobs(jobIds, limit) {
     result.push(pool.splice(index, 1)[0]);
   }
   return result;
+}
+
+function multiplyGrowth(growth, multiplier) {
+  return Object.fromEntries(Object.entries(growth).map(([key, value]) => [key, Math.round(value * multiplier)]));
+}
+
+function setActionResult(state, choice, payload) {
+  state.actionResult = {
+    choice,
+    ...payload
+  };
+}
+
+function diffStats(before, after) {
+  const changes = {};
+  for (const [key, value] of Object.entries(after)) {
+    const diff = Math.round(value - (before[key] ?? 0));
+    if (diff !== 0) {
+      changes[key] = diff;
+    }
+  }
+  return changes;
+}
+
+function markStatsChanged(state, statChanges) {
+  state.changed = { ...state.changed, stats: { ...(state.changed.stats ?? {}) } };
+  for (const key of Object.keys(statChanges)) {
+    state.changed.stats[key] = true;
+  }
+}
+
+function markRelicChanged(state, relicId) {
+  state.changed = {
+    ...state.changed,
+    relics: { ...(state.changed.relics ?? {}), [relicId]: true }
+  };
 }

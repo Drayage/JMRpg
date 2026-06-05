@@ -19,6 +19,12 @@ export function createInitialState() {
     masteredJobs: [],
     activeJobEvent: null,
     pendingJobXp: 0,
+    actionsSinceJobChange: 0,
+    actionResult: null,
+    battle: null,
+    battleSpeed: "fast",
+    busy: false,
+    changed: {},
     player: {
       stats: createBaseStats(),
       currentJobXp: 0,

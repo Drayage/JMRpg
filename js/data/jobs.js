@@ -4,6 +4,7 @@ export const jobs = {
     tier: 1,
     xpRequired: 100,
     apReward: 2,
+    themes: ["physical", "melee", "guard"],
     growth: { HP: 12, PA: 4, PD: 2 },
     skills: ["power_slash", "battle_instinct"],
     milestones: [
@@ -18,6 +19,7 @@ export const jobs = {
     tier: 1,
     xpRequired: 95,
     apReward: 2,
+    themes: ["physical", "ranged", "critical"],
     growth: { HP: 7, PA: 2, SPD: 2, ACC: 4 },
     skills: ["precise_shot", "eagle_eye"],
     milestones: [
@@ -31,6 +33,7 @@ export const jobs = {
     tier: 1,
     xpRequired: 90,
     apReward: 2,
+    themes: ["physical", "agile", "critical", "dark"],
     growth: { HP: 6, PA: 2, SPD: 4, EVA: 4, CRT: 2 },
     skills: ["evasive_strike", "backstab"],
     milestones: [
@@ -44,6 +47,7 @@ export const jobs = {
     tier: 1,
     xpRequired: 100,
     apReward: 2,
+    themes: ["holy", "support", "magic"],
     growth: { HP: 8, MA: 3, MD: 4 },
     skills: ["healing_prayer", "holy_light"],
     milestones: [
@@ -57,6 +61,7 @@ export const jobs = {
     tier: 1,
     xpRequired: 105,
     apReward: 1,
+    themes: ["magic", "fire"],
     growth: { HP: 5, MA: 5, MD: 2 },
     skills: ["firebolt", "arcane_focus", "spellblade"],
     milestones: [
@@ -71,6 +76,7 @@ export const jobs = {
     tier: 2,
     xpRequired: 150,
     apReward: 1,
+    themes: ["physical", "guard", "dragon"],
     requires: { masteredAny: ["warrior"], visitedAny: [] },
     growth: { HP: 14, PA: 2, PD: 5, MD: 2 },
     skills: ["shield_bash", "counterattack", "dragon_strike"],
@@ -86,6 +92,7 @@ export const jobs = {
     tier: 2,
     xpRequired: 180,
     apReward: 1,
+    themes: ["holy", "guard", "physical", "melee"],
     requires: { masteredAll: ["warrior", "cleric"], visitedAny: [] },
     growth: { HP: 12, PA: 3, PD: 3, MA: 3, MD: 4 },
     skills: ["smite", "divine_aegis"],
@@ -100,6 +107,7 @@ export const jobs = {
     tier: 2,
     xpRequired: 165,
     apReward: 1,
+    themes: ["poison", "dark", "agile", "critical"],
     requires: { masteredAll: ["archer", "rogue"], visitedAny: [] },
     growth: { HP: 8, PA: 3, SPD: 6, ACC: 4, EVA: 3, CRT: 4 },
     skills: ["poison_dart", "venom_mastery", "shadow_assault"],
