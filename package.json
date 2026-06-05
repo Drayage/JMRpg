@@ -1,0 +1,6 @@
+{
+  "type": "module",
+  "scripts": {
+    "check": "node --check js/main.js"
+  }
+}
