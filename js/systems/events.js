@@ -1,7 +1,7 @@
 import { bosses } from "../data/bosses.js";
 import { eventTemplates } from "../data/events.js";
 import { monsters } from "../data/monsters.js";
-import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomRelic } from "./relics.js";
+import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomUnownedRelic, rejectRelic } from "./relics.js";
 import { addStats } from "./stats.js";
 import { getAvailableAdvancedJobs, getAvailableBasicJobs, grantJobXp } from "./jobs.js";
 import { createBattle, estimateWinRate, getBattleReward } from "./battle.js";
@@ -59,10 +59,8 @@ export function resolveChoice(state, choiceId) {
     return { battle: state.battle };
   }
   if (choice.type === "relic") {
-    const relicId = addRelic(state, getRandomRelic(choice.category));
-    markRelicChanged(state, relicId);
-    state.log.unshift({ type: "relic", text: `Found relic ${relicId}.` });
-    setActionResult(state, choice, { relicId });
+    const pendingRelicId = getRandomUnownedRelic(state, choice.category);
+    setActionResult(state, choice, { pendingRelicId });
   }
   if (choice.type === "stats") {
     const before = { ...state.player.stats };
@@ -78,11 +76,9 @@ export function resolveChoice(state, choiceId) {
     const xpSummary = grantJobXp(state, xp, choice.category);
     let relicId = null;
     if (Math.random() < 0.45) {
-      relicId = addRelic(state, getRandomRelic(choice.category));
-      markRelicChanged(state, relicId);
-      state.log.unshift({ type: "relic", text: `Found relic ${relicId}.` });
+      relicId = getRandomUnownedRelic(state, choice.category);
     }
-    setActionResult(state, choice, { xpSummary, relicId });
+    setActionResult(state, choice, { xpSummary, pendingRelicId: relicId });
   }
 }
 
@@ -97,9 +93,7 @@ export function finishBattleAction(state) {
   let relicId = null;
 
   if (reward.won && choice.type === "hunt") {
-    relicId = addRelic(state, getRandomRelic(choice.category));
-    markRelicChanged(state, relicId);
-    state.log.unshift({ type: "relic", text: `Found relic ${relicId}.` });
+    relicId = getRandomUnownedRelic(state, choice.category);
   }
   if (reward.won && choice.type === "boss") {
     state.defeatedBosses.push(choice.monsterId);
@@ -114,12 +108,55 @@ export function finishBattleAction(state) {
   }
 
   state.log.unshift({ type: reward.won ? "win" : "loss", text: `${reward.won ? "Won" : "Lost"} battle against ${choice.monsterId}.` });
-  setActionResult(state, choice, { battle: state.battle, xpSummary, relicId, bossWon: reward.won });
+  setActionResult(state, choice, { battle: state.battle, xpSummary, pendingRelicId: relicId, bossWon: reward.won });
   state.pendingBattleChoice = null;
   state.busy = false;
 }
 
+export function acceptPendingRelic(state) {
+  const relicId = state.actionResult?.pendingRelicId;
+  if (!relicId) {
+    return null;
+  }
+  const addedRelicId = addRelic(state, relicId);
+  state.actionResult.pendingRelicId = null;
+  if (addedRelicId) {
+    state.actionResult.relicId = addedRelicId;
+    markRelicChanged(state, addedRelicId);
+    state.log.unshift({ type: "relic", text: `Found relic ${addedRelicId}.` });
+  }
+  return addedRelicId;
+}
+
+export function declinePendingRelic(state) {
+  const relicId = state.actionResult?.pendingRelicId;
+  if (!relicId) {
+    return null;
+  }
+  const rejectedRelicId = rejectRelic(state, relicId);
+  state.actionResult.pendingRelicId = null;
+  if (rejectedRelicId) {
+    state.actionResult.relicDeclinedId = rejectedRelicId;
+    state.log.unshift({ type: "relic", text: `Declined relic ${rejectedRelicId}.` });
+  }
+  return rejectedRelicId;
+}
+
+export function skipJobChange(state) {
+  if (!state.activeJobEvent) {
+    return false;
+  }
+  const event = state.activeJobEvent;
+  state.activeJobEvent = null;
+  setActionResult(state, { templateId: event.templateId, type: "job_change" }, { jobSkipped: true });
+  state.log.unshift({ type: "event", text: "Skipped job change." });
+  return true;
+}
+
 export function continueAction(state) {
+  if (state.actionResult?.pendingRelicId) {
+    return;
+  }
   const changedJob = Boolean(state.actionResult?.jobChangedTo);
   state.actionResult = null;
   state.battle = null;

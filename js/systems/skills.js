@@ -117,6 +117,7 @@ export function getSkillEstimate(state, skillId) {
   const finalValue = Math.round(baseValue * (isSkillOnTheme(state, skill) ? 1.08 : 0.96));
   return {
     type: skill.type,
+    effectType: effect?.type ?? null,
     tags: skill.tags ?? [],
     apCost: getEffectiveApCost(state, skillId),
     baseApCost: skill.apCost ?? 0,

@@ -10,13 +10,35 @@ export function getRandomRelic(category = null) {
   return pool[Math.floor(Math.random() * pool.length)]?.id ?? Object.values(relics)[0].id;
 }
 
+export function getRandomUnownedRelic(state, category = null) {
+  const preferredPool = (category ? getRelicsByCategory(category) : Object.values(relics)).filter((relic) => !isRelicUnavailable(state, relic.id));
+  const fallbackPool = Object.values(relics).filter((relic) => !isRelicUnavailable(state, relic.id));
+  const pool = preferredPool.length > 0 ? preferredPool : fallbackPool;
+  return pool[Math.floor(Math.random() * pool.length)]?.id ?? null;
+}
+
 export function addRelic(state, relicId) {
+  if (!relicId || hasRelic(state, relicId)) {
+    return null;
+  }
   state.player.relics.push(relicId);
   return relicId;
 }
 
 export function hasRelic(state, relicId) {
   return state.player.relics.includes(relicId);
+}
+
+export function rejectRelic(state, relicId) {
+  if (!relicId || !relics[relicId] || isRelicUnavailable(state, relicId)) {
+    return null;
+  }
+  state.rejectedRelics.push(relicId);
+  return relicId;
+}
+
+export function isRelicUnavailable(state, relicId) {
+  return hasRelic(state, relicId) || state.rejectedRelics.includes(relicId);
 }
 
 export function getRelicRules(state, type = null) {

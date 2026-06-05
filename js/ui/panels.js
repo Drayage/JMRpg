@@ -179,20 +179,24 @@ function battlePanel(state) {
 function resultPanel(state) {
   const result = state.actionResult;
   const choice = result.choice ?? {};
+  const waitingForRelicDecision = Boolean(result.pendingRelicId);
   return panel(`
     <div class="title-row">
       <h2>${ko.ui.eventResult}</h2>
-      <button class="primary" data-action="continue-action">${ko.ui.continue}</button>
+      ${waitingForRelicDecision ? "" : `<button class="primary" data-action="continue-action">${ko.ui.continue}</button>`}
     </div>
     <div class="card stack">
       <h3>${resultTitle(choice, result)}</h3>
       ${result.battle ? battleResultRows(result) : ""}
       ${result.jobChangedTo ? resultLine(ko.ui.jobChanged, jobName(result.jobChangedTo)) : ""}
+      ${result.jobSkipped ? resultLine(ko.ui.noJobChange ?? "No Job Change", ko.ui.skipped ?? "Skipped") : ""}
       ${xpResultRows(result.xpSummary)}
       ${statResultRows(result.statChanges ?? result.xpSummary?.statChanges)}
       ${skillResultRows(result.xpSummary)}
       ${unlockResultRows(result.xpSummary)}
+      ${result.pendingRelicId ? pendingRelicChoice(result.pendingRelicId) : ""}
       ${result.relicId ? resultLine(ko.ui.relics, `${relicName(result.relicId)} - ${relicDesc(result.relicId)}`) : ""}
+      ${result.relicDeclinedId ? resultLine(ko.ui.declinedRelic ?? "Declined Relic", `${relicName(result.relicDeclinedId)} - ${relicDesc(result.relicDeclinedId)}`) : ""}
     </div>
   `);
 }
@@ -207,6 +211,7 @@ function activeJobEventPanel(state) {
       </div>
       <p class="small muted">${eventDesc(event.templateId)}</p>
       ${event.jobOptions.map((jobId) => jobOption(state, jobs[jobId], true)).join("")}
+      <button data-action="skip-job-change">${ko.ui.skipJobChange ?? "Skip Job Change"}</button>
     </div>
   `;
 }
@@ -218,7 +223,7 @@ function jobOption(state, job, canChangeFromEvent) {
   const percent = current ? getCurrentJobProgress(state) : 0;
   const milestones = job.milestones.map((milestone) => {
     if (milestone.type === "skill") {
-      return `${milestone.percent}% ${skillName(milestone.skillId)}`;
+      return `${milestone.percent}% ${skillName(milestone.skillId)} - ${skillDesc(milestone.skillId)}`;
     }
     return `${milestone.percent}% ${ko.ui.mastered}, AP +${job.apReward}`;
   }).join(" / ");
@@ -261,9 +266,8 @@ function skillRow(state, skillId) {
           ${(skill.tags ?? []).map((tagId) => tag(tagId)).join("")}
           ${estimate.onTheme ? tag("job theme", "ok") : tag("off theme", "warn")}
         </div>
-        <p class="small">${ko.ui.skillUsed}: ${Math.round(estimate.activationChance * 100)}% (${Math.round(estimate.baseActivationChance * 100)}% base)</p>
-        <p class="small">${estimate.scalingStat ? `${ko.ui.statChanges}: ${estimate.scalingStat} ${estimate.scalingValue} x ${estimate.power} = ${estimate.baseValue}` : "Passive formula"}</p>
-        <p class="small muted">Estimated final value: ${estimate.finalValue} / AP ${estimate.baseApCost} -> ${estimate.apCost}</p>
+        ${skill.type === "passive" ? passiveSkillDetails(skill) : activeSkillDetails(estimate)}
+        <p class="small muted">AP Cost: ${estimate.baseApCost}${estimate.baseApCost !== estimate.apCost ? ` -> ${estimate.apCost}` : ""}</p>
         ${estimate.condition ? `<p class="small muted">Condition: ${conditionText(estimate.condition)}</p>` : ""}
         ${progressBar(mastery, 100, "mastery")}
         <p class="small muted">${mastered ? ko.ui.mastered : `${mastery}%`}</p>
@@ -300,6 +304,33 @@ function relicRow(state, relicId) {
         </div>
       </div>
       <span class="tag">${ko.categories[relic.category] ?? relic.category}</span>
+    </div>
+  `;
+}
+
+function activeSkillDetails(estimate) {
+  const label = estimate.effectType === "heal" ? "Estimated Heal" : "Estimated Damage";
+  return `
+    <p class="small">${ko.ui.skillUsed}: ${Math.round(estimate.activationChance * 100)}% (${Math.round(estimate.baseActivationChance * 100)}% base)</p>
+    <p class="small">Formula: ${estimate.scalingStat} ${estimate.scalingValue} x ${estimate.power} = ${estimate.baseValue}</p>
+    <p class="small muted">${label}: ${estimate.finalValue}</p>
+  `;
+}
+
+function passiveSkillDetails(skill) {
+  const stats = Object.entries(skill.passiveStats ?? {}).map(([key, value]) => `${key} +${value}`).join(", ");
+  return `<p class="small">Passive Bonus: ${stats || "No passive stat bonus"}</p>`;
+}
+
+function pendingRelicChoice(relicId) {
+  return `
+    <div class="result-line">
+      <span>${ko.ui.pendingRelic ?? "Relic Choice"}</span>
+      <strong>${relicName(relicId)} - ${relicDesc(relicId)}</strong>
+    </div>
+    <div class="button-row">
+      <button class="primary" data-action="accept-relic">${ko.ui.acceptRelic ?? "Take Relic"}</button>
+      <button data-action="decline-relic">${ko.ui.declineRelic ?? "Decline Relic"}</button>
     </div>
   `;
 }
@@ -409,6 +440,9 @@ function resultLine(label, value) {
 function resultTitle(choice, result) {
   if (result.jobChangedTo) {
     return `${ko.ui.jobChanged}: ${jobName(result.jobChangedTo)}`;
+  }
+  if (result.jobSkipped) {
+    return ko.ui.skipJobChange ?? "Skip Job Change";
   }
   if (result.battle) {
     const outcome = result.battle.won ? ko.ui.victory : ko.ui.defeat;

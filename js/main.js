@@ -1,5 +1,5 @@
 import { createInitialState } from "./state.js";
-import { continueAction, finishBattleAction, generateChoices, resolveChoice } from "./systems/events.js";
+import { acceptPendingRelic, continueAction, declinePendingRelic, finishBattleAction, generateChoices, resolveChoice, skipJobChange } from "./systems/events.js";
 import { runBattleStep } from "./systems/battle.js";
 import { changeJob } from "./systems/jobs.js";
 import { equipSkill, unequipSkill } from "./systems/skills.js";
@@ -40,6 +40,15 @@ app.addEventListener("click", (event) => {
         jobChangedTo: target.dataset.jobId
       };
     }
+  }
+  if (action === "skip-job-change") {
+    skipJobChange(state);
+  }
+  if (action === "accept-relic") {
+    acceptPendingRelic(state);
+  }
+  if (action === "decline-relic") {
+    declinePendingRelic(state);
   }
   if (action === "continue-action") {
     continueAction(state);

@@ -17,6 +17,7 @@ export function createInitialState() {
     unlockedJobs: ["warrior", "archer", "rogue", "cleric", "wizard"],
     visitedJobs: ["warrior"],
     masteredJobs: [],
+    rejectedRelics: [],
     activeJobEvent: null,
     pendingJobXp: 0,
     actionsSinceJobChange: 0,

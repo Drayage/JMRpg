@@ -63,7 +63,14 @@ export const ko = {
     highPhysicalDefense: "물리 방어 높음",
     highMagicDefense: "마법 방어 높음",
     possibleMilestone: "도달 가능 보상",
-    jobChanged: "전직 완료"
+    jobChanged: "전직 완료",
+    skipJobChange: "전직 안하기",
+    noJobChange: "전직하지 않음",
+    skipped: "넘김",
+    pendingRelic: "유물 선택",
+    acceptRelic: "유물 받기",
+    declineRelic: "유물 안얻기",
+    declinedRelic: "거절한 유물"
   },
   stats: {
     HP: "HP",
