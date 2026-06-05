@@ -8,7 +8,7 @@ import { canEquipSkill, getEffectiveApCost, getEquippedApCost, getEquippedSlotCo
 import { getRelicCurrentValue } from "../systems/relics.js";
 import { getStalemateDamageMultiplier } from "../systems/battle.js";
 import { clampPercent, getEffectiveStats, statKeys } from "../systems/stats.js";
-import { ko } from "../i18n/ko.js";
+import { ko } from "../i18n/ko.js?v=20260605-5";
 
 export function statusPanel(state) {
   const progress = getCurrentJobProgress(state);
@@ -158,6 +158,83 @@ export function gameOverPanel(state) {
   `;
 }
 
+export function battleLogModal(state) {
+  if (!state.showBattleLog || !state.actionResult?.battle) {
+    return "";
+  }
+  const battle = state.actionResult.battle;
+  const turnRows = battleTimelineRows(battle);
+  return `
+    <div class="modal-backdrop" data-action="close-battle-log">
+      <section class="modal" role="dialog" aria-modal="true" aria-label="${ko.ui.battleLog}">
+        <div class="title-row">
+          <h2>${ko.ui.battleLog}</h2>
+          <button data-action="close-battle-log">${ko.ui.closeBattleLog ?? "Close"}</button>
+        </div>
+        <div class="battle-log-header">
+          <span></span>
+          <span>${ko.ui.player}</span>
+          <span>${monsterOrBossName(battle.enemyId)}</span>
+        </div>
+        <div class="modal-log battle-timeline">
+          ${turnRows.length ? turnRows.map((row) => battleTimelineRow(row)).join("") : `<p class="muted">${ko.ui.noChoices}</p>`}
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function battleTimelineRows(battle) {
+  const rowsByTurn = new Map();
+  for (const entry of [...(battle.history ?? [])].reverse()) {
+    const turn = entry.turn ?? "-";
+    if (!rowsByTurn.has(turn)) {
+      rowsByTurn.set(turn, { turn, player: [], enemy: [], status: [] });
+    }
+    const row = rowsByTurn.get(turn);
+    if (entry.actor === "player") {
+      row.player.push(entry);
+    } else if (entry.actor === "enemy") {
+      row.enemy.push(entry);
+    } else {
+      row.status.push(entry);
+    }
+  }
+  return [...rowsByTurn.values()];
+}
+
+function battleTimelineRow(row) {
+  return `
+    <div class="timeline-turn">
+      <div class="timeline-turn-label">${ko.ui.turn} ${row.turn}</div>
+      <div class="timeline-side player-side">
+        ${row.player.length ? row.player.map((entry) => battleTimelineEntry(entry)).join("") : `<span class="muted small">-</span>`}
+      </div>
+      <div class="timeline-side enemy-side">
+        ${row.enemy.length ? row.enemy.map((entry) => battleTimelineEntry(entry)).join("") : `<span class="muted small">-</span>`}
+      </div>
+      ${row.status.length ? `<div class="timeline-status">${row.status.map((entry) => battleTimelineEntry(entry)).join("")}</div>` : ""}
+    </div>
+  `;
+}
+
+function battleTimelineEntry(entry) {
+  return `
+    <div class="timeline-entry">
+      <p>${formatLogText(entry.text)}</p>
+      <div class="tag-list">
+        ${entry.skillId ? tag(skillName(entry.skillId), "warn") : ""}
+        ${entry.damage ? tag(`${ko.ui.damage} ${entry.damage}`, "danger") : ""}
+        ${entry.heal ? tag(`${ko.ui.heal} ${entry.heal}`, "ok") : ""}
+        ${entry.miss ? tag(ko.ui.miss) : ""}
+        ${entry.crit ? tag(ko.ui.crit, "danger") : ""}
+        ${entry.block ? tag(ko.ui.block, "ok") : ""}
+        ${entry.status ? tag(`${ko.ui.statusEffect}: ${entry.status}`, "warn") : ""}
+      </div>
+    </div>
+  `;
+}
+
 function battlePanel(state) {
   const battle = state.battle;
   const action = battle.lastAction;
@@ -204,6 +281,8 @@ function resultPanel(state) {
     <div class="card stack">
       <h3>${resultTitle(choice, result)}</h3>
       ${result.battle ? battleResultRows(result) : ""}
+      ${result.battle ? `<button class="primary" data-action="open-battle-log">${ko.ui.viewBattleLog ?? "View Battle Log"}</button>` : ""}
+      ${result.noBattleRewards ? resultLine(ko.ui.noBattleRewards ?? "No rewards", ko.ui.defeat ?? "Defeat") : ""}
       ${result.jobChangedTo ? resultLine(ko.ui.jobChanged, jobName(result.jobChangedTo)) : ""}
       ${result.jobSkipped ? resultLine(ko.ui.noJobChange ?? "No Job Change", ko.ui.skipped ?? "Skipped") : ""}
       ${xpResultRows(result.xpSummary)}
@@ -220,6 +299,7 @@ function resultPanel(state) {
 
 function activeJobEventPanel(state) {
   const event = state.activeJobEvent;
+  const jobOptions = event.jobOptions.filter((jobId) => isJobUnlocked(state, jobId));
   return `
     <div class="card stack">
       <div class="title-row">
@@ -227,7 +307,7 @@ function activeJobEventPanel(state) {
         <span class="tag warn">${event.jobTier}</span>
       </div>
       <p class="small muted">${eventDesc(event.templateId)}</p>
-      ${event.jobOptions.map((jobId) => jobOption(state, jobs[jobId], true)).join("")}
+      ${jobOptions.length ? jobOptions.map((jobId) => jobOption(state, jobs[jobId], true)).join("") : `<p class="muted">${ko.ui.noChoices}</p>`}
       <button data-action="skip-job-change">${ko.ui.skipJobChange ?? "Skip Job Change"}</button>
     </div>
   `;
@@ -398,10 +478,13 @@ function choicePreviewTags(choice, state) {
     tags.push(tag(choice.jobOptions.map((jobId) => jobName(jobId)).join(", ") || ko.ui.noChoices, choice.jobOptions.length ? "warn" : "danger"));
   }
   if (choice.monsterOptions) {
-    tags.push(tag(choice.monsterOptions.map((item) => monsterName(item.monsterId)).join(", "), "warn"));
+    tags.push(tag(`${ko.ui.enemy ?? "Enemy"} 3 ${ko.ui.choose}`, "warn"));
   }
   if (choice.winRate !== null && choice.winRate !== undefined) {
     tags.push(tag(`${ko.ui.winRate} ${choice.winRate}%`, choice.winRate >= 60 ? "ok" : choice.winRate <= 35 ? "danger" : "warn"));
+  }
+  if (choice.difficulty) {
+    tags.push(tag(difficultyName(choice.difficulty), choice.difficulty === "dangerous" ? "danger" : choice.difficulty === "easy" ? "ok" : "warn"));
   }
   if (choice.xp) {
     tags.push(tag(`${ko.ui.xpReward} ${choice.xp}`));
@@ -553,6 +636,16 @@ function damageTypeName(type) {
 
 function defenseProfileName(profile) {
   return profile === "high_magic_defense" ? ko.ui.highMagicDefense : ko.ui.highPhysicalDefense;
+}
+
+function difficultyName(difficulty) {
+  if (difficulty === "easy") {
+    return ko.ui.easyHunt ?? "Easy";
+  }
+  if (difficulty === "dangerous") {
+    return ko.ui.dangerousHunt ?? "Dangerous";
+  }
+  return ko.ui.normalHunt ?? "Normal";
 }
 
 function conditionText(condition) {

@@ -1,18 +1,17 @@
 import { skills } from "../data/skills.js";
-import { getDamageMultiplier, getEliteIncomingDamageMultiplier, getNormalLossXpMultiplier, getPoisonMultiplier } from "./relics.js";
+import { getDamageMultiplier, getEliteIncomingDamageMultiplier, getPoisonMultiplier } from "./relics.js";
 import { getEffectiveActivationChance } from "./skills.js";
 import { getEffectiveStats, scoreStats } from "./stats.js";
 
 export function estimateWinRate(state, enemy, options = {}) {
   const playerScore = scoreStats(getEffectiveStats(state)) + state.player.equippedSkills.length * 12 + state.player.relics.length * 8;
-  const enemyScore = scoreStats(scaleBattleStats(enemy.stats, getEnemyHpScale(options)));
+  const enemyScore = scoreStats(scaleEnemyStats(enemy.stats, options));
   return Math.max(8, Math.min(92, Math.round((playerScore / (playerScore + enemyScore)) * 100)));
 }
 
 export function createBattle(state, enemy, options = {}) {
   const playerStats = scaleBattleStats(getEffectiveStats(state), 1.75);
-  const enemyScale = getEnemyHpScale(options);
-  const enemyStats = scaleBattleStats(enemy.stats, enemyScale);
+  const enemyStats = scaleEnemyStats(enemy.stats, options);
   const order = playerStats.SPD >= enemyStats.SPD ? ["player", "enemy"] : ["enemy", "player"];
 
   return {
@@ -60,7 +59,6 @@ export function runBattleStep(state, battle) {
 
   battle.lastAction = { turn: battle.turn, actor, ...action };
   battle.history.unshift(battle.lastAction);
-  battle.history = battle.history.slice(0, 14);
   battle.actorIndex += 1;
 
   if (battle.player.hp <= 0 || battle.foe.hp <= 0) {
@@ -73,7 +71,6 @@ export function runBattleStep(state, battle) {
     if (poisonAction) {
       battle.lastAction = { turn: battle.turn, actor: "status", ...poisonAction };
       battle.history.unshift(battle.lastAction);
-      battle.history = battle.history.slice(0, 14);
     }
     battle.actorIndex = 0;
     battle.turn += 1;
@@ -87,8 +84,7 @@ export function runBattleStep(state, battle) {
 }
 
 export function getBattleReward(state, battle) {
-  const lossMultiplier = getNormalLossXpMultiplier(state, battle);
-  const xp = battle.won ? battle.enemy.xp ?? 0 : Math.round((battle.enemy.xp ?? 0) * 0.25 * lossMultiplier);
+  const xp = battle.won ? battle.enemy.xp ?? 0 : 0;
   return { won: battle.won, xp, category: battle.category };
 }
 
@@ -121,6 +117,24 @@ function createFighter(stats) {
 
 function scaleBattleStats(stats, hpMultiplier) {
   return { ...stats, HP: Math.round(stats.HP * hpMultiplier) };
+}
+
+function scaleEnemyStats(stats, options = {}) {
+  const difficultyScale = options.difficultyScale ?? 1;
+  const hpScale = getEnemyHpScale(options) * difficultyScale;
+  const powerScale = 0.85 + difficultyScale * 0.15;
+  return {
+    ...stats,
+    HP: Math.round(stats.HP * hpScale),
+    PA: Math.round(stats.PA * powerScale),
+    PD: Math.round(stats.PD * powerScale),
+    MA: Math.round(stats.MA * powerScale),
+    MD: Math.round(stats.MD * powerScale),
+    SPD: Math.round(stats.SPD * powerScale),
+    ACC: Math.round(stats.ACC * Math.min(1.08, powerScale)),
+    EVA: Math.round(stats.EVA * powerScale),
+    CRT: Math.round(stats.CRT * powerScale)
+  };
 }
 
 function getEnemyHpScale(options = {}) {

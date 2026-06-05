@@ -1,9 +1,9 @@
-import { createInitialState } from "./state.js";
-import { acceptPendingRelic, continueAction, declinePendingRelic, finishBattleAction, generateChoices, resolveChoice, selectHuntMonster, skipJobChange } from "./systems/events.js";
-import { runBattleStep } from "./systems/battle.js";
-import { changeJob } from "./systems/jobs.js";
-import { equipSkill, unequipSkill } from "./systems/skills.js";
-import { render } from "./ui/render.js";
+import { createInitialState } from "./state.js?v=20260606-4";
+import { acceptPendingRelic, continueAction, declinePendingRelic, finishBattleAction, generateChoices, resolveChoice, selectHuntMonster, skipJobChange } from "./systems/events.js?v=20260605-5";
+import { runBattleStep } from "./systems/battle.js?v=20260605-5";
+import { changeJob } from "./systems/jobs.js?v=20260605-5";
+import { equipSkill, unequipSkill } from "./systems/skills.js?v=20260605-5";
+import { render } from "./ui/render.js?v=20260605-5";
 
 const app = document.querySelector("#app");
 let state = createInitialState();
@@ -60,6 +60,15 @@ app.addEventListener("click", (event) => {
   }
   if (action === "continue-action") {
     continueAction(state);
+  }
+  if (action === "open-battle-log") {
+    state.showBattleLog = true;
+  }
+  if (action === "close-battle-log") {
+    if (target.classList.contains("modal-backdrop") && event.target !== target) {
+      return;
+    }
+    state.showBattleLog = false;
   }
   if (action === "set-speed") {
     state.battleSpeed = target.dataset.speed;

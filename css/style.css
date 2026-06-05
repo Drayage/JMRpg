@@ -296,6 +296,105 @@ h3 {
   color: var(--muted);
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.modal {
+  width: min(980px, 100%);
+  max-height: min(820px, 90vh);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 12px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+}
+
+.modal-log {
+  max-height: 70vh;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.battle-log-header,
+.timeline-turn {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.battle-log-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin-bottom: 8px;
+  padding: 6px 0 8px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.battle-log-header span {
+  min-width: 0;
+}
+
+.battle-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.timeline-turn {
+  align-items: stretch;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.timeline-turn-label {
+  color: var(--muted);
+  font-size: 12px;
+  padding-top: 8px;
+}
+
+.timeline-side,
+.timeline-status {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #151a1d;
+  padding: 8px;
+}
+
+.player-side {
+  border-color: rgba(138, 191, 105, 0.55);
+}
+
+.enemy-side {
+  border-color: rgba(231, 111, 81, 0.55);
+}
+
+.timeline-status {
+  grid-column: 2 / 4;
+  border-color: rgba(230, 182, 75, 0.55);
+}
+
+.timeline-entry + .timeline-entry {
+  margin-top: 8px;
+}
+
+.timeline-entry p {
+  font-size: 12px;
+}
+
 .changed {
   animation: changed-flash 900ms ease-out;
 }

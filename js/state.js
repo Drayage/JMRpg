@@ -3,7 +3,9 @@ import { createBaseStats } from "./systems/stats.js";
 
 export function createInitialState() {
   const finalBossPool = ["fallen_seraph", "iron_tyrant", "plague_dragon", "mirror_queen", "world_serpent"];
+  const basicJobPool = ["warrior", "archer", "rogue", "cleric", "wizard"];
   const finalBossId = finalBossPool[Math.floor(Math.random() * finalBossPool.length)];
+  const startingJobId = basicJobPool[Math.floor(Math.random() * basicJobPool.length)];
   return {
     day: 1,
     actionInDay: 1,
@@ -13,10 +15,10 @@ export function createInitialState() {
     defeatedBosses: [],
     gameOver: false,
     victory: false,
-    currentJobId: "warrior",
-    unlockedJobs: ["warrior", "archer", "rogue", "cleric", "wizard"],
-    discoveredJobs: ["warrior", "archer", "rogue", "cleric", "wizard"],
-    visitedJobs: ["warrior"],
+    currentJobId: startingJobId,
+    unlockedJobs: [...basicJobPool],
+    discoveredJobs: [...basicJobPool],
+    visitedJobs: [startingJobId],
     masteredJobs: [],
     rejectedRelics: [],
     activeJobEvent: null,
@@ -24,6 +26,7 @@ export function createInitialState() {
     pendingJobXp: 0,
     actionsSinceJobChange: 0,
     actionResult: null,
+    showBattleLog: false,
     battle: null,
     battleSpeed: "fast",
     busy: false,
@@ -39,6 +42,7 @@ export function createInitialState() {
     },
     choices: [],
     log: [
+      { type: "start", text: `Starting job selected: ${startingJobId}.` },
       { type: "start", text: `Final boss revealed: ${finalBossId}.` }
     ]
   };

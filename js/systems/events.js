@@ -1,10 +1,10 @@
-import { bosses } from "../data/bosses.js";
-import { eventTemplates } from "../data/events.js";
-import { monsters } from "../data/monsters.js";
-import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomUnownedRelic, rejectRelic } from "./relics.js";
+import { bosses } from "../data/bosses.js?v=20260605-5";
+import { eventTemplates } from "../data/events.js?v=20260605-5";
+import { monsters } from "../data/monsters.js?v=20260605-5";
+import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomUnownedRelic, rejectRelic } from "./relics.js?v=20260605-5";
 import { addStats } from "./stats.js";
 import { getAvailableAdvancedJobs, getAvailableBasicJobs, grantJobXp, updateJobDiscovery } from "./jobs.js";
-import { createBattle, estimateWinRate, getBattleReward } from "./battle.js";
+import { createBattle, estimateWinRate, getBattleReward } from "./battle.js?v=20260605-5";
 
 export function generateChoices(state) {
   if (state.gameOver) {
@@ -29,7 +29,7 @@ export function generateChoices(state) {
     if (!choice) {
       continue;
     }
-    if (!choices.some((item) => item.templateId === choice.templateId)) {
+    if (!choices.some((item) => getChoiceGroup(item) === getChoiceGroup(choice))) {
       choices.push(choice);
     }
   }
@@ -82,11 +82,7 @@ export function resolveChoice(state, choiceId) {
   if (choice.type === "directional") {
     const xp = Math.round(choice.xp * getEventXpMultiplier(state, choice.category));
     const xpSummary = grantJobXp(state, xp, choice.category);
-    let relicId = null;
-    if (Math.random() < 0.45) {
-      relicId = getRandomUnownedRelic(state, choice.category);
-    }
-    setActionResult(state, choice, { xpSummary, pendingRelicId: relicId });
+    setActionResult(state, choice, { xpSummary });
   }
 }
 
@@ -97,7 +93,7 @@ export function selectHuntMonster(state, monsterChoiceId) {
     return null;
   }
   const enemy = monsters[choice.monsterId];
-  state.battle = createBattle(state, enemy, { category: choice.category, elite: choice.elite });
+  state.battle = createBattle(state, enemy, { category: choice.category, elite: choice.elite, difficultyScale: choice.difficultyScale });
   state.pendingBattleChoice = choice;
   state.activeHuntEvent = null;
   state.busy = true;
@@ -110,8 +106,8 @@ export function finishBattleAction(state) {
   }
   const choice = state.pendingBattleChoice;
   const reward = getBattleReward(state, state.battle);
-  const xp = Math.round(reward.xp * getEventXpMultiplier(state, choice.category, { elite: choice.elite }));
-  const xpSummary = grantJobXp(state, xp, choice.category);
+  const xp = Math.round(reward.xp * (choice.rewardMultiplier ?? 1) * getEventXpMultiplier(state, choice.category, { elite: choice.elite }));
+  const xpSummary = xp > 0 ? grantJobXp(state, xp, choice.category) : null;
   let relicId = null;
 
   if (reward.won && choice.type === "hunt") {
@@ -130,7 +126,7 @@ export function finishBattleAction(state) {
   }
 
   state.log.unshift({ type: reward.won ? "win" : "loss", text: `${reward.won ? "Won" : "Lost"} battle against ${choice.monsterId}.` });
-  setActionResult(state, choice, { battle: state.battle, xpSummary, pendingRelicId: relicId, bossWon: reward.won });
+  setActionResult(state, choice, { battle: state.battle, xpSummary, noBattleRewards: !reward.won, pendingRelicId: relicId, bossWon: reward.won });
   state.pendingBattleChoice = null;
   state.busy = false;
 }
@@ -184,6 +180,7 @@ export function continueAction(state) {
   }
   const changedJob = Boolean(state.actionResult?.jobChangedTo);
   state.actionResult = null;
+  state.showBattleLog = false;
   state.battle = null;
   state.pendingBattleChoice = null;
   state.activeJobEvent = null;
@@ -241,6 +238,16 @@ function createChoiceFromTemplate(state, template) {
   return { ...template, id: template.id };
 }
 
+function getChoiceGroup(choice) {
+  if (choice.type === "job_event" || choice.tags?.includes("job")) {
+    return "job";
+  }
+  if (choice.type === "hunt_event" || choice.type === "hunt" || choice.tags?.includes("hunt")) {
+    return "hunt";
+  }
+  return choice.tags?.[0] ?? choice.type ?? choice.templateId;
+}
+
 export function generateBasicJobEvent(state) {
   const jobOptions = sampleJobs(getAvailableBasicJobs(state), 3);
   if (jobOptions.length === 0) {
@@ -286,9 +293,15 @@ function createBossChoice(bossId, final = false) {
 }
 
 function createMonsterOptions(state, template) {
-  const pool = chooseMonsterPool(state, template.elite);
-  const selected = sampleItems(pool, 3);
-  return selected.map((monster) => {
+  const slots = [
+    { difficulty: "easy", levelOffset: template.elite ? 0 : -1, difficultyScale: 0.88, rewardMultiplier: 0.85 },
+    { difficulty: "normal", levelOffset: template.elite ? 1 : 0, difficultyScale: 1, rewardMultiplier: 1 },
+    { difficulty: "dangerous", levelOffset: template.elite ? 3 : 2, difficultyScale: 1.28, rewardMultiplier: 1.45 }
+  ];
+  const usedMonsterIds = new Set();
+  return slots.map((slot) => {
+    const monster = chooseMonsterForSlot(state, template.elite, slot.levelOffset, usedMonsterIds);
+    usedMonsterIds.add(monster.id);
     const category = monster.relicCategories[Math.floor(Math.random() * monster.relicCategories.length)];
     return {
       id: `${template.id}_${monster.id}_${Math.random()}`,
@@ -296,29 +309,27 @@ function createMonsterOptions(state, template) {
       type: "hunt",
       monsterId: monster.id,
       elite: template.elite,
+      difficulty: slot.difficulty,
+      difficultyScale: slot.difficultyScale,
+      rewardMultiplier: slot.rewardMultiplier,
       category,
-      xp: monster.xp,
+      xp: Math.round(monster.xp * slot.rewardMultiplier),
       enemyDamageType: getEnemyDamageType(monster),
       enemyDefenseProfile: monster.stats.MD > monster.stats.PD ? "high_magic_defense" : "high_physical_defense",
-      winRate: estimateWinRate(state, monster, { elite: template.elite })
+      winRate: estimateWinRate(state, monster, { elite: template.elite, difficultyScale: slot.difficultyScale })
     };
   });
 }
 
-function chooseMonsterPool(state, elite) {
-  const targetLevel = Math.max(1, Math.floor((state.day + 2) / 3) + (elite ? 2 : 0));
-  const pool = Object.values(monsters).filter((monster) => monster.level <= targetLevel + 2 && monster.level >= targetLevel - 2);
-  return pool.length >= 3 ? pool : Object.values(monsters);
-}
-
-function sampleItems(items, limit) {
-  const pool = [...items];
-  const result = [];
-  while (pool.length > 0 && result.length < limit) {
-    const index = Math.floor(Math.random() * pool.length);
-    result.push(pool.splice(index, 1)[0]);
+function chooseMonsterForSlot(state, elite, levelOffset, usedMonsterIds) {
+  const targetLevel = Math.max(1, Math.floor((state.day + 2) / 3) + (elite ? 2 : 0) + levelOffset);
+  const available = Object.values(monsters).filter((monster) => !usedMonsterIds.has(monster.id));
+  const exactPool = available.filter((monster) => monster.level === targetLevel);
+  if (exactPool.length > 0) {
+    return exactPool[Math.floor(Math.random() * exactPool.length)];
   }
-  return result;
+  return available
+    .sort((a, b) => Math.abs(a.level - targetLevel) - Math.abs(b.level - targetLevel) || a.level - b.level)[0] ?? Object.values(monsters)[0];
 }
 
 function getEnemyDamageType(monster) {

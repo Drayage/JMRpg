@@ -5,7 +5,7 @@ import { addSkillMasteryFromXp, learnSkill } from "./skills.js";
 import { getJobXpPreserveRatio } from "./relics.js";
 
 export function isJobUnlocked(state, jobId) {
-  return state.unlockedJobs.includes(jobId);
+  return isJobActuallyAvailable(state, jobId);
 }
 
 export function isJobDiscovered(state, jobId) {
@@ -19,7 +19,7 @@ export function getJobState(state, jobId) {
   if (state.visitedJobs.includes(jobId)) {
     return "VISITED";
   }
-  if (state.unlockedJobs.includes(jobId)) {
+  if (isJobActuallyAvailable(state, jobId)) {
     return "AVAILABLE";
   }
   if (isJobDiscovered(state, jobId)) {
@@ -29,15 +29,18 @@ export function getJobState(state, jobId) {
 }
 
 export function getAvailableJobs(state) {
+  sanitizeUnlockedJobs(state);
   return state.unlockedJobs.filter((jobId) => jobs[jobId]);
 }
 
 export function getAvailableBasicJobs(state) {
+  sanitizeUnlockedJobs(state);
   return state.unlockedJobs.filter((jobId) => jobs[jobId]?.tier === 1 && jobId !== state.currentJobId);
 }
 
 export function getAvailableAdvancedJobs(state) {
-  return state.unlockedJobs.filter((jobId) => jobs[jobId]?.tier > 1 && jobId !== state.currentJobId);
+  sanitizeUnlockedJobs(state);
+  return state.unlockedJobs.filter((jobId) => jobs[jobId]?.tier > 1 && jobId !== state.currentJobId && areJobConditionsMet(state, jobs[jobId]));
 }
 
 export function changeJob(state, jobId) {
@@ -183,6 +186,7 @@ function masterCurrentJob(state, messages, summary = null) {
 }
 
 export function updateJobDiscovery(state, messages = [], summary = null) {
+  sanitizeUnlockedJobs(state);
   state.discoveredJobs = state.discoveredJobs ?? [];
   for (const job of Object.values(jobs)) {
     if (job.tier === 1) {
@@ -204,6 +208,21 @@ export function updateJobDiscovery(state, messages = [], summary = null) {
       addDiscoveredJob(state, job.id);
     }
   }
+}
+
+function sanitizeUnlockedJobs(state) {
+  state.unlockedJobs = [...new Set(state.unlockedJobs)].filter((jobId) => isJobActuallyAvailable(state, jobId));
+}
+
+function isJobActuallyAvailable(state, jobId) {
+  const job = jobs[jobId];
+  if (!job) {
+    return false;
+  }
+  if (job.tier === 1) {
+    return state.unlockedJobs.includes(jobId);
+  }
+  return state.unlockedJobs.includes(jobId) && areJobConditionsMet(state, job);
 }
 
 function addDiscoveredJob(state, jobId) {

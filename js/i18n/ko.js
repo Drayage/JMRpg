@@ -70,7 +70,13 @@ export const ko = {
     pendingRelic: "유물 선택",
     acceptRelic: "유물 받기",
     declineRelic: "유물 안얻기",
-    declinedRelic: "거절한 유물"
+    declinedRelic: "거절한 유물",
+    easyHunt: "쉬움",
+    normalHunt: "보통",
+    dangerousHunt: "위험",
+    noBattleRewards: "패배 보상 없음",
+    viewBattleLog: "전투 로그 보기",
+    closeBattleLog: "닫기"
   },
   stats: {
     HP: "HP",

@@ -4,11 +4,12 @@ import {
   gameOverPanel,
   jobsPanel,
   logPanel,
+  battleLogModal,
   relicsPanel,
   skillsPanel,
   statsPanel,
   statusPanel
-} from "./panels.js";
+} from "./panels.js?v=20260605-5";
 
 export function render(app, state) {
   app.innerHTML = `
@@ -27,5 +28,6 @@ export function render(app, state) {
       ${relicsPanel(state)}
       ${logPanel(state)}
     </div>
+    ${battleLogModal(state)}
   `;
 }
