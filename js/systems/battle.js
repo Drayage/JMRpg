@@ -3,15 +3,15 @@ import { getDamageMultiplier, getEliteIncomingDamageMultiplier, getNormalLossXpM
 import { getEffectiveActivationChance } from "./skills.js";
 import { getEffectiveStats, scoreStats } from "./stats.js";
 
-export function estimateWinRate(state, enemy) {
+export function estimateWinRate(state, enemy, options = {}) {
   const playerScore = scoreStats(getEffectiveStats(state)) + state.player.equippedSkills.length * 12 + state.player.relics.length * 8;
-  const enemyScore = scoreStats(enemy.stats);
+  const enemyScore = scoreStats(scaleBattleStats(enemy.stats, getEnemyHpScale(options)));
   return Math.max(8, Math.min(92, Math.round((playerScore / (playerScore + enemyScore)) * 100)));
 }
 
 export function createBattle(state, enemy, options = {}) {
   const playerStats = scaleBattleStats(getEffectiveStats(state), 1.75);
-  const enemyScale = options.final ? 2.25 : options.boss ? 2 : options.elite ? 1.85 : 1.65;
+  const enemyScale = getEnemyHpScale(options);
   const enemyStats = scaleBattleStats(enemy.stats, enemyScale);
   const order = playerStats.SPD >= enemyStats.SPD ? ["player", "enemy"] : ["enemy", "player"];
 
@@ -123,6 +123,10 @@ function scaleBattleStats(stats, hpMultiplier) {
   return { ...stats, HP: Math.round(stats.HP * hpMultiplier) };
 }
 
+function getEnemyHpScale(options = {}) {
+  return options.final ? 2.45 : options.boss ? 2.18 : options.elite ? 2.25 : 1.9;
+}
+
 function resolvePlayerTurn(state, battle, player, foe, traits) {
   const activeSkills = state.player.equippedSkills.map((id) => skills[id]).filter((skill) => skill && skill.type !== "passive");
   const priority = activeSkills.filter((skill) => skill.priority);
@@ -150,7 +154,7 @@ function resolveEnemyTurn(state, battle, player, foe, enemyId) {
   if (Math.random() * 100 > Math.max(12, foe.stats.ACC - player.stats.EVA)) {
     return { skillId: null, text: `${enemyId} missed.`, damage: 0, heal: 0, miss: true, crit: false, block: false, status: null };
   }
-  const raw = foe.stats.PA * (0.55 + Math.random() * 0.24) * getEliteIncomingDamageMultiplier(state, battle) * getStalemateDamageMultiplier(battle);
+  const raw = foe.stats.PA * (0.64 + Math.random() * 0.28) * getEliteIncomingDamageMultiplier(state, battle) * getStalemateDamageMultiplier(battle);
   const blocked = player.guard > 0;
   const damage = Math.max(1, Math.round(raw - player.stats.PD * 0.38 - player.guard));
   player.guard = Math.max(0, player.guard - 4);

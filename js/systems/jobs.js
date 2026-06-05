@@ -1,10 +1,31 @@
 import { jobs } from "../data/jobs.js";
+import { relics } from "../data/relics.js";
 import { addStats, statKeys } from "./stats.js";
 import { addSkillMasteryFromXp, learnSkill } from "./skills.js";
 import { getJobXpPreserveRatio } from "./relics.js";
 
 export function isJobUnlocked(state, jobId) {
   return state.unlockedJobs.includes(jobId);
+}
+
+export function isJobDiscovered(state, jobId) {
+  return state.discoveredJobs.includes(jobId) || isJobUnlocked(state, jobId);
+}
+
+export function getJobState(state, jobId) {
+  if (state.masteredJobs.includes(jobId)) {
+    return "MASTERED";
+  }
+  if (state.visitedJobs.includes(jobId)) {
+    return "VISITED";
+  }
+  if (state.unlockedJobs.includes(jobId)) {
+    return "AVAILABLE";
+  }
+  if (isJobDiscovered(state, jobId)) {
+    return "DISCOVERED";
+  }
+  return "UNKNOWN";
 }
 
 export function getAvailableJobs(state) {
@@ -33,6 +54,7 @@ export function changeJob(state, jobId) {
   if (!state.visitedJobs.includes(jobId)) {
     state.visitedJobs.push(jobId);
   }
+  updateJobDiscovery(state);
   state.activeJobEvent = null;
   state.log.unshift({ type: "job", text: `Changed job to ${jobId}. Preserved ${preservedXp} job XP.` });
   if (state.pendingJobXp > 0) {
@@ -88,6 +110,7 @@ export function grantJobXp(state, xp, tag = null) {
       summary.skillsMastered.push(masteredSkillId);
       messages.push(`Mastered skill ${masteredSkillId}.`);
     }
+    updateJobDiscovery(state, messages, summary);
 
     const afterPercent = getCurrentJobProgress(state);
     for (const milestone of job.milestones) {
@@ -155,7 +178,38 @@ function masterCurrentJob(state, messages, summary = null) {
       messages.push(`Added ${unlockedJobId} to the job candidate pool.`);
     }
   }
+  updateJobDiscovery(state, messages, summary);
   state.player.currentJobXp = job.xpRequired;
+}
+
+export function updateJobDiscovery(state, messages = [], summary = null) {
+  state.discoveredJobs = state.discoveredJobs ?? [];
+  for (const job of Object.values(jobs)) {
+    if (job.tier === 1) {
+      addDiscoveredJob(state, job.id);
+      continue;
+    }
+    if (areJobConditionsMet(state, job)) {
+      addDiscoveredJob(state, job.id);
+      if (!state.unlockedJobs.includes(job.id)) {
+        state.unlockedJobs.push(job.id);
+        if (summary && !summary.jobsUnlocked.includes(job.id)) {
+          summary.jobsUnlocked.push(job.id);
+        }
+        messages.push(`Added ${job.id} to the job candidate pool.`);
+      }
+      continue;
+    }
+    if (shouldRevealJob(state, job)) {
+      addDiscoveredJob(state, job.id);
+    }
+  }
+}
+
+function addDiscoveredJob(state, jobId) {
+  if (!state.discoveredJobs.includes(jobId)) {
+    state.discoveredJobs.push(jobId);
+  }
 }
 
 function getJobsUnlockedByConditions(state) {
@@ -171,13 +225,74 @@ function areJobConditionsMet(state, job) {
   if (requires.masteredAll?.length && !requires.masteredAll.every((id) => state.masteredJobs.includes(id))) {
     return false;
   }
+  if (requires.visitedAll?.length && !requires.visitedAll.every((id) => state.visitedJobs.includes(id))) {
+    return false;
+  }
   if (requires.masteredAny?.length && !requires.masteredAny.some((id) => state.masteredJobs.includes(id))) {
     return false;
   }
   if (requires.visitedAny?.length && !requires.visitedAny.some((id) => state.visitedJobs.includes(id))) {
     return false;
   }
+  if (requires.skillMasteredAll?.length && !requires.skillMasteredAll.every((id) => (state.player.skillMastery[id] ?? 0) >= 100)) {
+    return false;
+  }
+  if (requires.requiredTags?.length && !requires.requiredTags.every((tag) => getPlayerJobTags(state).includes(tag))) {
+    return false;
+  }
+  if (requires.statThresholds && !Object.entries(requires.statThresholds).every(([key, value]) => (state.player.stats[key] ?? 0) >= value)) {
+    return false;
+  }
+  if (requires.relicCategoriesAny?.length && !state.player.relics.some((relicId) => requires.relicCategoriesAny.includes(getRelicCategory(relicId)))) {
+    return false;
+  }
+  if (requires.relicTagsAny?.length && !state.player.relics.some((relicId) => getRelicTags(relicId).some((tag) => requires.relicTagsAny.includes(tag)))) {
+    return false;
+  }
   return true;
+}
+
+function shouldRevealJob(state, job) {
+  const requires = job.requires ?? {};
+  const signals = [
+    ...(requires.masteredAll ?? []),
+    ...(requires.masteredAny ?? []),
+    ...(requires.visitedAll ?? []),
+    ...(requires.visitedAny ?? [])
+  ];
+  if (signals.some((id) => state.visitedJobs.includes(id) || state.masteredJobs.includes(id))) {
+    return true;
+  }
+  if ((requires.requiredTags ?? []).some((tag) => getPlayerJobTags(state).includes(tag))) {
+    return true;
+  }
+  if (requires.statThresholds && Object.entries(requires.statThresholds).some(([key, value]) => (state.player.stats[key] ?? 0) >= value * 0.75)) {
+    return true;
+  }
+  if ((requires.skillMasteredAll ?? []).some((id) => state.player.learnedSkills.includes(id) || (state.player.skillMastery[id] ?? 0) > 0)) {
+    return true;
+  }
+  if ((requires.relicCategoriesAny ?? []).some((category) => state.player.relics.some((relicId) => getRelicCategory(relicId) === category))) {
+    return true;
+  }
+  return false;
+}
+
+export function getPlayerJobTags(state) {
+  const jobIds = [...new Set([...state.visitedJobs, ...state.masteredJobs])];
+  return [...new Set(jobIds.flatMap((jobId) => jobs[jobId]?.themes ?? []))];
+}
+
+export function getJobRequirementHints(job) {
+  return job.revealHints ?? [];
+}
+
+function getRelicCategory(relicId) {
+  return relics[relicId]?.category ?? null;
+}
+
+function getRelicTags(relicId) {
+  return relics[relicId]?.tags ?? [];
 }
 
 function canChangeJobFromActiveEvent(state, jobId) {

@@ -3,7 +3,7 @@ import { eventTemplates } from "../data/events.js";
 import { monsters } from "../data/monsters.js";
 import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomUnownedRelic, rejectRelic } from "./relics.js";
 import { addStats } from "./stats.js";
-import { getAvailableAdvancedJobs, getAvailableBasicJobs, grantJobXp } from "./jobs.js";
+import { getAvailableAdvancedJobs, getAvailableBasicJobs, grantJobXp, updateJobDiscovery } from "./jobs.js";
 import { createBattle, estimateWinRate, getBattleReward } from "./battle.js";
 
 export function generateChoices(state) {
@@ -21,13 +21,15 @@ export function generateChoices(state) {
   }
 
   const choices = [];
-  while (choices.length < 3) {
+  let attempts = 0;
+  while (choices.length < 3 && attempts < 80) {
+    attempts += 1;
     const template = weightedTemplate(state);
     const choice = createChoiceFromTemplate(state, template);
     if (!choice) {
       continue;
     }
-    if (!choices.some((item) => item.id === choice.id && item.monsterId === choice.monsterId)) {
+    if (!choices.some((item) => item.templateId === choice.templateId)) {
       choices.push(choice);
     }
   }
@@ -51,7 +53,13 @@ export function resolveChoice(state, choiceId) {
     const xpSummary = grantJobXp(state, xp);
     setActionResult(state, choice, { xpSummary });
   }
-  if (choice.type === "hunt" || choice.type === "boss") {
+  if (choice.type === "hunt_event") {
+    state.activeHuntEvent = choice;
+    state.log.unshift({ type: "event", text: `Opened ${choice.elite ? "elite" : "normal"} hunt candidates.` });
+    return;
+  }
+
+  if (choice.type === "boss") {
     const enemy = choice.type === "boss" ? bosses[choice.monsterId] : monsters[choice.monsterId];
     state.battle = createBattle(state, enemy, { category: choice.category, elite: choice.elite, boss: choice.type === "boss", final: choice.final });
     state.pendingBattleChoice = choice;
@@ -80,6 +88,20 @@ export function resolveChoice(state, choiceId) {
     }
     setActionResult(state, choice, { xpSummary, pendingRelicId: relicId });
   }
+}
+
+export function selectHuntMonster(state, monsterChoiceId) {
+  const huntEvent = state.activeHuntEvent;
+  const choice = huntEvent?.monsterOptions.find((item) => item.id === monsterChoiceId);
+  if (!choice) {
+    return null;
+  }
+  const enemy = monsters[choice.monsterId];
+  state.battle = createBattle(state, enemy, { category: choice.category, elite: choice.elite });
+  state.pendingBattleChoice = choice;
+  state.activeHuntEvent = null;
+  state.busy = true;
+  return { battle: state.battle };
 }
 
 export function finishBattleAction(state) {
@@ -121,9 +143,12 @@ export function acceptPendingRelic(state) {
   const addedRelicId = addRelic(state, relicId);
   state.actionResult.pendingRelicId = null;
   if (addedRelicId) {
+    const beforeUnlockedJobs = [...state.unlockedJobs];
     state.actionResult.relicId = addedRelicId;
     markRelicChanged(state, addedRelicId);
     state.log.unshift({ type: "relic", text: `Found relic ${addedRelicId}.` });
+    updateJobDiscovery(state, [], state.actionResult.xpSummary ?? null);
+    state.actionResult.jobsUnlocked = state.unlockedJobs.filter((jobId) => !beforeUnlockedJobs.includes(jobId));
   }
   return addedRelicId;
 }
@@ -162,6 +187,7 @@ export function continueAction(state) {
   state.battle = null;
   state.pendingBattleChoice = null;
   state.activeJobEvent = null;
+  state.activeHuntEvent = null;
   state.changed = {};
   advanceTime(state, { changedJob });
 }
@@ -197,23 +223,16 @@ function createChoiceFromTemplate(state, template) {
     return generateAdvancedJobEvent(state);
   }
   if (template.type === "hunt") {
-    const monster = chooseMonster(state, template.elite);
-    const category = monster.relicCategories[Math.floor(Math.random() * monster.relicCategories.length)];
     return {
-      id: `${template.id}_${monster.id}`,
+      id: `${template.id}_${Math.random()}`,
       templateId: template.id,
-      type: "hunt",
-      monsterId: monster.id,
+      type: "hunt_event",
       elite: template.elite,
-      category,
-      xp: monster.xp,
-      enemyDamageType: monster.stats.MA > monster.stats.PA ? "magic" : "physical",
-      enemyDefenseProfile: monster.stats.MD > monster.stats.PD ? "high_magic_defense" : "high_physical_defense",
-      winRate: estimateWinRate(state, monster)
+      monsterOptions: createMonsterOptions(state, template)
     };
   }
   if (template.type === "relic") {
-    const categories = ["holy", "melee", "magic", "poison", "dragon", "dark"];
+    const categories = ["holy", "melee", "magic", "poison", "dragon", "dark", "summon"];
     return { ...template, id: `${template.id}_${Math.random()}`, templateId: template.id, category: categories[Math.floor(Math.random() * categories.length)] };
   }
   if (template.type === "stats") {
@@ -266,10 +285,47 @@ function createBossChoice(bossId, final = false) {
   };
 }
 
-function chooseMonster(state, elite) {
+function createMonsterOptions(state, template) {
+  const pool = chooseMonsterPool(state, template.elite);
+  const selected = sampleItems(pool, 3);
+  return selected.map((monster) => {
+    const category = monster.relicCategories[Math.floor(Math.random() * monster.relicCategories.length)];
+    return {
+      id: `${template.id}_${monster.id}_${Math.random()}`,
+      templateId: template.id,
+      type: "hunt",
+      monsterId: monster.id,
+      elite: template.elite,
+      category,
+      xp: monster.xp,
+      enemyDamageType: getEnemyDamageType(monster),
+      enemyDefenseProfile: monster.stats.MD > monster.stats.PD ? "high_magic_defense" : "high_physical_defense",
+      winRate: estimateWinRate(state, monster, { elite: template.elite })
+    };
+  });
+}
+
+function chooseMonsterPool(state, elite) {
   const targetLevel = Math.max(1, Math.floor((state.day + 2) / 3) + (elite ? 2 : 0));
   const pool = Object.values(monsters).filter((monster) => monster.level <= targetLevel + 2 && monster.level >= targetLevel - 2);
-  return pool[Math.floor(Math.random() * pool.length)] ?? Object.values(monsters)[0];
+  return pool.length >= 3 ? pool : Object.values(monsters);
+}
+
+function sampleItems(items, limit) {
+  const pool = [...items];
+  const result = [];
+  while (pool.length > 0 && result.length < limit) {
+    const index = Math.floor(Math.random() * pool.length);
+    result.push(pool.splice(index, 1)[0]);
+  }
+  return result;
+}
+
+function getEnemyDamageType(monster) {
+  if (monster.damageType && monster.damageType !== "mixed") {
+    return monster.damageType;
+  }
+  return monster.stats.MA > monster.stats.PA ? "magic" : "physical";
 }
 
 function weightedTemplate(state) {

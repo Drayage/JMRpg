@@ -70,5 +70,35 @@ export const relics = {
     category: "holy",
     tags: ["ap", "mastery"],
     rules: [{ type: "mastered_skill_ap_discount", amount: 1, minimumCost: 1 }]
+  },
+  dragon_heart: {
+    id: "dragon_heart",
+    category: "dragon",
+    tags: ["dragon", "boss", "risk"],
+    rules: [{ type: "boss_damage", multiplier: 1.25 }, { type: "elite_reward_damage", rewardMultiplier: 1.2, incomingDamageMultiplier: 1.1 }]
+  },
+  holy_grail: {
+    id: "holy_grail",
+    category: "holy",
+    tags: ["holy", "support", "focus"],
+    rules: [{ type: "low_ap_mastery", threshold: 6, multiplier: 1.25 }]
+  },
+  summoner_chalk: {
+    id: "summoner_chalk",
+    category: "summon",
+    tags: ["summon", "activation"],
+    rules: [{ type: "off_theme_activation_bonus", amount: 0.03 }]
+  },
+  black_candle: {
+    id: "black_candle",
+    category: "dark",
+    tags: ["dark", "mastery", "risk"],
+    rules: [{ type: "focused_mastery", maxBonus: 1.2 }, { type: "normal_loss_xp", multiplier: 0.5 }]
+  },
+  broken_crown: {
+    id: "broken_crown",
+    category: "dark",
+    tags: ["advanced", "job"],
+    rules: [{ type: "advanced_event_weight", multiplier: 1.6 }]
   }
 };

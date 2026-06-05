@@ -2,7 +2,7 @@ import { bosses } from "./data/bosses.js";
 import { createBaseStats } from "./systems/stats.js";
 
 export function createInitialState() {
-  const finalBossPool = ["fallen_seraph", "iron_tyrant", "plague_dragon"];
+  const finalBossPool = ["fallen_seraph", "iron_tyrant", "plague_dragon", "mirror_queen", "world_serpent"];
   const finalBossId = finalBossPool[Math.floor(Math.random() * finalBossPool.length)];
   return {
     day: 1,
@@ -15,10 +15,12 @@ export function createInitialState() {
     victory: false,
     currentJobId: "warrior",
     unlockedJobs: ["warrior", "archer", "rogue", "cleric", "wizard"],
+    discoveredJobs: ["warrior", "archer", "rogue", "cleric", "wizard"],
     visitedJobs: ["warrior"],
     masteredJobs: [],
     rejectedRelics: [],
     activeJobEvent: null,
+    activeHuntEvent: null,
     pendingJobXp: 0,
     actionsSinceJobChange: 0,
     actionResult: null,
@@ -29,7 +31,7 @@ export function createInitialState() {
     player: {
       stats: createBaseStats(),
       currentJobXp: 0,
-      ap: 3,
+      ap: 4,
       learnedSkills: ["basic_attack"],
       equippedSkills: ["basic_attack"],
       skillMastery: {},

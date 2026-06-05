@@ -3,7 +3,7 @@ import { jobs } from "../data/jobs.js";
 import { monsters } from "../data/monsters.js";
 import { relics } from "../data/relics.js";
 import { skills } from "../data/skills.js";
-import { getCurrentJobProgress, isJobUnlocked } from "../systems/jobs.js";
+import { getCurrentJobProgress, getJobRequirementHints, getJobState, isJobDiscovered, isJobUnlocked } from "../systems/jobs.js";
 import { canEquipSkill, getEffectiveApCost, getEquippedApCost, getEquippedSlotCount, getSkillEstimate, skillSlotLimits } from "../systems/skills.js";
 import { getRelicCurrentValue } from "../systems/relics.js";
 import { getStalemateDamageMultiplier } from "../systems/battle.js";
@@ -76,12 +76,28 @@ export function choicesPanel(state) {
   }
   return panel(`
     <div class="title-row"><h2>${ko.ui.eventChoices}</h2></div>
-    ${state.activeJobEvent ? activeJobEventPanel(state) : `
+    ${state.activeJobEvent ? activeJobEventPanel(state) : state.activeHuntEvent ? activeHuntEventPanel(state) : `
       <div class="choice-list">
         ${state.choices.length ? state.choices.map((choice) => choiceButton(choice, state)).join("") : `<p class="muted">${ko.ui.noChoices}</p>`}
       </div>
     `}
   `);
+}
+
+function activeHuntEventPanel(state) {
+  const event = state.activeHuntEvent;
+  return `
+    <div class="card stack">
+      <div class="title-row">
+        <h3>${eventName(event.templateId)}</h3>
+        <span class="tag warn">${event.elite ? "Elite" : "Hunt"}</span>
+      </div>
+      <p class="small muted">${eventDesc(event.templateId)}</p>
+      <div class="choice-list">
+        ${event.monsterOptions.map((choice) => monsterChoiceButton(choice, state)).join("")}
+      </div>
+    </div>
+  `;
 }
 
 export function jobsPanel(state) {
@@ -194,6 +210,7 @@ function resultPanel(state) {
       ${statResultRows(result.statChanges ?? result.xpSummary?.statChanges)}
       ${skillResultRows(result.xpSummary)}
       ${unlockResultRows(result.xpSummary)}
+      ${directUnlockResultRows(result)}
       ${result.pendingRelicId ? pendingRelicChoice(result.pendingRelicId) : ""}
       ${result.relicId ? resultLine(ko.ui.relics, `${relicName(result.relicId)} - ${relicDesc(result.relicId)}`) : ""}
       ${result.relicDeclinedId ? resultLine(ko.ui.declinedRelic ?? "Declined Relic", `${relicName(result.relicDeclinedId)} - ${relicDesc(result.relicDeclinedId)}`) : ""}
@@ -217,10 +234,23 @@ function activeJobEventPanel(state) {
 }
 
 function jobOption(state, job, canChangeFromEvent) {
+  const jobState = getJobState(state, job.id);
+  const discovered = isJobDiscovered(state, job.id);
   const unlocked = isJobUnlocked(state, job.id);
   const mastered = state.masteredJobs.includes(job.id);
   const current = state.currentJobId === job.id;
   const percent = current ? getCurrentJobProgress(state) : 0;
+  if (!discovered) {
+    return `
+      <div class="card job-option">
+        <div>
+          <div class="split-row"><h3>????</h3><span class="tag">${jobState}</span></div>
+          <p class="small muted">Requirements: ????</p>
+        </div>
+        <button disabled>${ko.ui.changeJob}</button>
+      </div>
+    `;
+  }
   const milestones = job.milestones.map((milestone) => {
     if (milestone.type === "skill") {
       return `${milestone.percent}% ${skillName(milestone.skillId)} - ${skillDesc(milestone.skillId)}`;
@@ -232,13 +262,15 @@ function jobOption(state, job, canChangeFromEvent) {
     .map((candidate) => jobName(candidate.id))
     .join(", ");
   const buttonDisabled = !canChangeFromEvent || !unlocked || current;
+  const hints = getJobRequirementHints(job);
 
   return `
     <div class="card job-option ${changedClass(state.changed.jobs?.[job.id])}">
       <div>
-        <div class="split-row"><h3>${jobName(job.id)}</h3><span class="tag ${mastered ? "ok" : unlocked ? "warn" : ""}">${mastered ? ko.ui.mastered : unlocked ? ko.ui.available : ko.ui.locked}</span></div>
+        <div class="split-row"><h3>${jobName(job.id)}</h3><span class="tag ${mastered ? "ok" : unlocked ? "warn" : ""}">${jobState}</span></div>
         <p class="small muted">${jobDesc(job.id)}</p>
         <p class="small">XP ${job.xpRequired} / ${growthText(job.growth)}</p>
+        ${hints.length ? `<p class="small muted">Requirements: ${hints.join(" / ")}</p>` : ""}
         <p class="small muted">${milestones}</p>
         ${advanced ? `<p class="small muted">Advanced: ${advanced}</p>` : ""}
         ${current ? progressBar(percent, 100, "job-xp") : ""}
@@ -284,6 +316,18 @@ function choiceButton(choice, state) {
     <button class="choice" data-action="choose-event" data-choice-id="${choice.id}">
       <div class="split-row"><h3>${title}</h3><span class="tag warn">${ko.ui.choose}</span></div>
       <p class="small muted">${desc}</p>
+      <div class="meta">
+        ${choicePreviewTags(choice, state)}
+      </div>
+    </button>
+  `;
+}
+
+function monsterChoiceButton(choice, state) {
+  return `
+    <button class="choice" data-action="choose-monster" data-monster-choice-id="${choice.id}">
+      <div class="split-row"><h3>${monsterName(choice.monsterId)}</h3><span class="tag warn">${ko.ui.choose}</span></div>
+      <p class="small muted">${eventName(choice.templateId)}</p>
       <div class="meta">
         ${choicePreviewTags(choice, state)}
       </div>
@@ -352,6 +396,9 @@ function choicePreviewTags(choice, state) {
   const tags = [];
   if (choice.jobOptions) {
     tags.push(tag(choice.jobOptions.map((jobId) => jobName(jobId)).join(", ") || ko.ui.noChoices, choice.jobOptions.length ? "warn" : "danger"));
+  }
+  if (choice.monsterOptions) {
+    tags.push(tag(choice.monsterOptions.map((item) => monsterName(item.monsterId)).join(", "), "warn"));
   }
   if (choice.winRate !== null && choice.winRate !== undefined) {
     tags.push(tag(`${ko.ui.winRate} ${choice.winRate}%`, choice.winRate >= 60 ? "ok" : choice.winRate <= 35 ? "danger" : "warn"));
@@ -422,6 +469,11 @@ function unlockResultRows(summary) {
     summary.jobMastered ? `${ko.ui.mastered}: ${jobName(summary.jobMastered)}` : ""
   ].filter(Boolean);
   return items.length ? resultLine(ko.ui.unlocked, items.join(", ")) : "";
+}
+
+function directUnlockResultRows(result) {
+  const jobsUnlocked = result.jobsUnlocked ?? [];
+  return jobsUnlocked.length ? resultLine(ko.ui.unlocked, jobsUnlocked.map((jobId) => jobName(jobId)).join(", ")) : "";
 }
 
 function battleResultRows(result) {

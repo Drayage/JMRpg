@@ -1,98 +1,25 @@
 export const monsters = {
-  training_dummy: {
-    id: "training_dummy",
-    level: 1,
-    category: "melee",
-    stats: { HP: 50, PA: 8, PD: 2, MA: 0, MD: 1, SPD: 5, ACC: 80, EVA: 3, CRT: 3, CRD: 25 },
-    xp: 24,
-    relicCategories: ["melee"]
-  },
-  cave_wolf: {
-    id: "cave_wolf",
-    level: 2,
-    category: "agile",
-    stats: { HP: 65, PA: 11, PD: 3, MA: 0, MD: 2, SPD: 12, ACC: 84, EVA: 10, CRT: 5, CRD: 35 },
-    xp: 34,
-    relicCategories: ["melee", "dark"]
-  },
-  bone_spearman: {
-    id: "bone_spearman",
-    level: 3,
-    category: "melee",
-    stats: { HP: 82, PA: 14, PD: 6, MA: 0, MD: 3, SPD: 8, ACC: 78, EVA: 4, CRT: 4, CRD: 30 },
-    xp: 44,
-    relicCategories: ["melee", "dark"]
-  },
-  swamp_witch: {
-    id: "swamp_witch",
-    level: 4,
-    category: "magic",
-    stats: { HP: 78, PA: 5, PD: 3, MA: 16, MD: 8, SPD: 7, ACC: 82, EVA: 6, CRT: 4, CRD: 25 },
-    xp: 52,
-    relicCategories: ["magic", "poison"]
-  },
-  shrine_keeper: {
-    id: "shrine_keeper",
-    level: 5,
-    category: "holy",
-    stats: { HP: 96, PA: 10, PD: 7, MA: 14, MD: 11, SPD: 8, ACC: 84, EVA: 5, CRT: 4, CRD: 30 },
-    xp: 64,
-    relicCategories: ["holy"]
-  },
-  toxic_slime: {
-    id: "toxic_slime",
-    level: 5,
-    category: "poison",
-    stats: { HP: 112, PA: 9, PD: 5, MA: 9, MD: 5, SPD: 5, ACC: 80, EVA: 2, CRT: 2, CRD: 20 },
-    xp: 66,
-    relicCategories: ["poison"]
-  },
-  mirror_duelist: {
-    id: "mirror_duelist",
-    level: 6,
-    category: "agile",
-    stats: { HP: 105, PA: 18, PD: 6, MA: 0, MD: 5, SPD: 16, ACC: 88, EVA: 14, CRT: 9, CRD: 40 },
-    xp: 78,
-    relicCategories: ["melee", "dark"]
-  },
-  ember_mage: {
-    id: "ember_mage",
-    level: 7,
-    category: "magic",
-    stats: { HP: 115, PA: 6, PD: 4, MA: 23, MD: 12, SPD: 9, ACC: 86, EVA: 7, CRT: 5, CRD: 30 },
-    xp: 88,
-    relicCategories: ["magic", "dragon"]
-  },
-  grave_paladin: {
-    id: "grave_paladin",
-    level: 8,
-    category: "holy",
-    stats: { HP: 155, PA: 20, PD: 14, MA: 13, MD: 13, SPD: 8, ACC: 84, EVA: 4, CRT: 5, CRD: 35 },
-    xp: 102,
-    relicCategories: ["holy", "melee"]
-  },
-  venom_archer: {
-    id: "venom_archer",
-    level: 8,
-    category: "poison",
-    stats: { HP: 130, PA: 18, PD: 7, MA: 0, MD: 7, SPD: 15, ACC: 94, EVA: 11, CRT: 8, CRD: 38 },
-    xp: 104,
-    relicCategories: ["poison", "dark"]
-  },
-  young_drake: {
-    id: "young_drake",
-    level: 9,
-    category: "dragon",
-    stats: { HP: 185, PA: 25, PD: 15, MA: 10, MD: 10, SPD: 10, ACC: 86, EVA: 6, CRT: 6, CRD: 35 },
-    xp: 122,
-    relicCategories: ["dragon"]
-  },
-  abyss_knight: {
-    id: "abyss_knight",
-    level: 10,
-    category: "dark",
-    stats: { HP: 210, PA: 28, PD: 17, MA: 18, MD: 14, SPD: 11, ACC: 88, EVA: 8, CRT: 8, CRD: 45 },
-    xp: 145,
-    relicCategories: ["dark", "melee"]
-  }
+  training_dummy: { id: "training_dummy", level: 1, category: "melee", damageType: "physical", traits: [], stats: { HP: 60, PA: 7, PD: 2, MA: 0, MD: 1, SPD: 5, ACC: 80, EVA: 3, CRT: 3, CRD: 25 }, xp: 24, relicCategories: ["melee"] },
+  skeleton: { id: "skeleton", level: 2, category: "dark", damageType: "physical", traits: ["holy_weakness"], stats: { HP: 70, PA: 10, PD: 5, MA: 0, MD: 2, SPD: 6, ACC: 78, EVA: 3, CRT: 3, CRD: 25 }, xp: 32, relicCategories: ["dark", "melee"] },
+  cave_wolf: { id: "cave_wolf", level: 2, category: "agile", damageType: "physical", traits: [], stats: { HP: 68, PA: 11, PD: 3, MA: 0, MD: 2, SPD: 12, ACC: 84, EVA: 10, CRT: 5, CRD: 35 }, xp: 34, relicCategories: ["melee", "dark"] },
+  goblin_hexer: { id: "goblin_hexer", level: 3, category: "magic", damageType: "magic", traits: [], stats: { HP: 74, PA: 5, PD: 3, MA: 13, MD: 6, SPD: 8, ACC: 82, EVA: 7, CRT: 4, CRD: 25 }, xp: 42, relicCategories: ["magic"] },
+  bone_spearman: { id: "bone_spearman", level: 3, category: "melee", damageType: "physical", traits: ["holy_weakness"], stats: { HP: 86, PA: 14, PD: 6, MA: 0, MD: 3, SPD: 8, ACC: 78, EVA: 4, CRT: 4, CRD: 30 }, xp: 44, relicCategories: ["melee", "dark"] },
+  swamp_witch: { id: "swamp_witch", level: 4, category: "magic", damageType: "magic", traits: ["poison_resistance"], stats: { HP: 84, PA: 5, PD: 3, MA: 16, MD: 8, SPD: 7, ACC: 82, EVA: 6, CRT: 4, CRD: 25 }, xp: 52, relicCategories: ["magic", "poison"] },
+  shrine_keeper: { id: "shrine_keeper", level: 5, category: "holy", damageType: "magic", traits: ["dark_weakness"], stats: { HP: 104, PA: 10, PD: 7, MA: 14, MD: 11, SPD: 8, ACC: 84, EVA: 5, CRT: 4, CRD: 30 }, xp: 64, relicCategories: ["holy"] },
+  toxic_slime: { id: "toxic_slime", level: 5, category: "poison", damageType: "magic", traits: ["poison_resistance"], stats: { HP: 122, PA: 9, PD: 5, MA: 9, MD: 5, SPD: 5, ACC: 80, EVA: 2, CRT: 2, CRD: 20 }, xp: 66, relicCategories: ["poison"] },
+  mirror_duelist: { id: "mirror_duelist", level: 6, category: "agile", damageType: "physical", traits: ["critical_resistance"], stats: { HP: 115, PA: 18, PD: 6, MA: 0, MD: 5, SPD: 16, ACC: 88, EVA: 14, CRT: 9, CRD: 40 }, xp: 78, relicCategories: ["melee", "dark"] },
+  ember_mage: { id: "ember_mage", level: 7, category: "magic", damageType: "magic", traits: ["fire_damage"], stats: { HP: 125, PA: 6, PD: 4, MA: 23, MD: 12, SPD: 9, ACC: 86, EVA: 7, CRT: 5, CRD: 30 }, xp: 88, relicCategories: ["magic", "dragon"] },
+  grave_paladin: { id: "grave_paladin", level: 8, category: "holy", damageType: "physical", traits: ["dark_weakness"], stats: { HP: 165, PA: 20, PD: 14, MA: 13, MD: 13, SPD: 8, ACC: 84, EVA: 4, CRT: 5, CRD: 35 }, xp: 102, relicCategories: ["holy", "melee"] },
+  venom_archer: { id: "venom_archer", level: 8, category: "poison", damageType: "physical", traits: ["poison_damage"], stats: { HP: 140, PA: 18, PD: 7, MA: 0, MD: 7, SPD: 15, ACC: 94, EVA: 11, CRT: 8, CRD: 38 }, xp: 104, relicCategories: ["poison", "dark"] },
+  ogre: { id: "ogre", level: 9, category: "melee", damageType: "physical", traits: ["high_physical_damage"], stats: { HP: 210, PA: 31, PD: 12, MA: 0, MD: 5, SPD: 6, ACC: 82, EVA: 2, CRT: 5, CRD: 40 }, xp: 118, relicCategories: ["melee"] },
+  young_drake: { id: "young_drake", level: 9, category: "dragon", damageType: "physical", traits: ["fire_damage"], stats: { HP: 195, PA: 25, PD: 15, MA: 10, MD: 10, SPD: 10, ACC: 86, EVA: 6, CRT: 6, CRD: 35 }, xp: 122, relicCategories: ["dragon"] },
+  abyss_knight: { id: "abyss_knight", level: 10, category: "dark", damageType: "mixed", traits: ["holy_weakness"], stats: { HP: 225, PA: 28, PD: 17, MA: 18, MD: 14, SPD: 11, ACC: 88, EVA: 8, CRT: 8, CRD: 45 }, xp: 145, relicCategories: ["dark", "melee"] },
+  lich: { id: "lich", level: 11, category: "dark", damageType: "magic", traits: ["holy_weakness", "summon_resistance"], stats: { HP: 230, PA: 8, PD: 11, MA: 34, MD: 22, SPD: 12, ACC: 90, EVA: 9, CRT: 7, CRD: 35 }, xp: 160, relicCategories: ["dark", "magic"] },
+  chimera: { id: "chimera", level: 11, category: "dragon", damageType: "mixed", traits: ["physical_fire"], stats: { HP: 260, PA: 32, PD: 15, MA: 20, MD: 12, SPD: 13, ACC: 88, EVA: 8, CRT: 7, CRD: 40 }, xp: 170, relicCategories: ["dragon", "poison"] },
+  seraphic_hound: { id: "seraphic_hound", level: 12, category: "holy", damageType: "magic", traits: ["dark_weakness"], stats: { HP: 245, PA: 22, PD: 12, MA: 30, MD: 20, SPD: 17, ACC: 90, EVA: 13, CRT: 8, CRD: 38 }, xp: 182, relicCategories: ["holy", "melee"] },
+  void_reaper: { id: "void_reaper", level: 13, category: "dark", damageType: "physical", traits: ["critical_weakness"], stats: { HP: 270, PA: 36, PD: 14, MA: 18, MD: 14, SPD: 18, ACC: 92, EVA: 14, CRT: 12, CRD: 50 }, xp: 198, relicCategories: ["dark"] },
+  elder_treant: { id: "elder_treant", level: 13, category: "summon", damageType: "physical", traits: ["fire_weakness"], stats: { HP: 340, PA: 30, PD: 24, MA: 12, MD: 18, SPD: 5, ACC: 82, EVA: 2, CRT: 4, CRD: 30 }, xp: 205, relicCategories: ["summon", "magic"] },
+  dragon_priest: { id: "dragon_priest", level: 14, category: "dragon", damageType: "magic", traits: ["dragon_magic"], stats: { HP: 300, PA: 18, PD: 16, MA: 38, MD: 24, SPD: 11, ACC: 90, EVA: 8, CRT: 7, CRD: 38 }, xp: 220, relicCategories: ["dragon", "holy"] },
+  arena_champion: { id: "arena_champion", level: 14, category: "melee", damageType: "physical", traits: ["high_physical_defense"], stats: { HP: 330, PA: 40, PD: 24, MA: 0, MD: 12, SPD: 13, ACC: 92, EVA: 8, CRT: 10, CRD: 45 }, xp: 230, relicCategories: ["melee"] },
+  abyss_dragon: { id: "abyss_dragon", level: 15, category: "dragon", damageType: "mixed", traits: ["dragon", "dark_resistance"], stats: { HP: 390, PA: 43, PD: 25, MA: 32, MD: 22, SPD: 14, ACC: 92, EVA: 9, CRT: 9, CRD: 45 }, xp: 260, relicCategories: ["dragon", "dark"] }
 };

@@ -1,5 +1,5 @@
 import { createInitialState } from "./state.js";
-import { acceptPendingRelic, continueAction, declinePendingRelic, finishBattleAction, generateChoices, resolveChoice, skipJobChange } from "./systems/events.js";
+import { acceptPendingRelic, continueAction, declinePendingRelic, finishBattleAction, generateChoices, resolveChoice, selectHuntMonster, skipJobChange } from "./systems/events.js";
 import { runBattleStep } from "./systems/battle.js";
 import { changeJob } from "./systems/jobs.js";
 import { equipSkill, unequipSkill } from "./systems/skills.js";
@@ -27,6 +27,14 @@ app.addEventListener("click", (event) => {
   const action = target.dataset.action;
   if (action === "choose-event") {
     const result = resolveChoice(state, target.dataset.choiceId);
+    redraw();
+    if (result?.battle) {
+      runVisibleBattle();
+      return;
+    }
+  }
+  if (action === "choose-monster") {
+    const result = selectHuntMonster(state, target.dataset.monsterChoiceId);
     redraw();
     if (result?.battle) {
       runVisibleBattle();
