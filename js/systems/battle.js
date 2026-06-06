@@ -1,4 +1,4 @@
-import { skills } from "../data/skills.js?v=20260606-17";
+import { skills } from "../data/skills.js?v=20260606-29";
 import { getDamageMultiplier, getEliteIncomingDamageMultiplier, getPoisonMultiplier } from "./relics.js";
 import { getEffectiveActivationChance } from "./skills.js";
 import { getEffectiveStats } from "./stats.js";
@@ -36,6 +36,7 @@ export function createBattle(state, enemy, options = {}) {
     won: false,
     player: createFighter(playerStats),
     foe: createFighter(enemyStats),
+    skillUses: {},
     lastAction: {
       actor: "system",
       skillId: null,
@@ -79,6 +80,8 @@ export function runBattleStep(state, battle) {
       battle.lastAction = withHpSnapshot({ turn: battle.turn, actor: "status", ...poisonAction }, battle);
       battle.history.unshift(battle.lastAction);
     }
+    tickStatuses(battle.player);
+    tickStatuses(battle.foe);
     battle.actorIndex = 0;
     battle.turn += 1;
   }
@@ -118,13 +121,18 @@ function createFighter(stats) {
     stats,
     hp: stats.HP,
     guard: 0,
-    poison: { power: 0, turns: 0 }
+    poison: { power: 0, turns: 0 },
+    statuses: []
   };
 }
 
 function withHpSnapshot(action, battle) {
   return {
     ...action,
+    statuses: {
+      player: battle.player.statuses.map((status) => ({ id: status.id, turns: status.turns })),
+      enemy: battle.foe.statuses.map((status) => ({ id: status.id, turns: status.turns }))
+    },
     hp: {
       player: {
         current: Math.max(0, Math.ceil(battle.player.hp)),
@@ -180,19 +188,19 @@ function simulateBattleOutcome(state, enemy, options = {}) {
 
 function resolvePlayerTurn(state, battle, player, foe, traits) {
   const activeSkills = state.player.equippedSkills.map((id) => skills[id]).filter((skill) => skill && skill.id !== "basic_attack" && skill.type !== "passive");
-  const priority = activeSkills.filter((skill) => skill.priority);
+  const priority = activeSkills.filter((skill) => skill.priority && canUseBattleSkill(battle, skill));
 
   for (const skill of priority) {
-    if (conditionMet(skill, player, foe) && rollSkill(state, skill)) {
+    if (conditionMet(skill, player, foe) && rollSkill(state, battle, skill)) {
       return executeSkill(state, battle, skill, player, foe, traits);
     }
   }
 
-  let pool = [...activeSkills.filter((skill) => !skill.priority)];
+  let pool = [...activeSkills.filter((skill) => !skill.priority && canUseBattleSkill(battle, skill))];
   while (pool.length > 0) {
     const index = Math.floor(Math.random() * pool.length);
     const skill = pool[index];
-    if (conditionMet(skill, player, foe) && rollSkill(state, skill)) {
+    if (conditionMet(skill, player, foe) && rollSkill(state, battle, skill)) {
       return executeSkill(state, battle, skill, player, foe, traits);
     }
     pool.splice(index, 1);
@@ -229,12 +237,12 @@ function resolveEnemyTurn(state, battle, player, foe, enemyId) {
     pool.splice(index, 1);
   }
 
-  if (Math.random() * 100 > Math.max(12, foe.stats.ACC - player.stats.EVA)) {
+  if (Math.random() * 100 > Math.max(12, getBattleStat(foe, "ACC") - getBattleStat(player, "EVA"))) {
     return { skillId: null, text: `${enemyId} missed.`, damage: 0, heal: 0, miss: true, crit: false, block: false, status: null };
   }
-  const raw = foe.stats.PA * (0.64 + Math.random() * 0.28) * getEliteIncomingDamageMultiplier(state, battle) * getStalemateDamageMultiplier(battle);
+  const raw = getBattleStat(foe, "PA") * (0.64 + Math.random() * 0.28) * getOutgoingDamageMultiplier(foe) * getIncomingDamageMultiplier(player) * getEliteIncomingDamageMultiplier(state, battle) * getStalemateDamageMultiplier(battle);
   const blocked = player.guard > 0;
-  const damage = Math.max(1, Math.round(raw - player.stats.PD * 0.38 - player.guard));
+  const damage = Math.max(1, Math.round(raw - getBattleStat(player, "PD") * getDefenseMultiplier(player) * 0.38 - player.guard));
   player.guard = Math.max(0, player.guard - 4);
   player.hp = Math.max(0, player.hp - damage);
   return {
@@ -328,7 +336,7 @@ function rollEnemySkill(skill) {
 }
 
 function executeEnemySkill(state, battle, skill, actor, target, enemyId) {
-  if (Math.random() * 100 > Math.max(14, actor.stats.ACC - target.stats.EVA * 0.82)) {
+  if (Math.random() * 100 > Math.max(14, getBattleStat(actor, "ACC") - getBattleStat(target, "EVA") * 0.82)) {
     return { skillId: skill.id, text: `${enemyId} used ${skill.id} but missed.`, damage: 0, heal: 0, miss: true, crit: false, block: false, status: null };
   }
 
@@ -339,14 +347,14 @@ function executeEnemySkill(state, battle, skill, actor, target, enemyId) {
 
   for (const effect of skill.effects ?? []) {
     if (effect.type === "damage") {
-      const rawStat = actor.stats[effect.stat] ?? actor.stats.PA;
-      const defenseStat = target.stats[effect.defense ?? "PD"] ?? target.stats.PD;
+      const rawStat = getBattleStat(actor, effect.stat) ?? getBattleStat(actor, "PA");
+      const defenseStat = getBattleStat(target, effect.defense ?? "PD") ?? getBattleStat(target, "PD");
       const blocked = target.guard > 0;
-      const critChance = actor.stats.CRT + (effect.critBonus ?? 0);
+      const critChance = getBattleStat(actor, "CRT") + (effect.critBonus ?? 0);
       const crit = Math.random() * 100 < Math.max(0, critChance);
-      const critMultiplier = crit ? 1 + actor.stats.CRD / 100 : 1;
-      const defenseReduction = defenseStat * (effect.defense === "MD" ? 0.28 : 0.32);
-      const damage = Math.max(1, Math.round(rawStat * effect.power * 0.92 * incomingMultiplier * stalemateMultiplier * critMultiplier - defenseReduction - target.guard));
+      const critMultiplier = crit ? 1 + getBattleStat(actor, "CRD") / 100 : 1;
+      const defenseReduction = defenseStat * getDefenseMultiplier(target) * (effect.defense === "MD" ? 0.28 : 0.32);
+      const damage = Math.max(1, Math.round(rawStat * effect.power * 0.92 * getOutgoingDamageMultiplier(actor) * getIncomingDamageMultiplier(target) * incomingMultiplier * stalemateMultiplier * critMultiplier - defenseReduction - target.guard));
       target.hp = Math.max(0, target.hp - damage);
       target.guard = Math.max(0, target.guard - (effect.guardBreak ?? 4));
       action.damage += damage;
@@ -372,6 +380,12 @@ function executeEnemySkill(state, battle, skill, actor, target, enemyId) {
       action.status = "poison";
       lines.push(`${enemyId} poison dealt ${poisonDamage} damage`);
     }
+    if (effect.type === "status") {
+      const targetFighter = effect.target === "self" ? actor : target;
+      applyStatus(targetFighter, effect);
+      action.status = effect.id;
+      lines.push(`${enemyId} applied ${effect.id}`);
+    }
   }
 
   action.text = `${lines.join(". ")}.`;
@@ -379,7 +393,8 @@ function executeEnemySkill(state, battle, skill, actor, target, enemyId) {
 }
 
 function executeSkill(state, battle, skill, player, foe, traits) {
-  if (Math.random() * 100 > Math.max(8, player.stats.ACC - foe.stats.EVA)) {
+  battle.skillUses[skill.id] = (battle.skillUses[skill.id] ?? 0) + 1;
+  if (skillRequiresAccuracy(skill) && Math.random() * 100 > Math.max(8, getBattleStat(player, "ACC") - getBattleStat(foe, "EVA"))) {
     return { skillId: skill.id, text: `${skill.id} missed.`, damage: 0, heal: 0, miss: true, crit: false, block: false, status: null };
   }
 
@@ -388,22 +403,22 @@ function executeSkill(state, battle, skill, player, foe, traits) {
 
   for (const effect of skill.effects ?? []) {
     if (effect.type === "damage") {
-      const base = player.stats[effect.stat] * effect.power * 0.64;
+      const base = getBattleStat(player, effect.stat) * effect.power * 0.64;
       const relicMultiplier = getDamageMultiplier(state, { player, battle, skill });
       const stalemateMultiplier = getStalemateDamageMultiplier(battle);
       const traitMultiplier = getTraitDamageMultiplier(skill, traits);
-      const critChance = player.stats.CRT + (effect.critBonus ?? 0) - (traits.includes("critical_resistance") ? 10 : 0);
+      const critChance = getBattleStat(player, "CRT") + (effect.critBonus ?? 0) - (traits.includes("critical_resistance") ? 10 : 0);
       const crit = Math.random() * 100 < Math.max(0, critChance);
-      const critMultiplier = crit ? 1 + player.stats.CRD / 100 : 1;
-      const defense = skill.tags?.includes("magic") ? foe.stats.MD : foe.stats.PD;
-      const damage = Math.max(1, Math.round(base * relicMultiplier * stalemateMultiplier * traitMultiplier * critMultiplier - defense * 0.34));
+      const critMultiplier = crit ? 1 + getBattleStat(player, "CRD") / 100 : 1;
+      const defense = skill.tags?.includes("magic") ? getBattleStat(foe, "MD") : getBattleStat(foe, "PD");
+      const damage = Math.max(1, Math.round(base * getOutgoingDamageMultiplier(player) * getIncomingDamageMultiplier(foe) * relicMultiplier * stalemateMultiplier * traitMultiplier * critMultiplier - defense * getDefenseMultiplier(foe) * 0.34));
       foe.hp = Math.max(0, foe.hp - damage);
       action.damage += damage;
       action.crit = action.crit || crit;
       lines.push(`${skill.id} dealt ${damage}${crit ? " critical" : ""} damage`);
     }
     if (effect.type === "heal") {
-      const healed = Math.round(player.stats[effect.stat] * effect.power * 0.72);
+      const healed = Math.round(getBattleStat(player, effect.stat) * effect.power * (effect.healScale ?? 0.72) + player.stats.HP * (effect.maxHpRatio ?? 0));
       player.hp = Math.min(player.stats.HP, player.hp + healed);
       action.heal += healed;
       lines.push(`${skill.id} healed ${healed} HP`);
@@ -417,6 +432,12 @@ function executeSkill(state, battle, skill, player, foe, traits) {
       foe.poison = { power: Math.round(effect.power * getPoisonMultiplier(state)), turns: effect.turns };
       action.status = "poison";
       lines.push(`${skill.id} applied poison`);
+    }
+    if (effect.type === "status") {
+      const targetFighter = effect.target === "self" ? player : foe;
+      applyStatus(targetFighter, effect);
+      action.status = effect.id;
+      lines.push(`${skill.id} applied ${effect.id}`);
     }
   }
 
@@ -447,8 +468,59 @@ function finishBattle(battle) {
   battle.won = battle.foe.hp <= 0;
 }
 
-function rollSkill(state, skill) {
-  return Math.random() < getEffectiveActivationChance(state, skill.id);
+function rollSkill(state, battle, skill) {
+  return Math.random() < getBattleActivationChance(state, battle, skill);
+}
+
+function canUseBattleSkill(battle, skill) {
+  return !skill.maxUses || (battle.skillUses?.[skill.id] ?? 0) < skill.maxUses;
+}
+
+function getBattleActivationChance(state, battle, skill) {
+  const baseChance = getEffectiveActivationChance(state, skill.id);
+  const uses = battle.skillUses?.[skill.id] ?? 0;
+  const penalty = (skill.repeatChancePenalty ?? 0) * uses;
+  return Math.max(skill.minChance ?? 0.08, baseChance - penalty);
+}
+
+function applyStatus(fighter, effect) {
+  const status = {
+    id: effect.id,
+    turns: effect.turns ?? 1,
+    permanent: Boolean(effect.permanent),
+    statMods: effect.statMods ?? {},
+    damageMultiplier: effect.damageMultiplier ?? 1,
+    damageTakenMultiplier: effect.damageTakenMultiplier ?? 1,
+    defenseMultiplier: effect.defenseMultiplier ?? 1
+  };
+  fighter.statuses = fighter.statuses.filter((item) => item.id !== status.id);
+  fighter.statuses.push(status);
+}
+
+function tickStatuses(fighter) {
+  fighter.statuses = fighter.statuses
+    .map((status) => status.permanent ? status : { ...status, turns: status.turns - 1 })
+    .filter((status) => status.turns > 0);
+}
+
+function skillRequiresAccuracy(skill) {
+  return (skill.effects ?? []).some((effect) => effect.type === "damage" || effect.type === "poison" || (effect.type === "status" && effect.target !== "self"));
+}
+
+function getBattleStat(fighter, key) {
+  return Math.max(0, Math.round((fighter.stats[key] ?? 0) + fighter.statuses.reduce((sum, status) => sum + (status.statMods?.[key] ?? 0), 0)));
+}
+
+function getOutgoingDamageMultiplier(fighter) {
+  return fighter.statuses.reduce((multiplier, status) => multiplier * (status.damageMultiplier ?? 1), 1);
+}
+
+function getIncomingDamageMultiplier(fighter) {
+  return fighter.statuses.reduce((multiplier, status) => multiplier * (status.damageTakenMultiplier ?? 1), 1);
+}
+
+function getDefenseMultiplier(fighter) {
+  return fighter.statuses.reduce((multiplier, status) => multiplier * (status.defenseMultiplier ?? 1), 1);
 }
 
 function conditionMet(skill, player, foe) {

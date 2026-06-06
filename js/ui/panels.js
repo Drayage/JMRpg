@@ -1,14 +1,14 @@
 import { bosses } from "../data/bosses.js";
-import { jobs } from "../data/jobs.js?v=20260606-17";
-import { monsters } from "../data/monsters.js?v=20260606-17";
-import { relics } from "../data/relics.js?v=20260606-17";
-import { skills } from "../data/skills.js?v=20260606-17";
+import { jobs } from "../data/jobs.js?v=20260606-29";
+import { monsters } from "../data/monsters.js?v=20260606-29";
+import { relics } from "../data/relics.js?v=20260606-29";
+import { skills } from "../data/skills.js?v=20260606-29";
 import { getCurrentJobProgress, getEffectiveJobXpRequired, getJobRequirementHints, getJobState, isJobDiscovered, isJobUnlocked } from "../systems/jobs.js";
 import { canEquipSkill, canUseSkill, getEffectiveApCost, getEquippedApCost, getEquippedSlotCount, getSkillEstimate, skillSlotLimits } from "../systems/skills.js";
 import { getRelicCurrentValue } from "../systems/relics.js";
 import { getStalemateDamageMultiplier } from "../systems/battle.js";
 import { clampPercent, getEffectiveStats, statKeys } from "../systems/stats.js";
-import { ko } from "../i18n/ko.js?v=20260606-17";
+import { ko } from "../i18n/ko.js?v=20260606-29";
 
 export function statusPanel(state) {
   const progress = getCurrentJobProgress(state);
@@ -102,10 +102,11 @@ function activeHuntEventPanel(state) {
 }
 
 export function jobsPanel(state) {
+  const visibleJobs = Object.values(jobs).filter((job) => isJobDiscovered(state, job.id));
   return panel(`
     <div class="title-row"><h2>${ko.ui.jobOptions}</h2></div>
     <div class="stack">
-      ${Object.values(jobs).map((job) => jobOption(state, job, false)).join("")}
+      ${visibleJobs.length ? visibleJobs.map((job) => jobOption(state, job, false)).join("") : `<p class="muted">${ko.ui.noChoices}</p>`}
     </div>
   `, "jobs-panel");
 }
@@ -328,15 +329,7 @@ function jobOption(state, job, canChangeFromEvent) {
   const current = state.currentJobId === job.id;
   const percent = current ? getCurrentJobProgress(state) : 0;
   if (!discovered) {
-    return `
-      <div class="card job-option">
-        <div>
-          <div class="split-row"><h3>????</h3><span class="tag">${jobState}</span></div>
-          <p class="small muted">Requirements: ????</p>
-        </div>
-        <button disabled>${ko.ui.changeJob}</button>
-      </div>
-    `;
+    return "";
   }
   const milestones = job.milestones.map((milestone) => {
     if (milestone.type === "skill") {
@@ -345,7 +338,7 @@ function jobOption(state, job, canChangeFromEvent) {
     return `${milestone.percent}% ${ko.ui.mastered}, AP +${job.apReward}`;
   }).join(" / ");
   const advanced = Object.values(jobs)
-    .filter((candidate) => candidate.requires?.masteredAll?.includes(job.id) || candidate.requires?.masteredAny?.includes(job.id))
+    .filter((candidate) => isJobDiscovered(state, candidate.id) && (candidate.requires?.masteredAll?.includes(job.id) || candidate.requires?.masteredAny?.includes(job.id)))
     .map((candidate) => jobName(candidate.id))
     .join(", ");
   const buttonDisabled = !canChangeFromEvent || !unlocked || current;
@@ -384,6 +377,7 @@ function skillRow(state, skillId) {
         <div class="tag-list">
           ${tag(skill.type)}
           ${(skill.tags ?? []).map((tagId) => tag(tagId)).join("")}
+          ${skillFeatureTags(skill)}
           ${estimate.onTheme ? tag("job theme", "ok") : tag("off theme", "warn")}
           ${mastered ? tag(ko.ui.mastered, "ok") : usable ? tag(ko.ui.currentJobOnly, "warn") : tag(ko.ui.locked, "danger")}
         </div>
@@ -446,6 +440,10 @@ function activeSkillDetails(estimate) {
   return `
     <p class="small">${ko.ui.skillUsed}: ${Math.round(estimate.activationChance * 100)}% (${Math.round(estimate.baseActivationChance * 100)}% base)</p>
     <p class="small">Formula: ${estimate.scalingStat} ${estimate.scalingValue} x ${estimate.power} = ${estimate.baseValue}</p>
+    ${estimate.maxHpValue ? `<p class="small">MHP Bonus: +${estimate.maxHpValue}</p>` : ""}
+    ${estimate.repeatChancePenalty ? `<p class="small muted">${ko.ui.repeatChancePenalty ?? "Repeated uses"}: -${Math.round(estimate.repeatChancePenalty * 100)}% / ${ko.ui.minChance ?? "Min"} ${Math.round((estimate.minChance ?? 0) * 100)}%</p>` : ""}
+    ${estimate.maxUses ? `<p class="small muted">${ko.ui.oncePerBattle ?? "Battle Limit"}: ${estimate.maxUses} / battle</p>` : ""}
+    ${estimate.statusEffects.length ? `<p class="small muted">${ko.ui.statusEffect}: ${estimate.statusEffects.map((effect) => statusEffectText(effect)).join(" / ")}</p>` : ""}
     <p class="small muted">${label}: ${estimate.finalValue}</p>
   `;
 }
@@ -453,6 +451,35 @@ function activeSkillDetails(estimate) {
 function passiveSkillDetails(skill) {
   const stats = Object.entries(skill.passiveStats ?? {}).map(([key, value]) => `${key} +${value}`).join(", ");
   return `<p class="small">Passive Bonus: ${stats || "No passive stat bonus"}</p>`;
+}
+
+function skillFeatureTags(skill) {
+  const features = [];
+  if (skill.id !== "basic_attack" && skill.type === "active" && skill.apCost === 0 && skill.chance >= 1) {
+    features.push(tag(ko.ui.basicAttackReplacement ?? "Basic Attack Replacement", "ok"));
+  }
+  if (skill.priority) {
+    features.push(tag(ko.ui.prioritySkill ?? "Priority", "warn"));
+  }
+  if (skill.condition) {
+    features.push(tag(ko.ui.conditionalSkill ?? "Conditional"));
+  }
+  if ((skill.effects ?? []).some((effect) => effect.type === "heal")) {
+    features.push(tag(ko.ui.heal));
+  }
+  if ((skill.effects ?? []).some((effect) => effect.type === "guard")) {
+    features.push(tag(ko.ui.block));
+  }
+  if ((skill.effects ?? []).some((effect) => effect.type === "poison")) {
+    features.push(tag(ko.ui.statusEffect));
+  }
+  if ((skill.effects ?? []).some((effect) => effect.type === "status")) {
+    features.push(tag(ko.ui.statusEffect, "warn"));
+  }
+  if (skill.maxUses) {
+    features.push(tag(ko.ui.oncePerBattle ?? "Limited", "danger"));
+  }
+  return features.join("");
 }
 
 function pendingRelicChoice(relicId) {
@@ -476,9 +503,28 @@ function fighterBox(name, fighter, tone) {
       <div class="tag-list">
         ${fighter.guard ? tag(`${ko.ui.block} ${fighter.guard}`, "ok") : ""}
         ${fighter.poison.turns ? tag(`poison ${fighter.poison.turns}`, "warn") : ""}
+        ${(fighter.statuses ?? []).map((status) => tag(`${status.id} ${status.permanent ? "battle" : status.turns}`, "warn")).join("")}
       </div>
     </div>
   `;
+}
+
+function statusEffectText(effect) {
+  const parts = [`${effect.id} ${effect.permanent ? (ko.ui.battleLong ?? "battle-long") : `${effect.turns ?? 1}T`}`];
+  if (effect.damageMultiplier && effect.damageMultiplier !== 1) {
+    parts.push(`DMG x${effect.damageMultiplier}`);
+  }
+  if (effect.damageTakenMultiplier && effect.damageTakenMultiplier !== 1) {
+    parts.push(`Taken x${effect.damageTakenMultiplier}`);
+  }
+  if (effect.defenseMultiplier && effect.defenseMultiplier !== 1) {
+    parts.push(`DEF x${effect.defenseMultiplier}`);
+  }
+  const stats = Object.entries(effect.statMods ?? {}).map(([key, value]) => `${key}${value > 0 ? "+" : ""}${value}`);
+  if (stats.length) {
+    parts.push(stats.join(", "));
+  }
+  return parts.join(" ");
 }
 
 function choicePreviewTags(choice, state) {

@@ -1,5 +1,5 @@
-import { jobs } from "../data/jobs.js?v=20260606-17";
-import { skills } from "../data/skills.js?v=20260606-17";
+import { jobs } from "../data/jobs.js?v=20260606-29";
+import { skills } from "../data/skills.js?v=20260606-29";
 import { getApDiscountFromRelics, getMasteryMultiplier, getRelicActivationBonus } from "./relics.js";
 import { getEffectiveStats } from "./stats.js";
 
@@ -157,8 +157,9 @@ export function getSkillEstimate(state, skillId) {
   const stat = effect?.stat ?? skill.scalingStat;
   const power = effect?.power ?? 0;
   const baseValue = stat ? Math.round((stats[stat] ?? 0) * power) : 0;
-  const combatFactor = effect?.type === "damage" ? 0.64 : effect?.type === "heal" ? 0.72 : 1;
-  const finalValue = Math.round(baseValue * combatFactor * (isSkillOnTheme(state, skill) ? 1.08 : 0.96));
+  const combatFactor = effect?.type === "damage" ? 0.64 : effect?.type === "heal" ? effect.healScale ?? 0.72 : 1;
+  const maxHpValue = effect?.type === "heal" ? Math.round(stats.HP * (effect.maxHpRatio ?? 0)) : 0;
+  const finalValue = Math.round((baseValue * combatFactor + maxHpValue) * (isSkillOnTheme(state, skill) ? 1.08 : 0.96));
   return {
     type: skill.type,
     effectType: effect?.type ?? null,
@@ -172,7 +173,12 @@ export function getSkillEstimate(state, skillId) {
     scalingValue: stat ? stats[stat] ?? 0 : 0,
     power,
     baseValue,
+    maxHpValue,
     finalValue,
+    minChance: skill.minChance ?? null,
+    repeatChancePenalty: skill.repeatChancePenalty ?? null,
+    maxUses: skill.maxUses ?? null,
+    statusEffects: (skill.effects ?? []).filter((item) => item.type === "status"),
     onTheme: isSkillOnTheme(state, skill),
     mastery: state.player.skillMastery[skillId] ?? 0,
     mastered: (state.player.skillMastery[skillId] ?? 0) >= 100

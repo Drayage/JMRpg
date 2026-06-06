@@ -1,10 +1,11 @@
-import { bosses } from "../data/bosses.js?v=20260606-17";
-import { eventTemplates } from "../data/events.js?v=20260606-17";
-import { monsters } from "../data/monsters.js?v=20260606-17";
-import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomUnownedRelic, rejectRelic } from "./relics.js?v=20260606-17";
+import { bosses } from "../data/bosses.js?v=20260606-29";
+import { eventTemplates } from "../data/events.js?v=20260606-29";
+import { jobs } from "../data/jobs.js?v=20260606-29";
+import { monsters } from "../data/monsters.js?v=20260606-29";
+import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomUnownedRelic, rejectRelic } from "./relics.js?v=20260606-29";
 import { addStats, createBaseStats, scoreStats } from "./stats.js";
 import { getAvailableAdvancedJobs, getAvailableBasicJobs, grantJobXp, updateJobDiscovery } from "./jobs.js";
-import { createBattle, estimateWinRate, getBattleReward } from "./battle.js?v=20260606-17";
+import { createBattle, estimateWinRate, getBattleReward } from "./battle.js?v=20260606-29";
 
 export function generateChoices(state) {
   if (state.gameOver) {
@@ -41,6 +42,7 @@ export function resolveChoice(state, choiceId) {
   if (!choice) {
     return;
   }
+  recordPassedUnchosenJobEvents(state, choiceId);
 
   if (choice.type === "job_event") {
     state.activeJobEvent = choice;
@@ -195,10 +197,34 @@ export function skipJobChange(state) {
     return false;
   }
   const event = state.activeJobEvent;
+  recordPassedAdvancedJobOffers(state, event);
   state.activeJobEvent = null;
   setActionResult(state, { templateId: event.templateId, type: "job_change" }, { jobSkipped: true });
   state.log.unshift({ type: "event", text: "Skipped job change." });
   return true;
+}
+
+export function recordPassedAdvancedJobOffers(state, event, selectedJobId = null, sourceJobId = state.currentJobId) {
+  if (!event || event.jobTier !== "advanced" || !state.masteredJobs.includes(sourceJobId)) {
+    return;
+  }
+  state.advancedJobOfferFatigue = state.advancedJobOfferFatigue ?? {};
+  state.advancedJobOfferFatigue[sourceJobId] = state.advancedJobOfferFatigue[sourceJobId] ?? {};
+  for (const jobId of event.jobOptions ?? []) {
+    if (jobId === selectedJobId) {
+      continue;
+    }
+    state.advancedJobOfferFatigue[sourceJobId][jobId] = (state.advancedJobOfferFatigue[sourceJobId][jobId] ?? 0) + 1;
+  }
+}
+
+function recordPassedUnchosenJobEvents(state, selectedChoiceId) {
+  for (const choice of state.choices ?? []) {
+    if (choice.id === selectedChoiceId) {
+      continue;
+    }
+    recordPassedAdvancedJobOffers(state, choice);
+  }
 }
 
 export function continueAction(state) {
@@ -279,7 +305,7 @@ function getChoiceGroup(choice) {
 }
 
 export function generateBasicJobEvent(state) {
-  const jobOptions = sampleJobs(getAvailableBasicJobs(state), 3);
+  const jobOptions = sampleWeightedJobs(state, getAvailableBasicJobs(state), 3, getBasicJobOptionWeight);
   if (jobOptions.length === 0) {
     return null;
   }
@@ -293,7 +319,7 @@ export function generateBasicJobEvent(state) {
 }
 
 export function generateAdvancedJobEvent(state) {
-  const jobOptions = sampleJobs(getAvailableAdvancedJobs(state), 3);
+  const jobOptions = sampleWeightedJobs(state, getAvailableAdvancedJobs(state), 3, getAdvancedJobOptionWeight);
   if (jobOptions.length === 0) {
     return null;
   }
@@ -440,6 +466,70 @@ function sampleJobs(jobIds, limit) {
     result.push(pool.splice(index, 1)[0]);
   }
   return result;
+}
+
+function sampleWeightedJobs(state, jobIds, limit, weightFn = getAdvancedJobOptionWeight) {
+  const pool = [...jobIds];
+  const result = [];
+  while (pool.length > 0 && result.length < limit) {
+    const total = pool.reduce((sum, jobId) => sum + weightFn(state, jobId), 0);
+    let roll = Math.random() * total;
+    let selectedIndex = 0;
+    for (let index = 0; index < pool.length; index += 1) {
+      roll -= weightFn(state, pool[index]);
+      if (roll <= 0) {
+        selectedIndex = index;
+        break;
+      }
+    }
+    result.push(pool.splice(selectedIndex, 1)[0]);
+  }
+  return result;
+}
+
+function getBasicJobOptionWeight(state, jobId) {
+  const job = jobs[jobId];
+  if (!job) {
+    return 1;
+  }
+  const skillMultiplier = getMasteredJobSkillMultiplier(state, job);
+  return Math.max(0.35, (1 + (job.tier ?? 1)) * skillMultiplier);
+}
+
+function getAdvancedJobOptionWeight(state, jobId) {
+  const job = jobs[jobId];
+  if (!job) {
+    return 1;
+  }
+  const requires = job.requires ?? {};
+  const currentThemes = jobs[state.currentJobId]?.themes ?? [];
+  const requiredJobIds = [
+    ...(requires.masteredAll ?? []),
+    ...(requires.masteredAny ?? []),
+    ...(requires.visitedAll ?? []),
+    ...(requires.visitedAny ?? [])
+  ];
+  const visitedMatches = requiredJobIds.filter((id) => state.visitedJobs.includes(id)).length;
+  const masteredMatches = requiredJobIds.filter((id) => state.masteredJobs.includes(id)).length;
+  const themeMatches = (job.themes ?? []).filter((theme) => currentThemes.includes(theme)).length;
+  const fatigue = state.advancedJobOfferFatigue?.[state.currentJobId]?.[jobId] ?? 0;
+  const fatigueMultiplier = Math.max(0.28, 0.75 ** fatigue);
+  const skillMultiplier = getMasteredJobSkillMultiplier(state, job);
+  return Math.max(0.25, (1 + job.tier * 1.4 + visitedMatches * 1.2 + masteredMatches * 2.4 + themeMatches * 0.8) * fatigueMultiplier * skillMultiplier);
+}
+
+function getMasteredJobSkillMultiplier(state, job) {
+  if (!state.masteredJobs.includes(job.id)) {
+    return 1;
+  }
+  const skillIds = job.milestones
+    .filter((milestone) => milestone.type === "skill")
+    .map((milestone) => milestone.skillId);
+  if (skillIds.length === 0) {
+    return 0.18;
+  }
+  const unfinishedSkills = skillIds.filter((skillId) => (state.player.skillMastery[skillId] ?? 0) < 100);
+  return unfinishedSkills.length > 0 ? 0.45 : 0.15;
 }
 
 function multiplyGrowth(growth, multiplier) {

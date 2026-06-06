@@ -1,6 +1,6 @@
-import { jobs } from "../data/jobs.js?v=20260606-17";
-import { relics } from "../data/relics.js?v=20260606-17";
-import { statKeys } from "./stats.js";
+import { jobs } from "../data/jobs.js?v=20260606-29";
+import { relics } from "../data/relics.js?v=20260606-29";
+import { createBaseStats, statKeys } from "./stats.js";
 import { addSkillMasteryFromXp, learnSkill, pruneUnavailableEquippedSkills } from "./skills.js";
 
 export function isJobUnlocked(state, jobId) {
@@ -49,7 +49,11 @@ export function changeJob(state, jobId) {
 
   state.player.jobXpByJob = state.player.jobXpByJob ?? {};
   state.player.jobXpByJob[state.currentJobId] = state.player.currentJobXp;
+  const previousJobId = state.currentJobId;
   state.currentJobId = jobId;
+  if (state.advancedJobOfferFatigue?.[previousJobId]) {
+    delete state.advancedJobOfferFatigue[previousJobId];
+  }
   state.player.currentJobXp = state.player.jobXpByJob[jobId] ?? 0;
   state.actionsSinceJobChange = 0;
   if (!state.visitedJobs.includes(jobId)) {
@@ -317,19 +321,20 @@ function areJobConditionsMet(state, job) {
 
 function shouldRevealJob(state, job) {
   const requires = job.requires ?? {};
-  const signals = [
+  const baseStats = createBaseStats();
+  const jobSignals = [
     ...(requires.masteredAll ?? []),
     ...(requires.masteredAny ?? []),
     ...(requires.visitedAll ?? []),
     ...(requires.visitedAny ?? [])
   ];
-  if (signals.some((id) => state.visitedJobs.includes(id) || state.masteredJobs.includes(id))) {
-    return true;
+  if (jobSignals.length > 0) {
+    return jobSignals.some((id) => state.visitedJobs.includes(id) || state.masteredJobs.includes(id));
   }
   if ((requires.requiredTags ?? []).some((tag) => getPlayerJobTags(state).includes(tag))) {
     return true;
   }
-  if (requires.statThresholds && Object.entries(requires.statThresholds).some(([key, value]) => (state.player.stats[key] ?? 0) >= value * 0.75)) {
+  if (requires.statThresholds && Object.entries(requires.statThresholds).some(([key, value]) => (state.player.stats[key] ?? 0) > (baseStats[key] ?? 0) && (state.player.stats[key] ?? 0) >= value * 0.9)) {
     return true;
   }
   if ((requires.skillMasteredAll ?? []).some((id) => state.player.learnedSkills.includes(id) || (state.player.skillMastery[id] ?? 0) > 0)) {

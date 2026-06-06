@@ -40,7 +40,7 @@ export const jobs = {
     apReward: 1,
     themes: ["holy", "support", "magic"],
     growth: { HP: 8, MA: 3, MD: 4 },
-    milestones: baseMilestones("healing_prayer", "holy_light")
+    milestones: baseMilestones("holy_light", "healing_prayer")
   },
   wizard: {
     id: "wizard",
@@ -512,5 +512,71 @@ export const jobs = {
     revealHints: ["Camp Provisioner mastered", "Greed or plague route touched"],
     growth: { HP: 16, PA: 3, MA: 2, MD: 3, CRT: 2 },
     milestones: baseMilestones("feast_of_omens", "hearty_meal", "battle_spice")
+  },
+  horizon_votary: {
+    id: "horizon_votary",
+    tier: 4,
+    xpRequired: 330,
+    apReward: 1,
+    themes: ["foundation", "holy", "survival", "support"],
+    requires: { masteredAll: ["trailwarden"], visitedAny: ["priest", "monk", "camp_provisioner"] },
+    revealHints: ["Trailwarden mastered", "Holy, martial, or preparation route touched"],
+    growth: { HP: 18, PA: 2, MA: 3, MD: 5, SPD: 3 },
+    milestones: baseMilestones("horizon_oath", "last_campfire", "miracle")
+  },
+  marrow_regent: {
+    id: "marrow_regent",
+    tier: 4,
+    xpRequired: 355,
+    apReward: 1,
+    themes: ["undead", "dark", "frontline", "summon"],
+    requires: { masteredAll: ["ossuary_guard"], visitedAny: ["necromancer", "death_knight", "lich"] },
+    revealHints: ["Ossuary Guard mastered", "Necromancy or death knight route touched"],
+    growth: { HP: 18, PA: 4, PD: 6, MA: 3, MD: 4 },
+    milestones: baseMilestones("black_standard", "bone_court", "phantom_army")
+  },
+  meridian_master: {
+    id: "meridian_master",
+    tier: 4,
+    xpRequired: 345,
+    apReward: 1,
+    themes: ["martial", "physical", "speed", "defensive"],
+    requires: { masteredAll: ["seal_martialist"], skillMasteredAll: ["flowing_form"] },
+    revealHints: ["Seal Martialist mastered", "Flowing Form mastered"],
+    growth: { HP: 13, PA: 6, PD: 4, SPD: 7, EVA: 5 },
+    milestones: baseMilestones("empty_palm", "sealed_heart", "meridian_burst")
+  },
+  chronobolt_savant: {
+    id: "chronobolt_savant",
+    tier: 4,
+    xpRequired: 340,
+    apReward: 1,
+    themes: ["ranged", "time", "critical", "utility"],
+    requires: { masteredAll: ["boltwright"], visitedAny: ["rune_scribe", "shadow_hunter", "coinblade"] },
+    revealHints: ["Boltwright mastered", "Rune, shadow, or greed route touched"],
+    growth: { HP: 8, PA: 3, ACC: 8, SPD: 5, CRT: 5, CRD: 10 },
+    milestones: baseMilestones("clockwork_sight", "time_barrage", "rewind_bolt")
+  },
+  star_oracle: {
+    id: "star_oracle",
+    tier: 4,
+    xpRequired: 350,
+    apReward: 1,
+    themes: ["spirit", "magic", "holy", "time"],
+    requires: { masteredAll: ["astral_medium"], visitedAny: ["sage", "oracle_knight", "grand_summoner"] },
+    revealHints: ["Astral Medium mastered", "Sage, oracle, or summoner route touched"],
+    growth: { HP: 9, MA: 8, MD: 6, SPD: 3 },
+    milestones: baseMilestones("constellation_edict", "fate_reversal", "starfall")
+  },
+  banquet_prophet: {
+    id: "banquet_prophet",
+    tier: 4,
+    xpRequired: 325,
+    apReward: 1,
+    themes: ["food", "risk", "support", "critical"],
+    requires: { masteredAll: ["omen_chef"], relicCategoriesAny: ["risk", "mastery", "ap"] },
+    revealHints: ["Omen Chef mastered", "Greed, mastery, or AP relic obtained"],
+    growth: { HP: 20, PA: 4, MA: 3, MD: 4, CRT: 4, CRD: 8 },
+    milestones: baseMilestones("lucky_leftovers", "final_course", "feast_of_omens")
   }
 };

@@ -21,6 +21,7 @@ export function createInitialState() {
     visitedJobs: [startingJobId],
     masteredJobs: [],
     rejectedRelics: [],
+    advancedJobOfferFatigue: {},
     activeJobEvent: null,
     activeHuntEvent: null,
     pendingJobXp: 0,
