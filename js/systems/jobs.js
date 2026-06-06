@@ -110,8 +110,15 @@ export function grantJobXp(state, xp, tag = null) {
     const xpRequired = getEffectiveJobXpRequired(job);
     const needed = xpRequired - state.player.currentJobXp;
     if (needed <= 0) {
+      for (const masteredSkillId of addSkillMasteryFromXp(state, remaining)) {
+        if (!summary.skillsMastered.includes(masteredSkillId)) {
+          summary.skillsMastered.push(masteredSkillId);
+        }
+        messages.push(`Mastered skill ${masteredSkillId}.`);
+      }
+      updateJobDiscovery(state, messages, summary);
       remaining = 0;
-      messages.push(`${job.id} is already mastered. Job XP was not applied.`);
+      messages.push(`${job.id} is already mastered. Job XP was not applied, but skill mastery progressed.`);
       break;
     }
     const applied = Math.min(remaining, needed);

@@ -1,9 +1,9 @@
-import { createInitialState } from "./state.js?v=20260606-12";
-import { acceptPendingRelic, continueAction, declinePendingRelic, finishBattleAction, generateChoices, refreshHuntWinRates, resolveChoice, selectHuntMonster, skipJobChange } from "./systems/events.js?v=20260606-12";
-import { runBattleStep } from "./systems/battle.js?v=20260606-12";
-import { changeJob } from "./systems/jobs.js?v=20260606-12";
-import { equipSkill, unequipSkill } from "./systems/skills.js?v=20260606-12";
-import { render } from "./ui/render.js?v=20260606-12";
+import { createInitialState } from "./state.js?v=20260606-13";
+import { acceptPendingRelic, continueAction, declinePendingRelic, finishBattleAction, generateChoices, refreshHuntWinRates, resolveChoice, selectHuntMonster, skipJobChange } from "./systems/events.js?v=20260606-13";
+import { runBattleStep } from "./systems/battle.js?v=20260606-13";
+import { changeJob } from "./systems/jobs.js?v=20260606-13";
+import { equipSkill, unequipSkill } from "./systems/skills.js?v=20260606-13";
+import { render } from "./ui/render.js?v=20260606-13";
 
 const app = document.querySelector("#app");
 let state = createInitialState();
@@ -130,7 +130,7 @@ function registerServiceWorker() {
     return;
   }
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=20260606-12").catch((error) => {
+    navigator.serviceWorker.register("./sw.js?v=20260606-13").catch((error) => {
       console.warn("Service worker registration failed.", error);
     });
   });
