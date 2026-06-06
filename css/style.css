@@ -307,6 +307,8 @@ h3 {
 }
 
 .modal {
+  display: flex;
+  flex-direction: column;
   width: min(980px, 100%);
   max-height: min(820px, 90vh);
   overflow: hidden;
@@ -318,8 +320,11 @@ h3 {
 }
 
 .modal-log {
+  flex: 1 1 auto;
+  min-height: 0;
   max-height: 70vh;
   overflow: auto;
+  overscroll-behavior: contain;
   padding-right: 6px;
 }
 

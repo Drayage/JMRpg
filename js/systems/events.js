@@ -4,7 +4,7 @@ import { monsters } from "../data/monsters.js?v=20260605-5";
 import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomUnownedRelic, rejectRelic } from "./relics.js?v=20260605-5";
 import { addStats } from "./stats.js";
 import { getAvailableAdvancedJobs, getAvailableBasicJobs, grantJobXp, updateJobDiscovery } from "./jobs.js";
-import { createBattle, estimateWinRate, getBattleReward } from "./battle.js?v=20260605-5";
+import { createBattle, estimateWinRate, getBattleReward } from "./battle.js?v=20260606-9";
 
 export function generateChoices(state) {
   if (state.gameOver) {
@@ -62,6 +62,7 @@ export function resolveChoice(state, choiceId) {
   if (choice.type === "boss") {
     const enemy = choice.type === "boss" ? bosses[choice.monsterId] : monsters[choice.monsterId];
     state.battle = createBattle(state, enemy, { category: choice.category, elite: choice.elite, boss: choice.type === "boss", final: choice.final });
+    state.battleSpeed = "fast";
     state.pendingBattleChoice = choice;
     state.busy = true;
     return { battle: state.battle };
@@ -94,6 +95,7 @@ export function selectHuntMonster(state, monsterChoiceId) {
   }
   const enemy = monsters[choice.monsterId];
   state.battle = createBattle(state, enemy, { category: choice.category, elite: choice.elite, difficultyScale: choice.difficultyScale });
+  state.battleSpeed = "fast";
   state.pendingBattleChoice = choice;
   state.activeHuntEvent = null;
   state.busy = true;
@@ -106,11 +108,12 @@ export function finishBattleAction(state) {
   }
   const choice = state.pendingBattleChoice;
   const reward = getBattleReward(state, state.battle);
-  const xp = Math.round(reward.xp * (choice.rewardMultiplier ?? 1) * getEventXpMultiplier(state, choice.category, { elite: choice.elite }));
+  const baseXp = choice.type === "hunt" ? choice.xp ?? 0 : reward.xp * (choice.rewardMultiplier ?? 1);
+  const xp = Math.round(baseXp * getEventXpMultiplier(state, choice.category, { elite: choice.elite }));
   const xpSummary = xp > 0 ? grantJobXp(state, xp, choice.category) : null;
   let relicId = null;
 
-  if (reward.won && choice.type === "hunt") {
+  if (reward.won && choice.type === "hunt" && choice.elite) {
     relicId = getRandomUnownedRelic(state, choice.category);
   }
   if (reward.won && choice.type === "boss") {
@@ -313,12 +316,17 @@ function createMonsterOptions(state, template) {
       difficultyScale: slot.difficultyScale,
       rewardMultiplier: slot.rewardMultiplier,
       category,
-      xp: Math.round(monster.xp * slot.rewardMultiplier),
+      xp: getHuntXpReward(monster, template.elite, slot.rewardMultiplier),
       enemyDamageType: getEnemyDamageType(monster),
       enemyDefenseProfile: monster.stats.MD > monster.stats.PD ? "high_magic_defense" : "high_physical_defense",
       winRate: estimateWinRate(state, monster, { elite: template.elite, difficultyScale: slot.difficultyScale })
     };
   });
+}
+
+function getHuntXpReward(monster, elite, rewardMultiplier = 1) {
+  const huntMultiplier = elite ? 0.62 : 0.48;
+  return Math.max(8, Math.round(monster.xp * rewardMultiplier * huntMultiplier));
 }
 
 function chooseMonsterForSlot(state, elite, levelOffset, usedMonsterIds) {

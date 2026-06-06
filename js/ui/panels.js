@@ -3,16 +3,17 @@ import { jobs } from "../data/jobs.js";
 import { monsters } from "../data/monsters.js";
 import { relics } from "../data/relics.js";
 import { skills } from "../data/skills.js";
-import { getCurrentJobProgress, getJobRequirementHints, getJobState, isJobDiscovered, isJobUnlocked } from "../systems/jobs.js";
-import { canEquipSkill, getEffectiveApCost, getEquippedApCost, getEquippedSlotCount, getSkillEstimate, skillSlotLimits } from "../systems/skills.js";
+import { getCurrentJobProgress, getEffectiveJobXpRequired, getJobRequirementHints, getJobState, isJobDiscovered, isJobUnlocked } from "../systems/jobs.js";
+import { canEquipSkill, canUseSkill, getEffectiveApCost, getEquippedApCost, getEquippedSlotCount, getSkillEstimate, skillSlotLimits } from "../systems/skills.js";
 import { getRelicCurrentValue } from "../systems/relics.js";
 import { getStalemateDamageMultiplier } from "../systems/battle.js";
 import { clampPercent, getEffectiveStats, statKeys } from "../systems/stats.js";
-import { ko } from "../i18n/ko.js?v=20260605-5";
+import { ko } from "../i18n/ko.js?v=20260606-9";
 
 export function statusPanel(state) {
   const progress = getCurrentJobProgress(state);
   const currentJob = jobs[state.currentJobId];
+  const currentJobXpRequired = getEffectiveJobXpRequired(currentJob);
   const nextMilestone = currentJob.milestones.find((milestone) => milestone.percent > progress);
   return panel(`
     <div class="title-row">
@@ -34,7 +35,7 @@ export function statusPanel(state) {
     ${progressBar(getEquippedApCost(state), Math.max(1, state.player.ap), "ap")}
     <p class="small muted">${jobDesc(currentJob.id)}</p>
     <div class="${changedClass(state.changed.jobXp)}">${progressBar(progress, 100, "job-xp")}</div>
-    <p class="small muted">${state.player.currentJobXp}/${currentJob.xpRequired} XP${nextMilestone ? ` / ${nextMilestone.percent}% ${milestoneName(nextMilestone)}` : ""}</p>
+    <p class="small muted">${state.player.currentJobXp}/${currentJobXpRequired} XP${nextMilestone ? ` / ${nextMilestone.percent}% ${milestoneName(nextMilestone)}` : ""}</p>
   `);
 }
 
@@ -349,7 +350,7 @@ function jobOption(state, job, canChangeFromEvent) {
       <div>
         <div class="split-row"><h3>${jobName(job.id)}</h3><span class="tag ${mastered ? "ok" : unlocked ? "warn" : ""}">${jobState}</span></div>
         <p class="small muted">${jobDesc(job.id)}</p>
-        <p class="small">XP ${job.xpRequired} / ${growthText(job.growth)}</p>
+        <p class="small">XP ${getEffectiveJobXpRequired(job)} / ${growthText(job.growth)}</p>
         ${hints.length ? `<p class="small muted">Requirements: ${hints.join(" / ")}</p>` : ""}
         <p class="small muted">${milestones}</p>
         ${advanced ? `<p class="small muted">Advanced: ${advanced}</p>` : ""}
@@ -366,6 +367,7 @@ function skillRow(state, skillId) {
   const equipped = state.player.equippedSkills.includes(skillId);
   const mastered = (state.player.skillMastery[skillId] ?? 0) >= 100;
   const mastery = state.player.skillMastery[skillId] ?? 0;
+  const usable = canUseSkill(state, skillId);
   const action = equipped ? "unequip-skill" : "equip-skill";
   const disabled = !equipped && !canEquipSkill(state, skillId);
   return `
@@ -377,6 +379,7 @@ function skillRow(state, skillId) {
           ${tag(skill.type)}
           ${(skill.tags ?? []).map((tagId) => tag(tagId)).join("")}
           ${estimate.onTheme ? tag("job theme", "ok") : tag("off theme", "warn")}
+          ${mastered ? tag(ko.ui.mastered, "ok") : usable ? tag(ko.ui.currentJobOnly, "warn") : tag(ko.ui.locked, "danger")}
         </div>
         ${skill.type === "passive" ? passiveSkillDetails(skill) : activeSkillDetails(estimate)}
         <p class="small muted">AP Cost: ${estimate.baseApCost}${estimate.baseApCost !== estimate.apCost ? ` -> ${estimate.apCost}` : ""}</p>
@@ -489,7 +492,7 @@ function choicePreviewTags(choice, state) {
   if (choice.xp) {
     tags.push(tag(`${ko.ui.xpReward} ${choice.xp}`));
   }
-  if (choice.category) {
+  if (choice.category && (choice.type !== "hunt" || choice.elite)) {
     tags.push(tag(`${ko.ui.relicCategory}: ${ko.categories[choice.category] ?? choice.category}`));
   }
   if (choice.enemyDamageType) {
@@ -501,7 +504,7 @@ function choicePreviewTags(choice, state) {
   if (choice.type === "training" || choice.type === "directional") {
     const currentJob = jobs[state.currentJobId];
     const currentPercent = getCurrentJobProgress(state);
-    const possiblePercent = Math.min(100, Math.floor(((state.player.currentJobXp + (choice.xp ?? 0)) / currentJob.xpRequired) * 100));
+    const possiblePercent = Math.min(100, Math.floor(((state.player.currentJobXp + (choice.xp ?? 0)) / getEffectiveJobXpRequired(currentJob)) * 100));
     const milestone = currentJob.milestones.find((item) => item.percent > currentPercent && item.percent <= possiblePercent);
     tags.push(tag(`${ko.ui.jobXp}: ${jobName(currentJob.id)} +${choice.xp ?? 0}`));
     if (milestone) {
@@ -711,6 +714,9 @@ function formatLogText(text) {
     output = output.replaceAll(id, jobName(id));
   }
   for (const id of Object.keys(skills)) {
+    output = output.replaceAll(id, skillName(id));
+  }
+  for (const id of Object.keys(ko.skills)) {
     output = output.replaceAll(id, skillName(id));
   }
   for (const id of Object.keys(relics)) {

@@ -76,7 +76,8 @@ export const ko = {
     dangerousHunt: "위험",
     noBattleRewards: "패배 보상 없음",
     viewBattleLog: "전투 로그 보기",
-    closeBattleLog: "닫기"
+    closeBattleLog: "닫기",
+    currentJobOnly: "현재 직업"
   },
   stats: {
     HP: "HP",
@@ -185,7 +186,24 @@ export const ko = {
     eclipse_step: { name: "월식 걸음", desc: "어둠 속도 빌드를 강화합니다." },
     imperial_backstab: { name: "황제의 기습", desc: "강력한 속도 기반 치명 특수기입니다." },
     summon_drake: { name: "비룡 소환", desc: "용 소환 피해와 방어를 제공합니다." },
-    legion_call: { name: "군단 호출", desc: "소환 빌드의 기반 능력을 보강합니다." }
+    legion_call: { name: "군단 호출", desc: "소환 빌드의 기반 능력을 보강합니다." },
+    enemy_heavy_swing: { name: "강타", desc: "적이 사용하는 강한 물리 공격입니다." },
+    enemy_guard_break: { name: "방어 파괴", desc: "방어를 깎으며 피해를 주는 적 기술입니다." },
+    enemy_quick_rend: { name: "빠른 난도질", desc: "속도 기반의 빠른 적 공격입니다." },
+    enemy_aimed_thrust: { name: "조준 찌르기", desc: "명중 기반 치명 공격입니다." },
+    enemy_arcane_bolt: { name: "비전 탄환", desc: "마법 피해를 주는 적 기술입니다." },
+    enemy_mana_burn: { name: "마나 연소", desc: "마법 피해와 방어를 동시에 얻는 적 기술입니다." },
+    enemy_dark_pulse: { name: "어둠 파동", desc: "어둠 계열 적이 쓰는 강한 공격입니다." },
+    enemy_life_leech: { name: "생명 갈취", desc: "피해를 주고 적이 회복합니다." },
+    enemy_toxic_spit: { name: "독성 침", desc: "피해와 독 피해를 함께 줍니다." },
+    enemy_venom_sting: { name: "맹독 찌르기", desc: "명중 기반 독 계열 공격입니다." },
+    enemy_radiant_smite: { name: "광휘의 징벌", desc: "신성 계열 적이 쓰는 공격입니다." },
+    enemy_blessed_guard: { name: "축복 방어", desc: "피해와 방어를 함께 얻는 적 기술입니다." },
+    enemy_flame_breath: { name: "화염 숨결", desc: "용 계열 적이 쓰는 강한 공격입니다." },
+    enemy_dragon_claw: { name: "용의 발톱", desc: "물리 기반 용 계열 공격입니다." },
+    enemy_root_crush: { name: "뿌리 압박", desc: "피해와 방어를 함께 얻는 적 기술입니다." },
+    enemy_spirit_swarm: { name: "정령 무리", desc: "소환 계열 적이 쓰는 마법 공격입니다." },
+    enemy_desperation_strike: { name: "필사의 일격", desc: "HP가 낮아진 적이 우선 사용하는 강한 공격입니다." }
   },
   relics: {
     wanderer_compass: { name: "방랑자의 나침반", desc: "전직 시 현재 직업 XP의 30%를 새 직업에 보존합니다." },

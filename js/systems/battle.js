@@ -5,7 +5,7 @@ import { getEffectiveStats, scoreStats } from "./stats.js";
 
 export function estimateWinRate(state, enemy, options = {}) {
   const playerScore = scoreStats(getEffectiveStats(state)) + state.player.equippedSkills.length * 12 + state.player.relics.length * 8;
-  const enemyScore = scoreStats(scaleEnemyStats(enemy.stats, options));
+  const enemyScore = scoreStats(scaleEnemyStats(enemy.stats, options)) * getEnemySkillThreat(enemy, options);
   return Math.max(8, Math.min(92, Math.round((playerScore / (playerScore + enemyScore)) * 100)));
 }
 
@@ -141,6 +141,21 @@ function getEnemyHpScale(options = {}) {
   return options.final ? 2.45 : options.boss ? 2.18 : options.elite ? 2.25 : 1.9;
 }
 
+function getEnemySkillThreat(enemy, options = {}) {
+  const categoryThreat = {
+    melee: 1.16,
+    agile: 1.2,
+    magic: 1.24,
+    dark: 1.25,
+    poison: 1.22,
+    holy: 1.2,
+    dragon: 1.3,
+    summon: 1.18
+  };
+  const eventThreat = options.final ? 0.28 : options.boss ? 0.22 : options.elite ? 0.14 : 0;
+  return (categoryThreat[enemy.category] ?? 1.18) + eventThreat;
+}
+
 function resolvePlayerTurn(state, battle, player, foe, traits) {
   const activeSkills = state.player.equippedSkills.map((id) => skills[id]).filter((skill) => skill && skill.type !== "passive");
   const priority = activeSkills.filter((skill) => skill.priority);
@@ -165,6 +180,25 @@ function resolvePlayerTurn(state, battle, player, foe, traits) {
 }
 
 function resolveEnemyTurn(state, battle, player, foe, enemyId) {
+  const enemySkills = getEnemySkills(battle);
+  const priority = enemySkills.filter((skill) => skill.priority);
+
+  for (const skill of priority) {
+    if (conditionMet(skill, foe, player) && rollEnemySkill(skill)) {
+      return executeEnemySkill(state, battle, skill, foe, player, enemyId);
+    }
+  }
+
+  let pool = [...enemySkills.filter((skill) => !skill.priority)];
+  while (pool.length > 0) {
+    const index = Math.floor(Math.random() * pool.length);
+    const skill = pool[index];
+    if (conditionMet(skill, foe, player) && rollEnemySkill(skill)) {
+      return executeEnemySkill(state, battle, skill, foe, player, enemyId);
+    }
+    pool.splice(index, 1);
+  }
+
   if (Math.random() * 100 > Math.max(12, foe.stats.ACC - player.stats.EVA)) {
     return { skillId: null, text: `${enemyId} missed.`, damage: 0, heal: 0, miss: true, crit: false, block: false, status: null };
   }
@@ -183,6 +217,135 @@ function resolveEnemyTurn(state, battle, player, foe, enemyId) {
     block: blocked,
     status: null
   };
+}
+
+function getEnemySkills(battle) {
+  const enemy = battle.enemy ?? {};
+  const configuredSkills = enemy.skills ?? [];
+  const skills = configuredSkills.length > 0 ? configuredSkills : getDefaultEnemySkills(enemy, battle);
+  const battleChanceBonus = battle.final ? 0.16 : battle.boss ? 0.12 : battle.elite ? 0.08 : 0;
+  const battlePowerBonus = battle.final ? 0.24 : battle.boss ? 0.18 : battle.elite ? 0.12 : 0;
+
+  return skills.map((skill) => ({
+    ...skill,
+    chance: Math.min(0.9, skill.chance + battleChanceBonus),
+    effects: skill.effects.map((effect) => effect.type === "damage" ? { ...effect, power: effect.power + battlePowerBonus } : effect)
+  }));
+}
+
+function getDefaultEnemySkills(enemy, battle) {
+  const category = enemy.category ?? "melee";
+  const damageType = enemy.damageType ?? "physical";
+  const skillsByCategory = {
+    melee: [
+      enemySkill("enemy_heavy_swing", 0.46, [{ type: "damage", stat: "PA", power: 1.42, defense: "PD", critBonus: 2 }]),
+      enemySkill("enemy_guard_break", 0.34, [{ type: "damage", stat: "PA", power: 1.18, defense: "PD", guardBreak: 6 }])
+    ],
+    agile: [
+      enemySkill("enemy_quick_rend", 0.52, [{ type: "damage", stat: "SPD", power: 1.22, defense: "PD", critBonus: 8 }]),
+      enemySkill("enemy_aimed_thrust", 0.38, [{ type: "damage", stat: "ACC", power: 0.92, defense: "PD", critBonus: 12 }])
+    ],
+    magic: [
+      enemySkill("enemy_arcane_bolt", 0.5, [{ type: "damage", stat: "MA", power: 1.45, defense: "MD" }]),
+      enemySkill("enemy_mana_burn", 0.34, [{ type: "damage", stat: "MA", power: 1.16, defense: "MD" }, { type: "guard", amount: 3 }])
+    ],
+    dark: [
+      enemySkill("enemy_dark_pulse", 0.5, [{ type: "damage", stat: damageType === "magic" ? "MA" : "PA", power: 1.44, defense: damageType === "magic" ? "MD" : "PD" }]),
+      enemySkill("enemy_life_leech", 0.34, [{ type: "damage", stat: "MA", power: 1.1, defense: "MD" }, { type: "heal", power: 0.45 }])
+    ],
+    poison: [
+      enemySkill("enemy_toxic_spit", 0.5, [{ type: "damage", stat: damageType === "physical" ? "PA" : "MA", power: 1.18, defense: damageType === "physical" ? "PD" : "MD" }, { type: "poison", power: 5, turns: 2 }]),
+      enemySkill("enemy_venom_sting", 0.4, [{ type: "damage", stat: "ACC", power: 0.96, defense: "PD", critBonus: 6 }])
+    ],
+    holy: [
+      enemySkill("enemy_radiant_smite", 0.48, [{ type: "damage", stat: damageType === "magic" ? "MA" : "PA", power: 1.38, defense: damageType === "magic" ? "MD" : "PD" }]),
+      enemySkill("enemy_blessed_guard", 0.34, [{ type: "damage", stat: "MA", power: 1.0, defense: "MD" }, { type: "guard", amount: 5 }])
+    ],
+    dragon: [
+      enemySkill("enemy_flame_breath", 0.48, [{ type: "damage", stat: damageType === "magic" ? "MA" : "PA", power: 1.5, defense: damageType === "magic" ? "MD" : "PD" }]),
+      enemySkill("enemy_dragon_claw", 0.38, [{ type: "damage", stat: "PA", power: 1.36, defense: "PD", critBonus: 5 }])
+    ],
+    summon: [
+      enemySkill("enemy_root_crush", 0.46, [{ type: "damage", stat: "PA", power: 1.32, defense: "PD" }, { type: "guard", amount: 4 }]),
+      enemySkill("enemy_spirit_swarm", 0.36, [{ type: "damage", stat: "MA", power: 1.18, defense: "MD" }])
+    ]
+  };
+
+  const chosen = skillsByCategory[category] ?? skillsByCategory.melee;
+  const enragePower = battle.final ? 1.9 : battle.boss ? 1.72 : battle.elite ? 1.58 : 1.42;
+  return [
+    ...chosen,
+    enemySkill("enemy_desperation_strike", 0.72, [{ type: "damage", stat: damageType === "magic" ? "MA" : "PA", power: enragePower, defense: damageType === "magic" ? "MD" : "PD", critBonus: 10 }], {
+      priority: true,
+      condition: { type: "hp_below", value: 0.35 }
+    })
+  ];
+}
+
+function enemySkill(id, chance, effects, options = {}) {
+  return {
+    id,
+    chance,
+    effects,
+    priority: false,
+    condition: null,
+    ...options
+  };
+}
+
+function rollEnemySkill(skill) {
+  return Math.random() < skill.chance;
+}
+
+function executeEnemySkill(state, battle, skill, actor, target, enemyId) {
+  if (Math.random() * 100 > Math.max(14, actor.stats.ACC - target.stats.EVA * 0.82)) {
+    return { skillId: skill.id, text: `${enemyId} used ${skill.id} but missed.`, damage: 0, heal: 0, miss: true, crit: false, block: false, status: null };
+  }
+
+  const action = { skillId: skill.id, text: "", damage: 0, heal: 0, miss: false, crit: false, block: false, status: null };
+  const lines = [];
+  const stalemateMultiplier = getStalemateDamageMultiplier(battle);
+  const incomingMultiplier = getEliteIncomingDamageMultiplier(state, battle);
+
+  for (const effect of skill.effects ?? []) {
+    if (effect.type === "damage") {
+      const rawStat = actor.stats[effect.stat] ?? actor.stats.PA;
+      const defenseStat = target.stats[effect.defense ?? "PD"] ?? target.stats.PD;
+      const blocked = target.guard > 0;
+      const critChance = actor.stats.CRT + (effect.critBonus ?? 0);
+      const crit = Math.random() * 100 < Math.max(0, critChance);
+      const critMultiplier = crit ? 1 + actor.stats.CRD / 100 : 1;
+      const defenseReduction = defenseStat * (effect.defense === "MD" ? 0.28 : 0.32);
+      const damage = Math.max(1, Math.round(rawStat * effect.power * 0.92 * incomingMultiplier * stalemateMultiplier * critMultiplier - defenseReduction - target.guard));
+      target.hp = Math.max(0, target.hp - damage);
+      target.guard = Math.max(0, target.guard - (effect.guardBreak ?? 4));
+      action.damage += damage;
+      action.crit = action.crit || crit;
+      action.block = action.block || blocked;
+      lines.push(`${enemyId} used ${skill.id} for ${damage}${crit ? " critical" : ""} damage${blocked ? " after block" : ""}`);
+    }
+    if (effect.type === "heal") {
+      const healed = Math.round(actor.stats.HP * effect.power * 0.08);
+      actor.hp = Math.min(actor.stats.HP, actor.hp + healed);
+      action.heal += healed;
+      lines.push(`${enemyId} recovered ${healed} HP`);
+    }
+    if (effect.type === "guard") {
+      actor.guard += effect.amount;
+      action.block = true;
+      lines.push(`${enemyId} gained ${effect.amount} block`);
+    }
+    if (effect.type === "poison") {
+      const poisonDamage = Math.max(1, Math.round(effect.power * (battle.elite ? 1.4 : 1) * (battle.boss ? 1.6 : 1)));
+      target.hp = Math.max(0, target.hp - poisonDamage);
+      action.damage += poisonDamage;
+      action.status = "poison";
+      lines.push(`${enemyId} poison dealt ${poisonDamage} damage`);
+    }
+  }
+
+  action.text = `${lines.join(". ")}.`;
+  return action;
 }
 
 function executeSkill(state, battle, skill, player, foe, traits) {

@@ -9,16 +9,20 @@ export const skillSlotLimits = {
   passive: 3
 };
 
+const skillMasteryRate = 1.7;
+
 export function getSkillType(skillId) {
   return skills[skillId]?.type ?? "active";
 }
 
 export function getEquippedApCost(state) {
-  return state.player.equippedSkills.reduce((total, skillId) => total + getEffectiveApCost(state, skillId), 0);
+  return state.player.equippedSkills
+    .filter((skillId) => canUseSkill(state, skillId))
+    .reduce((total, skillId) => total + getEffectiveApCost(state, skillId), 0);
 }
 
 export function getEquippedSlotCount(state, type) {
-  return state.player.equippedSkills.filter((skillId) => skillId !== "basic_attack" && getSkillType(skillId) === type).length;
+  return state.player.equippedSkills.filter((skillId) => skillId !== "basic_attack" && canUseSkill(state, skillId) && getSkillType(skillId) === type).length;
 }
 
 export function getEffectiveApCost(state, skillId) {
@@ -46,7 +50,7 @@ export function getEffectiveActivationChance(state, skillId) {
 
 export function canEquipSkill(state, skillId) {
   const skill = skills[skillId];
-  if (!skill || !state.player.learnedSkills.includes(skillId) || state.player.equippedSkills.includes(skillId)) {
+  if (!skill || !canUseSkill(state, skillId) || state.player.equippedSkills.includes(skillId)) {
     return false;
   }
   const type = skill.type;
@@ -69,6 +73,26 @@ export function unequipSkill(state, skillId) {
   return true;
 }
 
+export function canUseSkill(state, skillId) {
+  if (skillId === "basic_attack") {
+    return true;
+  }
+  if (!skills[skillId] || !state.player.learnedSkills.includes(skillId)) {
+    return false;
+  }
+  if ((state.player.skillMastery[skillId] ?? 0) >= 100) {
+    return true;
+  }
+  return isCurrentJobSkillUnlocked(state, skillId);
+}
+
+export function pruneUnavailableEquippedSkills(state) {
+  state.player.equippedSkills = [
+    "basic_attack",
+    ...state.player.equippedSkills.filter((skillId) => skillId !== "basic_attack" && canUseSkill(state, skillId))
+  ];
+}
+
 export function learnSkill(state, skillId) {
   if (!state.player.learnedSkills.includes(skillId)) {
     state.player.learnedSkills.push(skillId);
@@ -79,7 +103,7 @@ export function learnSkill(state, skillId) {
 export function addSkillMasteryFromXp(state, xp) {
   const targets = state.player.equippedSkills.filter((skillId) => {
     const skill = skills[skillId];
-    return skill && skill.id !== "basic_attack" && (state.player.skillMastery[skillId] ?? 0) < 100;
+    return skill && canUseSkill(state, skillId) && skill.id !== "basic_attack" && (state.player.skillMastery[skillId] ?? 0) < 100;
   });
 
   if (targets.length === 0) {
@@ -90,13 +114,32 @@ export function addSkillMasteryFromXp(state, xp) {
   const split = (xp / targets.length) * getMasteryMultiplier(state, targets);
   for (const skillId of targets) {
     const current = state.player.skillMastery[skillId] ?? 0;
-    const next = Math.min(100, current + split * 0.7);
+    const next = Math.min(100, current + split * skillMasteryRate);
     state.player.skillMastery[skillId] = Math.round(next);
     if (current < 100 && next >= 100) {
       gained.push(skillId);
     }
   }
   return gained;
+}
+
+function isCurrentJobSkillUnlocked(state, skillId) {
+  const job = jobs[state.currentJobId];
+  if (!job) {
+    return false;
+  }
+  const progress = Math.min(100, Math.floor((state.player.currentJobXp / getEffectiveJobXpRequired(job)) * 100));
+  return job.milestones.some((milestone) => milestone.type === "skill" && milestone.skillId === skillId && progress >= milestone.percent);
+}
+
+function getEffectiveJobXpRequired(job) {
+  const multipliers = {
+    1: 1.25,
+    2: 1.4,
+    3: 1.55,
+    4: 1.7
+  };
+  return Math.round(job.xpRequired * (multipliers[job.tier] ?? 1.5));
 }
 
 export function isSkillOnTheme(state, skill) {
@@ -114,7 +157,8 @@ export function getSkillEstimate(state, skillId) {
   const stat = effect?.stat ?? skill.scalingStat;
   const power = effect?.power ?? 0;
   const baseValue = stat ? Math.round((stats[stat] ?? 0) * power) : 0;
-  const finalValue = Math.round(baseValue * (isSkillOnTheme(state, skill) ? 1.08 : 0.96));
+  const combatFactor = effect?.type === "damage" ? 0.64 : effect?.type === "heal" ? 0.72 : 1;
+  const finalValue = Math.round(baseValue * combatFactor * (isSkillOnTheme(state, skill) ? 1.08 : 0.96));
   return {
     type: skill.type,
     effectType: effect?.type ?? null,

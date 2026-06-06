@@ -1,0 +1,19 @@
+{
+  "name": "30-Day Roguelike Auto RPG",
+  "short_name": "Auto RPG",
+  "description": "A 30-day roguelike auto RPG prototype.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b1014",
+  "theme_color": "#101820",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

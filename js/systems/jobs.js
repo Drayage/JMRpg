@@ -1,7 +1,7 @@
 import { jobs } from "../data/jobs.js";
 import { relics } from "../data/relics.js";
 import { addStats, statKeys } from "./stats.js";
-import { addSkillMasteryFromXp, learnSkill } from "./skills.js";
+import { addSkillMasteryFromXp, learnSkill, pruneUnavailableEquippedSkills } from "./skills.js";
 import { getJobXpPreserveRatio } from "./relics.js";
 
 export function isJobUnlocked(state, jobId) {
@@ -57,6 +57,7 @@ export function changeJob(state, jobId) {
   if (!state.visitedJobs.includes(jobId)) {
     state.visitedJobs.push(jobId);
   }
+  pruneUnavailableEquippedSkills(state);
   updateJobDiscovery(state);
   state.activeJobEvent = null;
   state.log.unshift({ type: "job", text: `Changed job to ${jobId}. Preserved ${preservedXp} job XP.` });
@@ -70,7 +71,17 @@ export function changeJob(state, jobId) {
 
 export function getCurrentJobProgress(state) {
   const job = jobs[state.currentJobId];
-  return Math.min(100, Math.floor((state.player.currentJobXp / job.xpRequired) * 100));
+  return Math.min(100, Math.floor((state.player.currentJobXp / getEffectiveJobXpRequired(job)) * 100));
+}
+
+export function getEffectiveJobXpRequired(job) {
+  const multipliers = {
+    1: 1.25,
+    2: 1.4,
+    3: 1.55,
+    4: 1.7
+  };
+  return Math.round(job.xpRequired * (multipliers[job.tier] ?? 1.5));
 }
 
 export function grantJobXp(state, xp, tag = null) {
@@ -96,7 +107,8 @@ export function grantJobXp(state, xp, tag = null) {
   while (remaining > 0) {
     const job = jobs[state.currentJobId];
     const beforePercent = getCurrentJobProgress(state);
-    const needed = job.xpRequired - state.player.currentJobXp;
+    const xpRequired = getEffectiveJobXpRequired(job);
+    const needed = xpRequired - state.player.currentJobXp;
     if (needed <= 0) {
       remaining = 0;
       messages.push(`${job.id} is already mastered. Job XP was not applied.`);
@@ -106,7 +118,7 @@ export function grantJobXp(state, xp, tag = null) {
     state.player.currentJobXp += applied;
     remaining -= applied;
 
-    const growthRatio = applied / job.xpRequired;
+    const growthRatio = applied / xpRequired;
     addStats(state.player.stats, job.growth, growthRatio);
 
     for (const masteredSkillId of addSkillMasteryFromXp(state, applied)) {
@@ -128,7 +140,7 @@ export function grantJobXp(state, xp, tag = null) {
       }
     }
 
-    if (state.player.currentJobXp >= job.xpRequired) {
+    if (state.player.currentJobXp >= xpRequired) {
       masterCurrentJob(state, messages, summary);
       if (remaining > 0) {
         state.pendingJobXp += remaining;
@@ -163,6 +175,7 @@ export function grantJobXp(state, xp, tag = null) {
 
 function masterCurrentJob(state, messages, summary = null) {
   const job = jobs[state.currentJobId];
+  const xpRequired = getEffectiveJobXpRequired(job);
   if (!state.masteredJobs.includes(job.id)) {
     state.masteredJobs.push(job.id);
     state.player.ap += job.apReward;
@@ -182,7 +195,7 @@ function masterCurrentJob(state, messages, summary = null) {
     }
   }
   updateJobDiscovery(state, messages, summary);
-  state.player.currentJobXp = job.xpRequired;
+  state.player.currentJobXp = xpRequired;
 }
 
 export function updateJobDiscovery(state, messages = [], summary = null) {

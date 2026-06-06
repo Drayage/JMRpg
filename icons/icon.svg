@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Auto RPG icon">
+  <rect width="512" height="512" rx="96" fill="#0b1014"/>
+  <path d="M104 326h304v58H104z" fill="#f3c84b"/>
+  <path d="M256 64l42 86 95 14-69 67 16 94-84-44-84 44 16-94-69-67 95-14z" fill="#e85d3f"/>
+  <path d="M164 358l92-238 92 238h-62l-13-42h-34l-13 42z" fill="#e8edf2"/>
+  <path d="M249 268h14l-7-25z" fill="#0b1014"/>
+  <path d="M112 388h288v40H112z" fill="#24343d"/>
+</svg>
