@@ -1,12 +1,19 @@
 import { skills } from "../data/skills.js";
 import { getDamageMultiplier, getEliteIncomingDamageMultiplier, getPoisonMultiplier } from "./relics.js";
 import { getEffectiveActivationChance } from "./skills.js";
-import { getEffectiveStats, scoreStats } from "./stats.js";
+import { getEffectiveStats } from "./stats.js";
 
 export function estimateWinRate(state, enemy, options = {}) {
-  const playerScore = scoreStats(getEffectiveStats(state)) + state.player.equippedSkills.length * 12 + state.player.relics.length * 8;
-  const enemyScore = scoreStats(scaleEnemyStats(enemy.stats, options)) * getEnemySkillThreat(enemy, options);
-  return Math.max(8, Math.min(92, Math.round((playerScore / (playerScore + enemyScore)) * 100)));
+  const samples = options.samples ?? getWinRateSamples(options);
+  let wins = 0;
+
+  for (let index = 0; index < samples; index += 1) {
+    if (simulateBattleOutcome(state, enemy, options)) {
+      wins += 1;
+    }
+  }
+
+  return Math.round((wins / samples) * 100);
 }
 
 export function createBattle(state, enemy, options = {}) {
@@ -141,19 +148,21 @@ function getEnemyHpScale(options = {}) {
   return options.final ? 2.45 : options.boss ? 2.18 : options.elite ? 2.25 : 1.9;
 }
 
-function getEnemySkillThreat(enemy, options = {}) {
-  const categoryThreat = {
-    melee: 1.16,
-    agile: 1.2,
-    magic: 1.24,
-    dark: 1.25,
-    poison: 1.22,
-    holy: 1.2,
-    dragon: 1.3,
-    summon: 1.18
-  };
-  const eventThreat = options.final ? 0.28 : options.boss ? 0.22 : options.elite ? 0.14 : 0;
-  return (categoryThreat[enemy.category] ?? 1.18) + eventThreat;
+function getWinRateSamples(options = {}) {
+  if (options.final || options.boss || options.elite) {
+    return 30;
+  }
+  return 20;
+}
+
+function simulateBattleOutcome(state, enemy, options = {}) {
+  const battle = createBattle(state, enemy, options);
+  let safetySteps = 0;
+  while (!battle.finished && safetySteps < 1000) {
+    runBattleStep(state, battle);
+    safetySteps += 1;
+  }
+  return battle.won;
 }
 
 function resolvePlayerTurn(state, battle, player, foe, traits) {

@@ -1,4 +1,4 @@
-import { jobs } from "../data/jobs.js";
+import { jobs } from "../data/jobs.js?v=20260606-12";
 import { skills } from "../data/skills.js";
 import { getApDiscountFromRelics, getMasteryMultiplier, getRelicActivationBonus } from "./relics.js";
 import { getEffectiveStats } from "./stats.js";

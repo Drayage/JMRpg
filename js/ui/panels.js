@@ -1,5 +1,5 @@
 import { bosses } from "../data/bosses.js";
-import { jobs } from "../data/jobs.js";
+import { jobs } from "../data/jobs.js?v=20260606-12";
 import { monsters } from "../data/monsters.js";
 import { relics } from "../data/relics.js";
 import { skills } from "../data/skills.js";
@@ -8,7 +8,7 @@ import { canEquipSkill, canUseSkill, getEffectiveApCost, getEquippedApCost, getE
 import { getRelicCurrentValue } from "../systems/relics.js";
 import { getStalemateDamageMultiplier } from "../systems/battle.js";
 import { clampPercent, getEffectiveStats, statKeys } from "../systems/stats.js";
-import { ko } from "../i18n/ko.js?v=20260606-10";
+import { ko } from "../i18n/ko.js?v=20260606-12";
 
 export function statusPanel(state) {
   const progress = getCurrentJobProgress(state);

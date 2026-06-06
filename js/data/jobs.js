@@ -1,6 +1,6 @@
 const baseMilestones = (firstSkill, secondSkill, thirdSkill = null) => [
-  { percent: 30, type: "skill", skillId: firstSkill },
-  { percent: 70, type: "skill", skillId: secondSkill },
+  { percent: 10, type: "skill", skillId: firstSkill },
+  { percent: 40, type: "skill", skillId: secondSkill },
   ...(thirdSkill ? [{ percent: 90, type: "skill", skillId: thirdSkill }] : []),
   { percent: 100, type: "master" }
 ];

@@ -4,7 +4,7 @@ import { monsters } from "../data/monsters.js?v=20260605-5";
 import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomUnownedRelic, rejectRelic } from "./relics.js?v=20260605-5";
 import { addStats } from "./stats.js";
 import { getAvailableAdvancedJobs, getAvailableBasicJobs, grantJobXp, updateJobDiscovery } from "./jobs.js";
-import { createBattle, estimateWinRate, getBattleReward } from "./battle.js?v=20260606-9";
+import { createBattle, estimateWinRate, getBattleReward } from "./battle.js?v=20260606-12";
 
 export function generateChoices(state) {
   if (state.gameOver) {
@@ -102,13 +102,24 @@ export function selectHuntMonster(state, monsterChoiceId) {
   return { battle: state.battle };
 }
 
+export function refreshHuntWinRates(state) {
+  for (const choice of state.choices ?? []) {
+    if (choice.type === "hunt_event") {
+      refreshMonsterOptions(state, choice.monsterOptions);
+    }
+  }
+  if (state.activeHuntEvent?.monsterOptions) {
+    refreshMonsterOptions(state, state.activeHuntEvent.monsterOptions);
+  }
+}
+
 export function finishBattleAction(state) {
   if (!state.battle?.finished || !state.pendingBattleChoice) {
     return;
   }
   const choice = state.pendingBattleChoice;
   const reward = getBattleReward(state, state.battle);
-  const baseXp = choice.type === "hunt" ? choice.xp ?? 0 : reward.xp * (choice.rewardMultiplier ?? 1);
+  const baseXp = reward.won ? getBattleBaseXp(choice, reward) : 0;
   const xp = Math.round(baseXp * getEventXpMultiplier(state, choice.category, { elite: choice.elite }));
   const xpSummary = xp > 0 ? grantJobXp(state, xp, choice.category) : null;
   let relicId = null;
@@ -132,6 +143,13 @@ export function finishBattleAction(state) {
   setActionResult(state, choice, { battle: state.battle, xpSummary, noBattleRewards: !reward.won, pendingRelicId: relicId, bossWon: reward.won });
   state.pendingBattleChoice = null;
   state.busy = false;
+}
+
+function getBattleBaseXp(choice, reward) {
+  if (choice.type === "hunt") {
+    return choice.xp ?? 0;
+  }
+  return reward.xp * (choice.rewardMultiplier ?? 1);
 }
 
 export function acceptPendingRelic(state) {
@@ -322,6 +340,16 @@ function createMonsterOptions(state, template) {
       winRate: estimateWinRate(state, monster, { elite: template.elite, difficultyScale: slot.difficultyScale })
     };
   });
+}
+
+function refreshMonsterOptions(state, monsterOptions) {
+  for (const option of monsterOptions ?? []) {
+    const monster = monsters[option.monsterId];
+    if (!monster) {
+      continue;
+    }
+    option.winRate = estimateWinRate(state, monster, { elite: option.elite, difficultyScale: option.difficultyScale });
+  }
 }
 
 function getHuntXpReward(monster, elite, rewardMultiplier = 1) {

@@ -1,9 +1,9 @@
-import { createInitialState } from "./state.js?v=20260606-10";
-import { acceptPendingRelic, continueAction, declinePendingRelic, finishBattleAction, generateChoices, resolveChoice, selectHuntMonster, skipJobChange } from "./systems/events.js?v=20260606-10";
-import { runBattleStep } from "./systems/battle.js?v=20260606-10";
-import { changeJob } from "./systems/jobs.js?v=20260606-10";
-import { equipSkill, unequipSkill } from "./systems/skills.js?v=20260606-10";
-import { render } from "./ui/render.js?v=20260606-10";
+import { createInitialState } from "./state.js?v=20260606-12";
+import { acceptPendingRelic, continueAction, declinePendingRelic, finishBattleAction, generateChoices, refreshHuntWinRates, resolveChoice, selectHuntMonster, skipJobChange } from "./systems/events.js?v=20260606-12";
+import { runBattleStep } from "./systems/battle.js?v=20260606-12";
+import { changeJob } from "./systems/jobs.js?v=20260606-12";
+import { equipSkill, unequipSkill } from "./systems/skills.js?v=20260606-12";
+import { render } from "./ui/render.js?v=20260606-12";
 
 const app = document.querySelector("#app");
 let state = createInitialState();
@@ -76,10 +76,14 @@ app.addEventListener("click", (event) => {
     state.battleSpeed = target.dataset.speed;
   }
   if (action === "equip-skill") {
-    equipSkill(state, target.dataset.skillId);
+    if (equipSkill(state, target.dataset.skillId)) {
+      refreshHuntWinRates(state);
+    }
   }
   if (action === "unequip-skill") {
-    unequipSkill(state, target.dataset.skillId);
+    if (unequipSkill(state, target.dataset.skillId)) {
+      refreshHuntWinRates(state);
+    }
   }
   if (action === "restart") {
     state = createInitialState();
@@ -126,7 +130,7 @@ function registerServiceWorker() {
     return;
   }
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js?v=20260606-10").catch((error) => {
+    navigator.serviceWorker.register("./sw.js?v=20260606-12").catch((error) => {
       console.warn("Service worker registration failed.", error);
     });
   });
