@@ -422,7 +422,16 @@ h3 {
 
 @media (max-width: 980px) {
   .app {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .column {
+    display: contents;
+  }
+
+  .jobs-panel {
+    order: 999;
   }
 
   .battle-board {

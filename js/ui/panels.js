@@ -8,7 +8,7 @@ import { canEquipSkill, canUseSkill, getEffectiveApCost, getEquippedApCost, getE
 import { getRelicCurrentValue } from "../systems/relics.js";
 import { getStalemateDamageMultiplier } from "../systems/battle.js";
 import { clampPercent, getEffectiveStats, statKeys } from "../systems/stats.js";
-import { ko } from "../i18n/ko.js?v=20260606-9";
+import { ko } from "../i18n/ko.js?v=20260606-10";
 
 export function statusPanel(state) {
   const progress = getCurrentJobProgress(state);
@@ -107,7 +107,7 @@ export function jobsPanel(state) {
     <div class="stack">
       ${Object.values(jobs).map((job) => jobOption(state, job, false)).join("")}
     </div>
-  `);
+  `, "jobs-panel");
 }
 
 export function skillsPanel(state) {
@@ -611,8 +611,8 @@ function milestoneName(milestone) {
   return ko.ui.mastered;
 }
 
-function panel(content) {
-  return `<section class="panel">${content}</section>`;
+function panel(content, className = "") {
+  return `<section class="panel ${className}">${content}</section>`;
 }
 
 function tag(text, tone = "") {

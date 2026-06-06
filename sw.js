@@ -1,4 +1,4 @@
-const cacheName = "job-master-rpg-20260606-9";
+const cacheName = "job-master-rpg-20260606-10";
 
 const appShell = [
   "./",
@@ -45,15 +45,10 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(
-    caches.match(event.request, { ignoreSearch: true }).then((cached) => {
-      if (cached) {
-        return cached;
-      }
-      return fetch(event.request).then((response) => {
-        const copy = response.clone();
-        caches.open(cacheName).then((cache) => cache.put(event.request, copy));
-        return response;
-      });
-    })
+    fetch(event.request).then((response) => {
+      const copy = response.clone();
+      caches.open(cacheName).then((cache) => cache.put(event.request, copy));
+      return response;
+    }).catch(() => caches.match(event.request).then((cached) => cached ?? caches.match("./index.html")))
   );
 });
