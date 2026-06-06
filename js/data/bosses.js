@@ -13,7 +13,7 @@ export const bosses = {
     traits: ["physical_resistance", "summon_resistance", "poison_immunity"],
     stats: { HP: 610, PA: 40, PD: 28, MA: 8, MD: 16, SPD: 9, ACC: 88, EVA: 4, CRT: 5, CRD: 30 },
     xp: 0,
-    relicCategories: ["melee"]
+    relicCategories: ["risk"]
   },
   plague_dragon: {
     id: "plague_dragon",
@@ -29,7 +29,7 @@ export const bosses = {
     traits: ["critical_resistance", "magic_resistance", "poison_vulnerability"],
     stats: { HP: 500, PA: 28, PD: 18, MA: 36, MD: 24, SPD: 18, ACC: 92, EVA: 16, CRT: 10, CRD: 45 },
     xp: 0,
-    relicCategories: ["magic", "dark"]
+    relicCategories: ["critical", "dark"]
   },
   world_serpent: {
     id: "world_serpent",
@@ -45,7 +45,7 @@ export const bosses = {
     traits: ["physical_resistance"],
     stats: { HP: 210, PA: 23, PD: 14, MA: 5, MD: 8, SPD: 10, ACC: 85, EVA: 6, CRT: 5, CRD: 35 },
     xp: 95,
-    relicCategories: ["melee", "holy"]
+    relicCategories: ["risk", "holy"]
   },
   void_acolyte: {
     id: "void_acolyte",
@@ -53,7 +53,7 @@ export const bosses = {
     traits: ["critical_resistance", "holy_vulnerability"],
     stats: { HP: 340, PA: 18, PD: 14, MA: 31, MD: 18, SPD: 12, ACC: 88, EVA: 9, CRT: 6, CRD: 35 },
     xp: 150,
-    relicCategories: ["dark", "magic"]
+    relicCategories: ["dark", "mastery"]
   },
   dragon_herald: {
     id: "dragon_herald",

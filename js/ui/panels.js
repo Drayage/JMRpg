@@ -1,14 +1,14 @@
 import { bosses } from "../data/bosses.js";
-import { jobs } from "../data/jobs.js?v=20260606-15";
-import { monsters } from "../data/monsters.js";
-import { relics } from "../data/relics.js";
-import { skills } from "../data/skills.js?v=20260606-15";
+import { jobs } from "../data/jobs.js?v=20260606-17";
+import { monsters } from "../data/monsters.js?v=20260606-17";
+import { relics } from "../data/relics.js?v=20260606-17";
+import { skills } from "../data/skills.js?v=20260606-17";
 import { getCurrentJobProgress, getEffectiveJobXpRequired, getJobRequirementHints, getJobState, isJobDiscovered, isJobUnlocked } from "../systems/jobs.js";
 import { canEquipSkill, canUseSkill, getEffectiveApCost, getEquippedApCost, getEquippedSlotCount, getSkillEstimate, skillSlotLimits } from "../systems/skills.js";
 import { getRelicCurrentValue } from "../systems/relics.js";
 import { getStalemateDamageMultiplier } from "../systems/battle.js";
 import { clampPercent, getEffectiveStats, statKeys } from "../systems/stats.js";
-import { ko } from "../i18n/ko.js?v=20260606-12";
+import { ko } from "../i18n/ko.js?v=20260606-17";
 
 export function statusPanel(state) {
   const progress = getCurrentJobProgress(state);

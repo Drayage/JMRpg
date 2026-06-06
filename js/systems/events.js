@@ -1,10 +1,10 @@
-import { bosses } from "../data/bosses.js?v=20260605-5";
-import { eventTemplates } from "../data/events.js?v=20260605-5";
-import { monsters } from "../data/monsters.js?v=20260605-5";
-import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomUnownedRelic, rejectRelic } from "./relics.js?v=20260605-5";
+import { bosses } from "../data/bosses.js?v=20260606-17";
+import { eventTemplates } from "../data/events.js?v=20260606-17";
+import { monsters } from "../data/monsters.js?v=20260606-17";
+import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomUnownedRelic, rejectRelic } from "./relics.js?v=20260606-17";
 import { addStats, createBaseStats, scoreStats } from "./stats.js";
 import { getAvailableAdvancedJobs, getAvailableBasicJobs, grantJobXp, updateJobDiscovery } from "./jobs.js";
-import { createBattle, estimateWinRate, getBattleReward } from "./battle.js?v=20260606-15";
+import { createBattle, estimateWinRate, getBattleReward } from "./battle.js?v=20260606-17";
 
 export function generateChoices(state) {
   if (state.gameOver) {
@@ -259,7 +259,7 @@ function createChoiceFromTemplate(state, template) {
     };
   }
   if (template.type === "relic") {
-    const categories = ["holy", "melee", "magic", "poison", "dragon", "dark", "summon"];
+    const categories = ["job", "mastery", "ap", "holy", "dark", "dragon", "summon", "critical", "poison", "bleed", "risk"];
     return { ...template, id: `${template.id}_${Math.random()}`, templateId: template.id, category: categories[Math.floor(Math.random() * categories.length)] };
   }
   if (template.type === "stats") {

@@ -314,5 +314,203 @@ export const jobs = {
     revealHints: ["Summoner mastered", "Beast Lord mastered"],
     growth: { HP: 10, MA: 6, MD: 5, ACC: 3 },
     milestones: baseMilestones("summon_drake", "legion_call")
+  },
+  monk: {
+    id: "monk",
+    tier: 2,
+    xpRequired: 170,
+    apReward: 1,
+    themes: ["holy", "physical", "speed", "defensive"],
+    requires: { visitedAny: ["cleric", "rogue"], statThresholds: { SPD: 10 } },
+    revealHints: ["Cleric or Rogue visited", "Moderate SPD"],
+    growth: { HP: 9, PA: 3, PD: 3, SPD: 3, MD: 2 },
+    milestones: baseMilestones("iron_skin", "aura_cut")
+  },
+  rune_scribe: {
+    id: "rune_scribe",
+    tier: 2,
+    xpRequired: 175,
+    apReward: 1,
+    themes: ["magic", "arcane", "defensive"],
+    requires: { visitedAny: ["wizard"], statThresholds: { MD: 10 } },
+    revealHints: ["Wizard visited", "Moderate MD"],
+    growth: { HP: 6, MA: 4, MD: 5, ACC: 2 },
+    milestones: baseMilestones("rune_barrier", "sigil_burst")
+  },
+  coinblade: {
+    id: "coinblade",
+    tier: 2,
+    xpRequired: 185,
+    apReward: 1,
+    themes: ["critical", "risk", "ranged"],
+    requires: { visitedAny: ["rogue", "archer"], statThresholds: { CRT: 7 } },
+    revealHints: ["Rogue or Archer visited", "High CRT"],
+    growth: { HP: 5, PA: 3, SPD: 3, CRT: 5, CRD: 8 },
+    milestones: baseMilestones("golden_throw", "needle_flurry")
+  },
+  hexblade: {
+    id: "hexblade",
+    tier: 3,
+    xpRequired: 255,
+    apReward: 1,
+    themes: ["dark", "magic", "weapon", "critical"],
+    requires: { masteredAll: ["dark_acolyte"], visitedAll: ["rogue"] },
+    revealHints: ["Dark Acolyte mastered", "Rogue visited"],
+    growth: { HP: 8, PA: 3, MA: 5, SPD: 3, CRT: 4 },
+    milestones: baseMilestones("curse_mark", "phase_cut", "blood_seal")
+  },
+  plague_doctor: {
+    id: "plague_doctor",
+    tier: 3,
+    xpRequired: 260,
+    apReward: 1,
+    themes: ["poison", "holy", "support", "risk"],
+    requires: { visitedAll: ["cleric"], skillMasteredAll: ["poison_dart"] },
+    revealHints: ["Cleric visited", "Poison skill mastered"],
+    growth: { HP: 8, MA: 5, MD: 4, ACC: 3 },
+    milestones: baseMilestones("plague_cloud", "reversal_prayer", "venom_bloom")
+  },
+  wild_speaker: {
+    id: "wild_speaker",
+    tier: 3,
+    xpRequired: 250,
+    apReward: 1,
+    themes: ["summon", "beast", "ranged"],
+    requires: { masteredAll: ["hunter"], visitedAll: ["summoner"] },
+    revealHints: ["Hunter mastered", "Summoner visited"],
+    growth: { HP: 10, PA: 2, MA: 4, ACC: 5, MD: 3 },
+    milestones: baseMilestones("spirit_link", "monster_tamer", "summon_bear")
+  },
+  oracle_knight: {
+    id: "oracle_knight",
+    tier: 3,
+    xpRequired: 270,
+    apReward: 1,
+    themes: ["holy", "magic", "frontline", "defensive"],
+    requires: { masteredAny: ["rune_scribe", "knight"], visitedAll: ["cleric"] },
+    revealHints: ["Rune or Knight lineage", "Cleric visited"],
+    growth: { HP: 12, PA: 2, PD: 4, MA: 4, MD: 5 },
+    milestones: baseMilestones("rune_barrier", "aura_cut", "starfall")
+  },
+  relic_seeker: {
+    id: "relic_seeker",
+    tier: 3,
+    xpRequired: 245,
+    apReward: 1,
+    themes: ["job", "risk", "critical"],
+    requires: { visitedAny: ["coinblade", "rune_scribe"], relicCategoriesAny: ["ap", "risk", "job"] },
+    revealHints: ["Strange relic obtained", "Coinblade or Rune Scribe visited"],
+    growth: { HP: 7, PA: 3, MA: 3, ACC: 3, CRT: 4 },
+    milestones: baseMilestones("golden_throw", "sigil_burst", "oathbreaker_stance")
+  },
+  saint_of_ruin: {
+    id: "saint_of_ruin",
+    tier: 4,
+    xpRequired: 360,
+    apReward: 1,
+    themes: ["holy", "dark", "risk", "boss"],
+    requires: { masteredAll: ["holy_executor", "dark_acolyte"], skillMasteredAll: ["judgment"] },
+    revealHints: ["Holy Executor mastered", "Dark lineage touched", "Judgment mastered"],
+    growth: { HP: 10, PA: 4, MA: 7, CRT: 5, CRD: 8 },
+    milestones: baseMilestones("oathbreaker_stance", "starfall", "final_verdict")
+  },
+  void_conductor: {
+    id: "void_conductor",
+    tier: 4,
+    xpRequired: 370,
+    apReward: 1,
+    themes: ["dark", "summon", "magic"],
+    requires: { masteredAny: ["lich", "grand_summoner"], relicCategoriesAny: ["summon", "dark"] },
+    revealHints: ["Lich or Grand Summoner mastered", "Dark or Summon relic obtained"],
+    growth: { HP: 9, MA: 8, MD: 5, ACC: 3 },
+    milestones: baseMilestones("phantom_army", "death_pact", "legion_call")
+  },
+  trailwarden: {
+    id: "trailwarden",
+    tier: 2,
+    xpRequired: 165,
+    apReward: 1,
+    themes: ["foundation", "survival", "utility", "branching"],
+    requires: { visitedAny: ["warrior", "archer", "rogue", "cleric", "wizard"], statThresholds: { HP: 124 } },
+    revealHints: ["Any starter visited", "Slight HP growth"],
+    growth: { HP: 12, PA: 1, PD: 2, MA: 1, MD: 2, ACC: 1 },
+    milestones: baseMilestones("trail_grit", "emergency_bandage")
+  },
+  ossuary_guard: {
+    id: "ossuary_guard",
+    tier: 3,
+    xpRequired: 250,
+    apReward: 1,
+    themes: ["undead", "dark", "frontline", "attrition"],
+    requires: { visitedAll: ["dark_acolyte"], relicCategoriesAny: ["dark"] },
+    revealHints: ["Dark Acolyte visited", "Dark relic obtained"],
+    growth: { HP: 15, PA: 3, PD: 5, MA: 2, MD: 3 },
+    milestones: baseMilestones("bone_phalanx", "marrow_order", "ancestor_banner")
+  },
+  seal_martialist: {
+    id: "seal_martialist",
+    tier: 3,
+    xpRequired: 245,
+    apReward: 1,
+    themes: ["martial", "physical", "speed", "defensive"],
+    requires: { visitedAll: ["monk"], masteredAny: ["rogue", "warrior"] },
+    revealHints: ["Monk visited", "Rogue or Warrior mastered"],
+    growth: { HP: 10, PA: 5, PD: 3, SPD: 5, EVA: 3 },
+    milestones: baseMilestones("palm_break", "flowing_form", "meridian_burst")
+  },
+  boltwright: {
+    id: "boltwright",
+    tier: 3,
+    xpRequired: 240,
+    apReward: 1,
+    themes: ["ranged", "time", "critical", "utility"],
+    requires: { visitedAll: ["archer"], masteredAny: ["rune_scribe", "hunter"] },
+    revealHints: ["Archer visited", "Rune Scribe or Hunter mastered"],
+    growth: { HP: 7, PA: 2, SPD: 5, ACC: 6, CRT: 3, CRD: 6 },
+    milestones: baseMilestones("pinning_bolt", "rewind_bolt", "needle_flurry")
+  },
+  talisman_weaver: {
+    id: "talisman_weaver",
+    tier: 2,
+    xpRequired: 180,
+    apReward: 1,
+    themes: ["spirit", "magic", "time", "support"],
+    requires: { visitedAny: ["wizard", "cleric"], statThresholds: { MD: 10 } },
+    revealHints: ["Wizard or Cleric visited", "Moderate MD"],
+    growth: { HP: 6, MA: 4, MD: 5, SPD: 2 },
+    milestones: baseMilestones("spirit_talisman", "time_charm")
+  },
+  camp_provisioner: {
+    id: "camp_provisioner",
+    tier: 2,
+    xpRequired: 160,
+    apReward: 1,
+    themes: ["preparation", "food", "support", "survival"],
+    requires: { visitedAny: ["warrior", "hunter", "cleric"], statThresholds: { HP: 124 } },
+    revealHints: ["Warrior, Hunter, or Cleric visited", "Slight HP growth"],
+    growth: { HP: 14, PA: 2, MD: 2, ACC: 2 },
+    milestones: baseMilestones("hearty_meal", "battle_spice")
+  },
+  astral_medium: {
+    id: "astral_medium",
+    tier: 3,
+    xpRequired: 255,
+    apReward: 1,
+    themes: ["spirit", "summon", "magic", "support"],
+    requires: { masteredAll: ["talisman_weaver"], visitedAny: ["summoner", "cleric"] },
+    revealHints: ["Talisman Weaver mastered", "Summon or Cleric lineage touched"],
+    growth: { HP: 8, MA: 6, MD: 4, SPD: 2 },
+    milestones: baseMilestones("astral_seal", "spirit_link", "time_charm")
+  },
+  omen_chef: {
+    id: "omen_chef",
+    tier: 3,
+    xpRequired: 235,
+    apReward: 1,
+    themes: ["food", "risk", "support", "preparation"],
+    requires: { masteredAll: ["camp_provisioner"], visitedAny: ["coinblade", "plague_doctor"] },
+    revealHints: ["Camp Provisioner mastered", "Greed or plague route touched"],
+    growth: { HP: 16, PA: 3, MA: 2, MD: 3, CRT: 2 },
+    milestones: baseMilestones("feast_of_omens", "hearty_meal", "battle_spice")
   }
 };

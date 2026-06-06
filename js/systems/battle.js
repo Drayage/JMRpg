@@ -1,4 +1,4 @@
-import { skills } from "../data/skills.js?v=20260606-15";
+import { skills } from "../data/skills.js?v=20260606-17";
 import { getDamageMultiplier, getEliteIncomingDamageMultiplier, getPoisonMultiplier } from "./relics.js";
 import { getEffectiveActivationChance } from "./skills.js";
 import { getEffectiveStats } from "./stats.js";
@@ -469,11 +469,35 @@ function conditionMet(skill, player, foe) {
 
 function getTraitDamageMultiplier(skill, traits) {
   let multiplier = 1;
-  if (traits.includes("holy_vulnerability") && skill.tags?.includes("holy")) {
+  if ((traits.includes("holy_vulnerability") || traits.includes("holy_weakness")) && skill.tags?.includes("holy")) {
     multiplier *= 1.35;
+  }
+  if (traits.includes("dark_weakness") && skill.tags?.includes("dark")) {
+    multiplier *= 1.3;
+  }
+  if ((traits.includes("magic_weakness") || traits.includes("fire_weakness")) && skill.tags?.includes("magic")) {
+    multiplier *= 1.25;
+  }
+  if (traits.includes("critical_weakness") && skill.tags?.includes("critical")) {
+    multiplier *= 1.3;
+  }
+  if (traits.includes("summon_weakness") && skill.tags?.includes("summon")) {
+    multiplier *= 1.3;
   }
   if (traits.includes("physical_resistance") && skill.tags?.includes("physical")) {
     multiplier *= 0.72;
+  }
+  if (traits.includes("magic_resistance") && skill.tags?.includes("magic")) {
+    multiplier *= 0.75;
+  }
+  if (traits.includes("dark_resistance") && skill.tags?.includes("dark")) {
+    multiplier *= 0.75;
+  }
+  if (traits.includes("dragon_resistance") && skill.tags?.includes("dragon")) {
+    multiplier *= 0.75;
+  }
+  if (traits.includes("summon_resistance") && skill.tags?.includes("summon")) {
+    multiplier *= 0.78;
   }
   if (traits.includes("poison_immunity") && skill.tags?.includes("poison")) {
     multiplier *= 0.65;

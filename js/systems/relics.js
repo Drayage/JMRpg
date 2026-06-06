@@ -1,5 +1,5 @@
-import { relics } from "../data/relics.js";
-import { skills } from "../data/skills.js?v=20260606-15";
+import { relics } from "../data/relics.js?v=20260606-17";
+import { skills } from "../data/skills.js?v=20260606-17";
 
 export function getRelicsByCategory(category) {
   return Object.values(relics).filter((relic) => relic.category === category);
@@ -22,6 +22,11 @@ export function addRelic(state, relicId) {
     return null;
   }
   state.player.relics.push(relicId);
+  for (const rule of relics[relicId]?.rules ?? []) {
+    if (rule.type === "extra_ap") {
+      state.player.ap += rule.amount;
+    }
+  }
   return relicId;
 }
 
@@ -106,6 +111,18 @@ export function getDamageMultiplier(state, context = {}) {
   for (const { rule } of getRelicRules(state, "mastered_job_damage")) {
     multiplier *= 1 + state.masteredJobs.length * rule.perJob;
   }
+  for (const { rule } of getRelicRules(state, "visited_job_damage")) {
+    multiplier *= 1 + state.visitedJobs.length * rule.perJob;
+  }
+  for (const { rule } of getRelicRules(state, "mastered_skill_damage")) {
+    const masteredSkills = Object.values(state.player.skillMastery).filter((value) => value >= 100).length;
+    multiplier *= 1 + masteredSkills * rule.perSkill;
+  }
+  for (const { rule } of getRelicRules(state, "tag_damage")) {
+    if (context.skill?.tags?.includes(rule.tag)) {
+      multiplier *= rule.multiplier;
+    }
+  }
   for (const { rule } of getRelicRules(state, "missing_hp_damage")) {
     const missingRatio = context.player ? 1 - Math.max(0, context.player.hp) / context.player.stats.HP : 0;
     multiplier *= 1 + Math.min(rule.maxBonus, missingRatio * rule.maxBonus);
@@ -147,11 +164,16 @@ export function getRelicActivationBonus(state, skill, context = {}) {
       bonus += rule.amount;
     }
   }
+  for (const { rule } of getRelicRules(state, "tag_activation_bonus")) {
+    if (skill.tags?.includes(rule.tag)) {
+      bonus += rule.amount;
+    }
+  }
   return bonus;
 }
 
 export function getPoisonMultiplier(state) {
-  return 1;
+  return getRelicRules(state, "poison_multiplier").reduce((multiplier, entry) => multiplier * entry.rule.multiplier, 1);
 }
 
 export function getRelicCurrentValue(state, relicId) {
@@ -176,6 +198,27 @@ export function getRelicCurrentValue(state, relicId) {
     if (rule.type === "mastered_job_damage") {
       lines.push(`Mastered Jobs: ${state.masteredJobs.length}`);
       lines.push(`Current Damage Bonus: +${Math.round(state.masteredJobs.length * rule.perJob * 100)}%`);
+    }
+    if (rule.type === "visited_job_damage") {
+      lines.push(`Visited Jobs: ${state.visitedJobs.length}`);
+      lines.push(`Current Damage Bonus: +${Math.round(state.visitedJobs.length * rule.perJob * 100)}%`);
+    }
+    if (rule.type === "mastered_skill_damage") {
+      const masteredSkills = Object.values(state.player.skillMastery).filter((value) => value >= 100).length;
+      lines.push(`Mastered Skills: ${masteredSkills}`);
+      lines.push(`Current Damage Bonus: +${Math.round(masteredSkills * rule.perSkill * 100)}%`);
+    }
+    if (rule.type === "tag_damage") {
+      lines.push(`${rule.tag} skill damage: x${rule.multiplier}`);
+    }
+    if (rule.type === "tag_activation_bonus") {
+      lines.push(`${rule.tag} skill activation: +${Math.round(rule.amount * 100)}%`);
+    }
+    if (rule.type === "poison_multiplier") {
+      lines.push(`Poison power multiplier: x${rule.multiplier}`);
+    }
+    if (rule.type === "extra_ap") {
+      lines.push(`AP gained on pickup: +${rule.amount}`);
     }
     if (rule.type === "advanced_event_weight") {
       lines.push(`Advanced Job Event Weight: x${rule.multiplier}`);
