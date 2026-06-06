@@ -1,8 +1,7 @@
-import { jobs } from "../data/jobs.js?v=20260606-12";
+import { jobs } from "../data/jobs.js?v=20260606-15";
 import { relics } from "../data/relics.js";
-import { addStats, statKeys } from "./stats.js";
+import { statKeys } from "./stats.js";
 import { addSkillMasteryFromXp, learnSkill, pruneUnavailableEquippedSkills } from "./skills.js";
-import { getJobXpPreserveRatio } from "./relics.js";
 
 export function isJobUnlocked(state, jobId) {
   return isJobActuallyAvailable(state, jobId);
@@ -48,11 +47,10 @@ export function changeJob(state, jobId) {
     return false;
   }
 
-  const previousXp = state.player.currentJobXp;
-  const preserveRatio = getJobXpPreserveRatio(state);
-  const preservedXp = Math.floor(previousXp * preserveRatio);
+  state.player.jobXpByJob = state.player.jobXpByJob ?? {};
+  state.player.jobXpByJob[state.currentJobId] = state.player.currentJobXp;
   state.currentJobId = jobId;
-  state.player.currentJobXp = preservedXp;
+  state.player.currentJobXp = state.player.jobXpByJob[jobId] ?? 0;
   state.actionsSinceJobChange = 0;
   if (!state.visitedJobs.includes(jobId)) {
     state.visitedJobs.push(jobId);
@@ -60,7 +58,7 @@ export function changeJob(state, jobId) {
   pruneUnavailableEquippedSkills(state);
   updateJobDiscovery(state);
   state.activeJobEvent = null;
-  state.log.unshift({ type: "job", text: `Changed job to ${jobId}. Preserved ${preservedXp} job XP.` });
+  state.log.unshift({ type: "job", text: `Changed job to ${jobId}. Restored ${state.player.currentJobXp} job XP.` });
   if (state.pendingJobXp > 0) {
     const pendingXp = state.pendingJobXp;
     state.pendingJobXp = 0;
@@ -121,12 +119,14 @@ export function grantJobXp(state, xp, tag = null) {
       messages.push(`${job.id} is already mastered. Job XP was not applied, but skill mastery progressed.`);
       break;
     }
-    const applied = Math.min(remaining, needed);
+    const applied = Math.min(remaining, needed, getXpToNextMilestone(job, xpRequired, state.player.currentJobXp));
     state.player.currentJobXp += applied;
+    state.player.jobXpByJob = state.player.jobXpByJob ?? {};
+    state.player.jobXpByJob[job.id] = state.player.currentJobXp;
     remaining -= applied;
 
     const growthRatio = applied / xpRequired;
-    addStats(state.player.stats, job.growth, growthRatio);
+    addPermanentStatGrowth(state, job.growth, growthRatio);
 
     for (const masteredSkillId of addSkillMasteryFromXp(state, applied)) {
       summary.skillsMastered.push(masteredSkillId);
@@ -159,6 +159,8 @@ export function grantJobXp(state, xp, tag = null) {
   }
 
   summary.jobXpAfter = state.player.currentJobXp;
+  state.player.jobXpByJob = state.player.jobXpByJob ?? {};
+  state.player.jobXpByJob[state.currentJobId] = state.player.currentJobXp;
   for (const key of statKeys) {
     const diff = Math.round((state.player.stats[key] ?? 0) - (beforeStats[key] ?? 0));
     if (diff !== 0) {
@@ -178,6 +180,14 @@ export function grantJobXp(state, xp, tag = null) {
   }
   markChanges(state, summary);
   return summary;
+}
+
+function getXpToNextMilestone(job, xpRequired, currentXp) {
+  const nextXp = job.milestones
+    .map((milestone) => Math.min(xpRequired, Math.ceil((xpRequired * milestone.percent) / 100)))
+    .filter((xp) => xp > currentXp)
+    .sort((a, b) => a - b)[0];
+  return Math.max(1, (nextXp ?? xpRequired) - currentXp);
 }
 
 function masterCurrentJob(state, messages, summary = null) {
@@ -203,6 +213,20 @@ function masterCurrentJob(state, messages, summary = null) {
   }
   updateJobDiscovery(state, messages, summary);
   state.player.currentJobXp = xpRequired;
+  state.player.jobXpByJob = state.player.jobXpByJob ?? {};
+  state.player.jobXpByJob[job.id] = xpRequired;
+}
+
+function addPermanentStatGrowth(state, growth, multiplier) {
+  state.player.statGrowthRemainder = state.player.statGrowthRemainder ?? {};
+  for (const [key, value] of Object.entries(growth)) {
+    const rawGrowth = (state.player.statGrowthRemainder[key] ?? 0) + value * multiplier;
+    const wholeGrowth = Math.floor(rawGrowth);
+    state.player.statGrowthRemainder[key] = rawGrowth - wholeGrowth;
+    if (wholeGrowth > 0) {
+      state.player.stats[key] = (state.player.stats[key] ?? 0) + wholeGrowth;
+    }
+  }
 }
 
 export function updateJobDiscovery(state, messages = [], summary = null) {

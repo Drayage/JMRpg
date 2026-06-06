@@ -2,9 +2,9 @@ import { bosses } from "../data/bosses.js?v=20260605-5";
 import { eventTemplates } from "../data/events.js?v=20260605-5";
 import { monsters } from "../data/monsters.js?v=20260605-5";
 import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomUnownedRelic, rejectRelic } from "./relics.js?v=20260605-5";
-import { addStats } from "./stats.js";
+import { addStats, createBaseStats, scoreStats } from "./stats.js";
 import { getAvailableAdvancedJobs, getAvailableBasicJobs, grantJobXp, updateJobDiscovery } from "./jobs.js";
-import { createBattle, estimateWinRate, getBattleReward } from "./battle.js?v=20260606-12";
+import { createBattle, estimateWinRate, getBattleReward } from "./battle.js?v=20260606-15";
 
 export function generateChoices(state) {
   if (state.gameOver) {
@@ -127,6 +127,12 @@ export function finishBattleAction(state) {
   if (reward.won && choice.type === "hunt" && choice.elite) {
     relicId = getRandomUnownedRelic(state, choice.category);
   }
+  if (reward.won && choice.type === "hunt") {
+    state.huntWins = (state.huntWins ?? 0) + 1;
+    if (choice.elite) {
+      state.eliteHuntWins = (state.eliteHuntWins ?? 0) + 1;
+    }
+  }
   if (reward.won && choice.type === "boss") {
     state.defeatedBosses.push(choice.monsterId);
     if (choice.final) {
@@ -241,6 +247,9 @@ function createChoiceFromTemplate(state, template) {
     return generateAdvancedJobEvent(state);
   }
   if (template.type === "hunt") {
+    if (template.elite && (state.huntWins ?? 0) <= 0) {
+      return null;
+    }
     return {
       id: `${template.id}_${Math.random()}`,
       templateId: template.id,
@@ -324,6 +333,7 @@ function createMonsterOptions(state, template) {
     const monster = chooseMonsterForSlot(state, template.elite, slot.levelOffset, usedMonsterIds);
     usedMonsterIds.add(monster.id);
     const category = monster.relicCategories[Math.floor(Math.random() * monster.relicCategories.length)];
+    const difficultyScale = getAdaptiveDifficultyScale(state, slot.difficulty, template.elite, slot.difficultyScale);
     return {
       id: `${template.id}_${monster.id}_${Math.random()}`,
       templateId: template.id,
@@ -331,13 +341,13 @@ function createMonsterOptions(state, template) {
       monsterId: monster.id,
       elite: template.elite,
       difficulty: slot.difficulty,
-      difficultyScale: slot.difficultyScale,
+      difficultyScale,
       rewardMultiplier: slot.rewardMultiplier,
       category,
       xp: getHuntXpReward(monster, template.elite, slot.rewardMultiplier),
       enemyDamageType: getEnemyDamageType(monster),
       enemyDefenseProfile: monster.stats.MD > monster.stats.PD ? "high_magic_defense" : "high_physical_defense",
-      winRate: estimateWinRate(state, monster, { elite: template.elite, difficultyScale: slot.difficultyScale })
+      winRate: estimateWinRate(state, monster, { elite: template.elite, difficultyScale })
     };
   });
 }
@@ -355,6 +365,25 @@ function refreshMonsterOptions(state, monsterOptions) {
 function getHuntXpReward(monster, elite, rewardMultiplier = 1) {
   const huntMultiplier = elite ? 0.62 : 0.48;
   return Math.max(8, Math.round(monster.xp * rewardMultiplier * huntMultiplier));
+}
+
+function getAdaptiveDifficultyScale(state, difficulty, elite, baseScale) {
+  const growthRatio = getPermanentStatGrowthRatio(state);
+  const pressureByDifficulty = {
+    easy: 0.1,
+    normal: 0.45,
+    dangerous: 0.78
+  };
+  const pressure = (pressureByDifficulty[difficulty] ?? 0.45) + (elite ? 0.32 : 0);
+  const cap = difficulty === "easy" ? 0.18 : elite ? 0.95 : difficulty === "dangerous" ? 0.78 : 0.55;
+  const bonus = Math.min(cap, growthRatio * pressure);
+  return Number((baseScale + bonus).toFixed(2));
+}
+
+function getPermanentStatGrowthRatio(state) {
+  const baseScore = scoreStats(createBaseStats());
+  const currentScore = scoreStats(state.player.stats);
+  return Math.max(0, (currentScore - baseScore) / Math.max(1, baseScore));
 }
 
 function chooseMonsterForSlot(state, elite, levelOffset, usedMonsterIds) {

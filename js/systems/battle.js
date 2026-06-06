@@ -1,4 +1,4 @@
-import { skills } from "../data/skills.js";
+import { skills } from "../data/skills.js?v=20260606-15";
 import { getDamageMultiplier, getEliteIncomingDamageMultiplier, getPoisonMultiplier } from "./relics.js";
 import { getEffectiveActivationChance } from "./skills.js";
 import { getEffectiveStats } from "./stats.js";
@@ -64,7 +64,7 @@ export function runBattleStep(state, battle) {
     action = resolveEnemyTurn(state, battle, battle.player, battle.foe, battle.enemyId);
   }
 
-  battle.lastAction = { turn: battle.turn, actor, ...action };
+  battle.lastAction = withHpSnapshot({ turn: battle.turn, actor, ...action }, battle);
   battle.history.unshift(battle.lastAction);
   battle.actorIndex += 1;
 
@@ -76,7 +76,7 @@ export function runBattleStep(state, battle) {
   if (battle.actorIndex >= battle.order.length) {
     const poisonAction = applyPoison(battle.foe, battle.traits);
     if (poisonAction) {
-      battle.lastAction = { turn: battle.turn, actor: "status", ...poisonAction };
+      battle.lastAction = withHpSnapshot({ turn: battle.turn, actor: "status", ...poisonAction }, battle);
       battle.history.unshift(battle.lastAction);
     }
     battle.actorIndex = 0;
@@ -122,6 +122,22 @@ function createFighter(stats) {
   };
 }
 
+function withHpSnapshot(action, battle) {
+  return {
+    ...action,
+    hp: {
+      player: {
+        current: Math.max(0, Math.ceil(battle.player.hp)),
+        max: battle.player.stats.HP
+      },
+      enemy: {
+        current: Math.max(0, Math.ceil(battle.foe.hp)),
+        max: battle.foe.stats.HP
+      }
+    }
+  };
+}
+
 function scaleBattleStats(stats, hpMultiplier) {
   return { ...stats, HP: Math.round(stats.HP * hpMultiplier) };
 }
@@ -149,10 +165,7 @@ function getEnemyHpScale(options = {}) {
 }
 
 function getWinRateSamples(options = {}) {
-  if (options.final || options.boss || options.elite) {
-    return 30;
-  }
-  return 20;
+  return 30;
 }
 
 function simulateBattleOutcome(state, enemy, options = {}) {
@@ -166,7 +179,7 @@ function simulateBattleOutcome(state, enemy, options = {}) {
 }
 
 function resolvePlayerTurn(state, battle, player, foe, traits) {
-  const activeSkills = state.player.equippedSkills.map((id) => skills[id]).filter((skill) => skill && skill.type !== "passive");
+  const activeSkills = state.player.equippedSkills.map((id) => skills[id]).filter((skill) => skill && skill.id !== "basic_attack" && skill.type !== "passive");
   const priority = activeSkills.filter((skill) => skill.priority);
 
   for (const skill of priority) {
@@ -185,7 +198,15 @@ function resolvePlayerTurn(state, battle, player, foe, traits) {
     pool.splice(index, 1);
   }
 
-  return executeSkill(state, battle, skills.basic_attack, player, foe, traits);
+  return executeSkill(state, battle, getFallbackSkill(state), player, foe, traits);
+}
+
+function getFallbackSkill(state) {
+  const firebolt = skills.firebolt;
+  if (state.currentJobId === "wizard") {
+    return firebolt;
+  }
+  return skills.basic_attack;
 }
 
 function resolveEnemyTurn(state, battle, player, foe, enemyId) {

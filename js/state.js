@@ -24,6 +24,8 @@ export function createInitialState() {
     activeJobEvent: null,
     activeHuntEvent: null,
     pendingJobXp: 0,
+    huntWins: 0,
+    eliteHuntWins: 0,
     actionsSinceJobChange: 0,
     actionResult: null,
     showBattleLog: false,
@@ -33,6 +35,8 @@ export function createInitialState() {
     changed: {},
     player: {
       stats: createBaseStats(),
+      statGrowthRemainder: {},
+      jobXpByJob: { [startingJobId]: 0 },
       currentJobXp: 0,
       ap: 4,
       learnedSkills: ["basic_attack"],

@@ -1,4 +1,4 @@
-const cacheName = "job-master-rpg-20260606-13";
+const cacheName = "job-master-rpg-20260606-15";
 
 const appShell = [
   "./",

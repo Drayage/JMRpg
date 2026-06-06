@@ -1,8 +1,8 @@
 import { bosses } from "../data/bosses.js";
-import { jobs } from "../data/jobs.js?v=20260606-12";
+import { jobs } from "../data/jobs.js?v=20260606-15";
 import { monsters } from "../data/monsters.js";
 import { relics } from "../data/relics.js";
-import { skills } from "../data/skills.js";
+import { skills } from "../data/skills.js?v=20260606-15";
 import { getCurrentJobProgress, getEffectiveJobXpRequired, getJobRequirementHints, getJobState, isJobDiscovered, isJobUnlocked } from "../systems/jobs.js";
 import { canEquipSkill, canUseSkill, getEffectiveApCost, getEquippedApCost, getEquippedSlotCount, getSkillEstimate, skillSlotLimits } from "../systems/skills.js";
 import { getRelicCurrentValue } from "../systems/relics.js";
@@ -190,9 +190,12 @@ function battleTimelineRows(battle) {
   for (const entry of [...(battle.history ?? [])].reverse()) {
     const turn = entry.turn ?? "-";
     if (!rowsByTurn.has(turn)) {
-      rowsByTurn.set(turn, { turn, player: [], enemy: [], status: [] });
+      rowsByTurn.set(turn, { turn, player: [], enemy: [], status: [], hp: null });
     }
     const row = rowsByTurn.get(turn);
+    if (entry.hp) {
+      row.hp = entry.hp;
+    }
     if (entry.actor === "player") {
       row.player.push(entry);
     } else if (entry.actor === "enemy") {
@@ -207,7 +210,10 @@ function battleTimelineRows(battle) {
 function battleTimelineRow(row) {
   return `
     <div class="timeline-turn">
-      <div class="timeline-turn-label">${ko.ui.turn} ${row.turn}</div>
+      <div class="timeline-turn-label">
+        <strong>${ko.ui.turn} ${row.turn}</strong>
+        ${row.hp ? `<p class="small muted">${ko.ui.player} HP ${row.hp.player.current}/${row.hp.player.max}<br>${ko.ui.enemy} HP ${row.hp.enemy.current}/${row.hp.enemy.max}</p>` : ""}
+      </div>
       <div class="timeline-side player-side">
         ${row.player.length ? row.player.map((entry) => battleTimelineEntry(entry)).join("") : `<span class="muted small">-</span>`}
       </div>

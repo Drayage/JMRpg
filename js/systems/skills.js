@@ -1,5 +1,5 @@
-import { jobs } from "../data/jobs.js?v=20260606-12";
-import { skills } from "../data/skills.js";
+import { jobs } from "../data/jobs.js?v=20260606-15";
+import { skills } from "../data/skills.js?v=20260606-15";
 import { getApDiscountFromRelics, getMasteryMultiplier, getRelicActivationBonus } from "./relics.js";
 import { getEffectiveStats } from "./stats.js";
 
@@ -33,7 +33,7 @@ export function getEffectiveApCost(state, skillId) {
   const base = skill.apCost ?? 0;
   const jobDiscount = isSkillOnTheme(state, skill) && jobs[state.currentJobId]?.tier > 1 ? 1 : 0;
   const relicDiscount = getApDiscountFromRelics(state, skill);
-  return Math.max(skill.id === "basic_attack" ? 0 : 1, base - jobDiscount - relicDiscount);
+  return Math.max(base === 0 ? 0 : 1, base - jobDiscount - relicDiscount);
 }
 
 export function getEffectiveActivationChance(state, skillId) {
