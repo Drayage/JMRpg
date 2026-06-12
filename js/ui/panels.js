@@ -1,14 +1,14 @@
 import { bosses } from "../data/bosses.js";
-import { jobs } from "../data/jobs.js?v=20260607-14";
-import { monsters } from "../data/monsters.js?v=20260607-14";
-import { relics } from "../data/relics.js?v=20260607-14";
-import { skills } from "../data/skills.js?v=20260607-14";
+import { jobs } from "../data/jobs.js?v=20260607-15";
+import { monsters } from "../data/monsters.js?v=20260607-15";
+import { relics } from "../data/relics.js?v=20260607-15";
+import { skills } from "../data/skills.js?v=20260607-15";
 import { getCurrentJobProgress, getEffectiveJobXpRequired, getJobRequirementHints, getJobState, isJobDiscovered, isJobUnlocked } from "../systems/jobs.js";
 import { canUseSkill, getEffectiveApCost, getEquippedApCost, getEquippedSlotCount, getSkillEquipBlockReason, getSkillEstimate, skillSlotLimits } from "../systems/skills.js";
 import { getRelicCurrentValue } from "../systems/relics.js";
 import { getStalemateDamageMultiplier } from "../systems/battle.js";
 import { clampPercent, getEffectiveStats, statKeys } from "../systems/stats.js";
-import { ko } from "../i18n/ko.js?v=20260607-14";
+import { ko } from "../i18n/ko.js?v=20260607-15";
 
 export function statusPanel(state) {
   const progress = getCurrentJobProgress(state);
@@ -531,7 +531,10 @@ function fighterBox(name, fighter, tone) {
       ${progressBar(fighter.hp, fighter.stats.HP, tone)}
       <div class="tag-list">
         ${fighter.guard ? tag(`${ko.ui.block} ${fighter.guard}`, "ok") : ""}
-        ${fighter.poison.turns ? tag(`poison ${fighter.poison.turns}`, "warn") : ""}
+        ${fighter.poison ? tag(`poison ${fighter.poison}`, "warn") : ""}
+        ${Object.entries(fighter.typedStatuses ?? {}).map(([id, status]) => tag(`${id} ${status.amount}${status.turns ? `/${status.turns}T` : ""}`, "warn")).join("")}
+        ${(fighter.summons ?? []).length ? tag(`summons ${(fighter.summons ?? []).length}`, "ok") : ""}
+        ${Object.entries(fighter.resources ?? {}).filter(([, value]) => value > 0).map(([id, value]) => tag(`${id} ${value}`, "ok")).join("")}
         ${(fighter.statuses ?? []).map((status) => tag(`${status.id} ${status.permanent ? "battle" : status.turns}`, "warn")).join("")}
       </div>
     </div>
@@ -539,6 +542,21 @@ function fighterBox(name, fighter, tone) {
 }
 
 function statusEffectText(effect) {
+  if (effect.type === "typed_status") {
+    return `${effect.kind} ${effect.amount}${effect.turns ? ` ${effect.turns}T` : ""}`;
+  }
+  if (effect.type === "poison") {
+    return `poison ${effect.amount ?? effect.power ?? 0}`;
+  }
+  if (effect.type === "summon") {
+    return `summon ${effect.summonId}`;
+  }
+  if (effect.type === "rune") {
+    return `rune ${effect.runeId}`;
+  }
+  if (effect.type === "shield") {
+    return `shield ${effect.amount ?? 0}`;
+  }
   const parts = [`${effect.id} ${effect.permanent ? (ko.ui.battleLong ?? "battle-long") : `${effect.turns ?? 1}T`}`];
   if (effect.damageMultiplier && effect.damageMultiplier !== 1) {
     parts.push(`DMG x${effect.damageMultiplier}`);

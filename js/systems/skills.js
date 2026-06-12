@@ -1,5 +1,5 @@
-import { jobs } from "../data/jobs.js?v=20260607-14";
-import { skills } from "../data/skills.js?v=20260607-14";
+import { jobs } from "../data/jobs.js?v=20260607-15";
+import { skills } from "../data/skills.js?v=20260607-15";
 import { getMasteryMultiplier, getRelicActivationBonus } from "./relics.js";
 import { getEffectiveStats } from "./stats.js";
 
@@ -215,7 +215,7 @@ export function getSkillEstimate(state, skillId) {
     inverseCrit: Boolean(effect?.inverseCrit),
     inverseCritBase: effect?.inverseCritBase ?? null,
     inverseCritFloor: effect?.inverseCritFloor ?? null,
-    statusEffects: (skill.effects ?? []).filter((item) => item.type === "status"),
+    statusEffects: (skill.effects ?? []).filter((item) => item.type === "status" || item.type === "typed_status" || item.type === "poison" || item.type === "summon" || item.type === "rune" || item.type === "shield"),
     onTheme: isSkillOnTheme(state, skill),
     mastery: state.player.skillMastery[skillId] ?? 0,
     mastered: (state.player.skillMastery[skillId] ?? 0) >= 100

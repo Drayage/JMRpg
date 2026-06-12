@@ -9,7 +9,7 @@ import {
   skillsPanel,
   statsPanel,
   statusPanel
-} from "./panels.js?v=20260607-14";
+} from "./panels.js?v=20260607-15";
 
 export function render(app, state) {
   app.innerHTML = `

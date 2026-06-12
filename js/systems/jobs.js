@@ -1,5 +1,5 @@
-import { jobs } from "../data/jobs.js?v=20260607-14";
-import { relics } from "../data/relics.js?v=20260607-14";
+import { jobs } from "../data/jobs.js?v=20260607-15";
+import { relics } from "../data/relics.js?v=20260607-15";
 import { createBaseStats, statKeys } from "./stats.js";
 import { addSkillMasteryFromXp, learnSkill, pruneUnavailableEquippedSkills } from "./skills.js";
 

@@ -1,6 +1,6 @@
-import { jobs } from "./data/jobs.js?v=20260607-14";
-import { skills } from "./data/skills.js?v=20260607-14";
-import { ko } from "./i18n/ko.js?v=20260607-14";
+import { jobs } from "./data/jobs.js?v=20260607-15";
+import { skills } from "./data/skills.js?v=20260607-15";
+import { ko } from "./i18n/ko.js?v=20260607-15";
 
 const app = document.querySelector("#db-app");
 const params = new URLSearchParams(window.location.search);
@@ -23,7 +23,7 @@ function render() {
           <h1>RPG Database Viewer</h1>
           <p class="small muted">Jobs ${Object.keys(jobs).length} / Skills ${Object.keys(skills).length}</p>
         </div>
-        <a class="button-link" href="./index.html?v=20260607-14">Game</a>
+        <a class="button-link" href="./index.html?v=20260607-15">Game</a>
       </header>
       <div class="db-controls panel">
         <div class="segmented">

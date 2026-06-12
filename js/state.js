@@ -3,7 +3,7 @@ import { createBaseStats } from "./systems/stats.js";
 
 export function createInitialState() {
   const finalBossPool = ["fallen_seraph", "iron_tyrant", "plague_dragon", "mirror_queen", "world_serpent"];
-  const basicJobPool = ["warrior", "archer", "rogue", "cleric", "wizard"];
+  const basicJobPool = ["warrior", "archer", "rogue", "cleric", "mystic"];
   const finalBossId = finalBossPool[Math.floor(Math.random() * finalBossPool.length)];
   const startingJobId = basicJobPool[Math.floor(Math.random() * basicJobPool.length)];
   return {

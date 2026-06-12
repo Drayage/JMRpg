@@ -1,12 +1,12 @@
-import { bosses } from "../data/bosses.js?v=20260607-14";
-import { eventTemplates } from "../data/events.js?v=20260607-14";
-import { jobs } from "../data/jobs.js?v=20260607-14";
-import { monsters } from "../data/monsters.js?v=20260607-14";
-import { skills } from "../data/skills.js?v=20260607-14";
-import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomUnownedRelic, rejectRelic } from "./relics.js?v=20260607-14";
+import { bosses } from "../data/bosses.js?v=20260607-15";
+import { eventTemplates } from "../data/events.js?v=20260607-15";
+import { jobs } from "../data/jobs.js?v=20260607-15";
+import { monsters } from "../data/monsters.js?v=20260607-15";
+import { skills } from "../data/skills.js?v=20260607-15";
+import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomUnownedRelic, rejectRelic } from "./relics.js?v=20260607-15";
 import { addStats, createBaseStats, scoreStats } from "./stats.js";
 import { getAvailableAdvancedJobs, getAvailableBasicJobs, grantJobXp, updateJobDiscovery } from "./jobs.js";
-import { createBattle, estimateWinRate, getBattleReward } from "./battle.js?v=20260607-14";
+import { createBattle, estimateWinRate, getBattleReward } from "./battle.js?v=20260607-15";
 
 export function generateChoices(state) {
   if (state.gameOver) {

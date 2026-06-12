@@ -1,192 +1,111 @@
+import { jobs } from "./jobs.js?v=20260607-15";
+
 const damage = (stat, power, extra = {}) => ({ type: "damage", stat, power, ...extra });
 const heal = (stat, power, extra = {}) => ({ type: "heal", stat, power, ...extra });
-const guard = (amount) => ({ type: "guard", amount });
-const poison = (power, turns) => ({ type: "poison", power, turns });
+const shield = (amount, stat = null, power = 0) => ({ type: "shield", amount, stat, power });
 const status = (id, target, turns, extra = {}) => ({ type: "status", id, target, turns, ...extra });
-const dispel = (target = "foe", extra = {}) => ({ type: "dispel", target, ...extra });
+const typedStatus = (kind, amount, turns = null, extra = {}) => ({ type: "typed_status", kind, amount, turns, ...extra });
+const poison = (amount) => ({ type: "poison", amount });
+const summon = (id, role, count = 1, extra = {}) => ({ type: "summon", summonId: id, role, count, ...extra });
+const resource = (key, amount, extra = {}) => ({ type: "resource", key, amount, ...extra });
+const rune = (id, trigger, effects, extra = {}) => ({ type: "rune", runeId: id, trigger, effects, ...extra });
+const extraAction = (chance = 1, limit = 10) => ({ type: "extra_action", chance, limit });
+const sacrifice = (ratio) => ({ type: "sacrifice", ratio });
+const consumeResource = (key, power, extra = {}) => ({ type: "consume_resource", key, power, ...extra });
+
+const tierCost = (tier, offset = 0) => Math.max(1, Math.min(6, Math.ceil(tier / 2) + offset));
+const activeChance = (tier) => Math.max(0.38, 0.68 - tier * 0.035);
+const specialChance = (tier) => Math.max(0.32, 0.62 - tier * 0.03);
+const scale = (tier, base = 1) => Math.round((base + tier * 0.18) * 100) / 100;
+const has = (job, tag) => job.themes?.includes(tag);
+
+function coreDamageStat(job) {
+  if (has(job, "magic") || has(job, "ma") || has(job, "burn") || has(job, "freeze") || has(job, "shock") || has(job, "decay")) return "MA";
+  if (has(job, "pd") || has(job, "shield") || has(job, "absolute")) return "PD";
+  if (has(job, "current_hp") || has(job, "max_hp")) return "HP";
+  if (has(job, "ranged") || has(job, "acc")) return "ACC";
+  if (has(job, "evasion") || has(job, "rhythm")) return "EVA";
+  return "PA";
+}
+
+function activeEffects(job, tier) {
+  const stat = coreDamageStat(job);
+  if (has(job, "low_hp")) return [damage("PA", scale(tier, 1.15), { missingHpPower: 1.2 }), sacrifice(0.04)];
+  if (has(job, "swordsmanship")) return [damage("PA", scale(tier, 0.95), { swordsmanshipPower: 0.08 }), resource("swordsmanship", 1)];
+  if (has(job, "shield_break")) return [damage("PA", scale(tier, 1), { shieldBreak: 14 + tier * 4 }), typedStatus("fracture", 4 + tier, 3)];
+  if (has(job, "absolute")) return [damage("PD", scale(tier, 0.9), { absolute: true }), shield(4 + tier * 2, "PD", 0.25)];
+  if (has(job, "pd_to_pa")) return [damage("PD", scale(tier, 0.95), { absolute: true, pdToPa: 0.35 }), status("dragon_form", "self", 2, { statMods: { PA: 3 + tier } })];
+  if (has(job, "enemy_current_hp")) return [damage("SPD", scale(tier, 0.8), { enemyCurrentHpPower: 0.08 + tier * 0.01 }), typedStatus("bleed", 3 + tier, 3)];
+  if (has(job, "reverse_crit")) return [damage("PA", scale(tier, 1.05), { inverseCrit: true, inverseCritBase: 38 + tier * 4, inverseCritFloor: 8 })];
+  if (has(job, "evasion")) return [damage("EVA", scale(tier, 0.9), { evadeBonusPower: 0.12 }), status("flow", "self", 2, { statMods: { EVA: 2 + tier } })];
+  if (has(job, "rhythm")) return [damage("EVA", scale(tier, 0.75), { spendEvasion: 2 + tier }), status("rhythm", "self", 2, { statMods: { EVA: 3 + tier } })];
+  if (has(job, "predation")) return [damage("ACC", scale(tier, 0.9), { predation: true, enemyMissingHpPower: 0.1 + tier * 0.015 })];
+  if (has(job, "extra_action")) return [damage("ACC", scale(tier, 0.55)), status("aiming", "self", 999, { permanent: true, stack: true, statMods: { ACC: 2 + tier } }), extraAction(0.35 + tier * 0.04)];
+  if (has(job, "summon")) return [damage(stat, scale(tier, 0.65)), summon(`${job.id}_ally`, has(job, "frontline") || has(job, "bear") ? "tank" : has(job, "legion") ? "legion" : "striker", has(job, "legion") ? Math.min(6, 1 + tier) : 1, { stat, tier })];
+  if (has(job, "food")) return [damage("HP", scale(tier, 0.08), { currentHpPower: 0.18, inverseScaleStat: "EVA", inverseScaleBase: 30 + tier * 3, inverseScalePower: 3 + tier }), heal("HP", 0.12, { overheal: true })];
+  if (has(job, "heal")) return [heal("MA", scale(tier, 1.35), { maxHpRatio: 0.02, overheal: has(job, "overheal") }), typedStatus("regeneration", 4 + tier * 2, 3)];
+  if (has(job, "decay")) return [damage("MA", scale(tier, 0.9)), typedStatus("decay", 5 + tier * 2, 4)];
+  if (has(job, "burn")) return [damage("MA", scale(tier, 0.95), { aoe: true }), typedStatus("burn", 5 + tier * 2, 3)];
+  if (has(job, "freeze")) return [damage("MA", scale(tier, 0.85)), typedStatus("freeze", 3 + tier, 3)];
+  if (has(job, "shock")) return [damage("MA", scale(tier, 1.05)), typedStatus("shock", 3 + tier, 3)];
+  if (has(job, "fracture")) return [damage(stat, scale(tier, 0.9)), typedStatus("fracture", 4 + tier, 4)];
+  if (has(job, "poison")) return [damage("ACC", scale(tier, 0.55)), poison(8 + tier * 5)];
+  if (has(job, "rune")) return [damage("MA", scale(tier, 0.65)), rune(`${job.id}_attack_rune`, "after_damage", [damage("MA", scale(tier, 0.45))], { maxInstalled: 100 })];
+  if (has(job, "life_cost")) return [sacrifice(0.06), damage("MA", scale(tier, 1.25), { lifeSteal: 0.25 })];
+  if (has(job, "misfortune") || has(job, "fate")) return [damage("MA", scale(tier, 0.75)), typedStatus("misfortune", 3 + tier, 3)];
+  return [damage(stat, scale(tier, 1))];
+}
+
+function coreEffects(job, tier) {
+  if (has(job, "ma_amp")) return [status("ma_amplified", "self", 999, { permanent: true, stack: true, statMods: { MA: 4 + tier }, damageMultiplier: 1.05 })];
+  if (has(job, "balance")) return [damage("PA", scale(tier, 0.75), { balancePower: 0.04 }), damage("MA", scale(tier, 0.75), { balancePower: 0.04 })];
+  if (has(job, "judgment")) return [heal("MA", scale(tier, 0.8), { maxHpRatio: 0.02 }), resource("judgment", 10 + tier * 5, { fromHeal: true })];
+  if (has(job, "self_status")) return [typedStatus("weaken", 2, 2, { target: "self" }), typedStatus("bleed", 3 + tier, 2, { target: "self" }), status("cursed_rage", "self", 999, { permanent: true, stack: true, statMods: { PA: 4 + tier, CRD: 8 + tier * 2 }, damageMultiplier: 1.08 })];
+  if (has(job, "shadow_dance")) return [status("shadow_dance", "self", 999, { permanent: true, statMods: { EVA: 3 + tier, CRT: 3 + tier } })];
+  if (has(job, "contract")) return [summon(`${job.id}_entity`, has(job, "bear") || has(job, "dragon") ? "tank" : "striker", 1, { contract: true, stat: coreDamageStat(job), tier })];
+  if (has(job, "shield") || has(job, "pd")) return [shield(8 + tier * 4, "PD", 0.45), status("guarded", "self", 2, { defenseMultiplier: 1.08 })];
+  if (has(job, "swordsmanship")) return [resource("swordsmanship", 2 + tier), status("sword_form", "self", 999, { permanent: true, statMods: { PA: 2 + tier, ACC: 1 + tier } })];
+  if (has(job, "rune")) return [rune(`${job.id}_guard_rune`, "on_hit", [shield(6 + tier * 2), damage("MA", scale(tier, 0.35))], { maxInstalled: 100 })];
+  if (has(job, "heal")) return [heal("MD", scale(tier, 1.1), { maxHpRatio: 0.03, overheal: true }), typedStatus("regeneration", 6 + tier * 2, 3)];
+  if (has(job, "rhythm")) return [status("tempo", "self", 999, { permanent: true, stack: true, statMods: { EVA: 2 + tier, SPD: 1 + tier } })];
+  return [status(`${job.id}_stance`, "self", 999, { permanent: true, stack: true, statMods: { [coreDamageStat(job)]: 2 + tier } })];
+}
+
+function artEffects(job, tier) {
+  if (has(job, "judgment")) return [consumeResource("judgment", 0.9, { absolute: true, stat: "MD" })];
+  if (has(job, "burn")) return [damage("MA", scale(tier, 1.2), { aoe: true, consumeStatus: "burn", consumeStatusPower: 1.2 }), typedStatus("burn", 6 + tier * 3, 3)];
+  if (has(job, "poison")) return [damage("ACC", scale(tier, 0.85), { poisonPower: 0.6 }), poison(12 + tier * 6)];
+  if (has(job, "predation") || has(job, "enemy_missing_hp")) return [damage("ACC", scale(tier, 1.15), { predation: true, enemyMissingHpPower: 0.18 + tier * 0.02, absolute: has(job, "enemy_missing_hp") })];
+  if (has(job, "enemy_current_hp")) return [damage("SPD", scale(tier, 1.05), { enemyCurrentHpPower: 0.16 + tier * 0.015 }), typedStatus("bleed", 5 + tier * 2, 3)];
+  if (has(job, "low_hp")) return [damage("PA", scale(tier, 1.45), { missingHpPower: 1.8, lowMaPower: 0.03, statusCountPower: 0.08 }), sacrifice(0.08)];
+  if (has(job, "absolute")) return [damage("PD", scale(tier, 1.2), { absolute: true }), shield(12 + tier * 5, "PD", 0.6)];
+  if (has(job, "pd_to_pa")) return [damage("PD", scale(tier, 1.25), { absolute: true, pdToPa: 0.75 }), damage("PA", scale(tier, 0.75), { absolute: true })];
+  if (has(job, "summon")) return [summon(`${job.id}_elite`, has(job, "legion") ? "legion" : has(job, "bear") ? "tank" : "striker", has(job, "legion") ? Math.min(12, 2 + tier * 2) : 1, { stat: coreDamageStat(job), tier, elite: true }), damage(coreDamageStat(job), scale(tier, 0.85), { aoe: true })];
+  if (has(job, "rune")) return [rune(`${job.id}_death_rune`, "on_low_hp", [damage("MA", scale(tier, 1.5)), typedStatus("shock", 4 + tier, 2)], { maxInstalled: 100 })];
+  if (has(job, "life_cost")) return [sacrifice(0.12), damage("MA", scale(tier, 1.75), { lifeSteal: 0.35 })];
+  if (has(job, "decay")) return [damage("MA", scale(tier, 1)), typedStatus("decay", 8 + tier * 3, 4), typedStatus("silence", 1, 2)];
+  if (has(job, "freeze")) return [damage("MA", scale(tier, 1)), typedStatus("freeze", 6 + tier, 3)];
+  if (has(job, "shock")) return [damage("MA", scale(tier, 1.25)), typedStatus("shock", 6 + tier, 3)];
+  if (has(job, "fracture")) return [damage(coreDamageStat(job), scale(tier, 1.05)), typedStatus("fracture", 8 + tier, 4)];
+  if (has(job, "evasion") || has(job, "shadow_dance")) return [damage("EVA", scale(tier, 1.2), { evadeBonusPower: 0.18, critBonus: tier * 2 }), extraAction(0.15 + tier * 0.03)];
+  return [damage(coreDamageStat(job), scale(tier, 1.35))];
+}
+
+function makeSkill(job, stage) {
+  const tier = job.tier;
+  const id = `${job.id}_${stage}`;
+  if (stage === "init") return { id, type: "active", apCost: tierCost(tier), chance: activeChance(tier), scalingStat: coreDamageStat(job), tags: job.themes, effects: activeEffects(job, tier) };
+  if (stage === "core") return { id, type: "special", apCost: tierCost(tier), chance: specialChance(tier), maxUses: has(job, "rune") || has(job, "contract") ? null : 1, priority: true, scalingStat: coreDamageStat(job), tags: job.themes, effects: coreEffects(job, tier) };
+  return { id, type: "special", apCost: tierCost(tier, 1), chance: specialChance(tier), maxUses: has(job, "predation") ? 1 : null, priority: has(job, "predation") || has(job, "low_hp") || has(job, "judgment"), condition: has(job, "predation") || has(job, "enemy_missing_hp") ? { type: "enemy_hp_below", value: 0.45 } : has(job, "enemy_current_hp") ? { type: "enemy_hp_above", value: 0.5 } : has(job, "low_hp") ? { type: "hp_below", value: 0.7 } : null, scalingStat: coreDamageStat(job), tags: job.themes, effects: artEffects(job, tier) };
+}
+
+const generatedSkills = {};
+for (const job of Object.values(jobs)) {
+  for (const stage of ["init", "core", "art"]) generatedSkills[`${job.id}_${stage}`] = makeSkill(job, stage);
+}
 
 export const skills = {
-  basic_attack: { id: "basic_attack", type: "active", apCost: 0, chance: 1, priority: false, scalingStat: "PA", power: 1, tags: ["physical"], effects: [damage("PA", 1)] },
-  power_slash: { id: "power_slash", type: "active", apCost: 1, chance: 0.55, scalingStat: "PA", tags: ["physical", "weapon"], effects: [damage("PA", 1.7), status("armor_crack", "foe", 2, { defenseMultiplier: 0.92 })] },
-  battle_focus: { id: "battle_focus", type: "special", apCost: 1, chance: 0.72, maxUses: 1, priority: true, tags: ["physical", "focus"], scalingStat: "PA", effects: [status("battle_focus", "self", 999, { permanent: true, statMods: { PA: 4, CRT: 4 }, damageMultiplier: 1.08 })] },
-  shield_bash: { id: "shield_bash", type: "active", apCost: 1, chance: 0.5, scalingStat: "PD", tags: ["physical", "defensive", "frontline", "absolute"], effects: [damage("PD", 1.15, { absolute: true }), guard(4), status("staggered", "foe", 1, { statMods: { PA: -3, ACC: -5 } })] },
-  counter_attack: { id: "counter_attack", type: "special", apCost: 2, chance: 0.45, priority: true, condition: { type: "hp_below", value: 0.65 }, scalingStat: "PD", tags: ["physical", "defensive", "absolute"], effects: [damage("PD", 1.55, { absolute: true }), guard(6)] },
-  precise_shot: { id: "precise_shot", type: "active", apCost: 1, chance: 0.62, scalingStat: "ACC", tags: ["physical", "ranged", "focus"], effects: [damage("ACC", 0.22), status("aiming", "self", 999, { permanent: true, stack: true, statMods: { ACC: 2 } })] },
-  eagle_eye: { id: "eagle_eye", type: "passive", apCost: 1, tags: ["ranged", "critical"], passiveStats: { ACC: 3, CRT: 2 } },
-  marked_shot: { id: "marked_shot", type: "active", apCost: 2, chance: 0.58, scalingStat: "ACC", tags: ["physical", "ranged", "critical", "focus"], effects: [damage("ACC", 0.34, { critBonus: 4 }), status("aiming", "self", 999, { permanent: true, stack: true, statMods: { ACC: 3 } }), status("marked", "foe", 2, { damageTakenMultiplier: 1.06, statMods: { EVA: -3 } })] },
-  trap_mastery: { id: "trap_mastery", type: "passive", apCost: 1, tags: ["ranged", "poison"], passiveStats: { ACC: 2, EVA: 2 } },
-  evasive_strike: { id: "evasive_strike", type: "active", apCost: 1, chance: 0.58, scalingStat: "EVA", tags: ["physical", "speed"], effects: [damage("EVA", 1.4), guard(3)] },
-  backstab: { id: "backstab", type: "special", apCost: 2, chance: 0.42, maxUses: 1, priority: true, condition: { type: "enemy_hp_above", value: 0.45 }, scalingStat: "SPD", tags: ["physical", "speed", "critical"], effects: [damage("SPD", 2.45, { critBonus: 20 })] },
-  shadow_step: { id: "shadow_step", type: "passive", apCost: 1, tags: ["speed", "dark"], passiveStats: { SPD: 4, EVA: 4 } },
-  poison_dart: { id: "poison_dart", type: "active", apCost: 1, chance: 0.52, scalingStat: "ACC", tags: ["poison", "ranged"], effects: [damage("ACC", 0.32), poison(5, 3), status("sickened", "foe", 2, { damageMultiplier: 0.92 })] },
-  venom_mastery: { id: "venom_mastery", type: "passive", apCost: 1, tags: ["poison"], passiveStats: { ACC: 2, SPD: 2 } },
-  shadow_assault: { id: "shadow_assault", type: "special", apCost: 3, chance: 0.46, priority: true, condition: { type: "enemy_hp_below", value: 0.55 }, scalingStat: "SPD", tags: ["dark", "speed", "critical"], effects: [damage("SPD", 2.0, { critBonus: 15 })] },
-  healing_prayer: { id: "healing_prayer", type: "special", apCost: 1, chance: 0.75, minChance: 0.15, repeatChancePenalty: 0.12, priority: true, condition: { type: "hp_below", value: 0.5 }, scalingStat: "MA", tags: ["holy", "support", "defensive"], effects: [heal("MA", 3.0, { healScale: 1, maxHpRatio: 0.03 }), guard(4)] },
-  holy_light: { id: "holy_light", type: "active", apCost: 1, chance: 0.68, scalingStat: "MA", tags: ["holy", "magic"], effects: [damage("MA", 1.6)] },
-  holy_burst: { id: "holy_burst", type: "active", apCost: 2, chance: 0.42, scalingStat: "MA", tags: ["holy", "magic"], effects: [damage("MA", 2.05), status("radiant_mark", "foe", 2, { damageTakenMultiplier: 1.12 })] },
-  sanctuary: { id: "sanctuary", type: "passive", apCost: 2, tags: ["holy", "support", "defensive"], passiveStats: { HP: 16, MD: 4 } },
-  smite: { id: "smite", type: "active", apCost: 2, chance: 0.48, scalingStat: "PA", tags: ["holy", "physical", "weapon"], effects: [damage("PA", 1.9)] },
-  divine_aegis: { id: "divine_aegis", type: "special", apCost: 2, chance: 0.45, priority: true, condition: { type: "hp_below", value: 0.7 }, scalingStat: "MD", tags: ["holy", "defensive"], effects: [heal("MD", 1.1), guard(12)] },
-  judgment: { id: "judgment", type: "special", apCost: 3, chance: 0.38, priority: true, condition: { type: "enemy_hp_below", value: 0.5 }, scalingStat: "MA", tags: ["holy", "critical"], effects: [damage("MA", 2.6, { critBonus: 20 })] },
-  firebolt: { id: "firebolt", type: "active", apCost: 0, chance: 1, scalingStat: "MA", tags: ["magic", "fire"], effects: [damage("MA", 1.3)] },
-  arcane_focus: { id: "arcane_focus", type: "special", apCost: 1, chance: 0.72, maxUses: 1, priority: true, tags: ["magic", "arcane", "focus"], scalingStat: "MA", effects: [status("arcane_focus", "self", 999, { permanent: true, statMods: { MA: 5, MD: 3 }, damageMultiplier: 1.08 })] },
-  arcane_blast: { id: "arcane_blast", type: "active", apCost: 2, chance: 0.52, scalingStat: "MA", tags: ["magic", "arcane"], effects: [damage("MA", 1.85)] },
-  ice_lance: { id: "ice_lance", type: "active", apCost: 2, chance: 0.55, scalingStat: "MA", tags: ["magic", "ice"], effects: [damage("MA", 1.65), guard(3)] },
-  chain_lightning: { id: "chain_lightning", type: "active", apCost: 3, chance: 0.44, scalingStat: "MA", tags: ["magic", "lightning"], effects: [damage("MA", 2.15)] },
-  meteor: { id: "meteor", type: "special", apCost: 4, chance: 0.62, maxUses: 1, priority: false, scalingStat: "MA", tags: ["magic", "fire"], effects: [damage("MA", 3.35), status("scorched", "foe", 2, { defenseMultiplier: 0.86 })] },
-  spellblade: { id: "spellblade", type: "active", apCost: 2, chance: 0.48, scalingStat: "MA", tags: ["magic", "physical", "weapon"], effects: [damage("MA", 1.05), damage("PA", 1.05)] },
-  mana_guard: { id: "mana_guard", type: "passive", apCost: 2, tags: ["magic", "defensive"], passiveStats: { PD: 2, MD: 4 } },
-  dark_bolt: { id: "dark_bolt", type: "active", apCost: 2, chance: 0.58, scalingStat: "MA", tags: ["dark", "magic"], effects: [damage("MA", 1.5)] },
-  life_drain: { id: "life_drain", type: "special", apCost: 2, chance: 0.44, priority: true, condition: { type: "hp_below", value: 0.75 }, scalingStat: "MA", tags: ["dark", "lifesteal"], effects: [damage("MA", 1.5), heal("MA", 0.7)] },
-  corpse_bloom: { id: "corpse_bloom", type: "active", apCost: 2, chance: 0.46, scalingStat: "MA", tags: ["dark", "poison"], effects: [damage("MA", 1.45), poison(8, 4)] },
-  bone_armor: { id: "bone_armor", type: "passive", apCost: 2, tags: ["dark", "defensive"], passiveStats: { HP: 12, PD: 4 } },
-  summon_wolf: { id: "summon_wolf", type: "active", apCost: 3, chance: 0.52, scalingStat: "MA", tags: ["summon", "beast"], effects: [damage("MA", 1.55)] },
-  summon_skeleton: { id: "summon_skeleton", type: "active", apCost: 3, chance: 0.5, scalingStat: "MA", tags: ["summon", "dark"], effects: [damage("MA", 1.65), guard(2)] },
-  summon_bear: { id: "summon_bear", type: "special", apCost: 3, chance: 0.42, scalingStat: "MA", tags: ["summon", "beast", "defensive"], effects: [damage("MA", 1.8), guard(8)] },
-  pack_tactics: { id: "pack_tactics", type: "passive", apCost: 3, tags: ["summon", "beast"], passiveStats: { PA: 2, MA: 2, ACC: 3 } },
-  dragon_roar: { id: "dragon_roar", type: "special", apCost: 3, chance: 0.58, maxUses: 1, priority: true, condition: { type: "enemy_hp_above", value: 0.5 }, scalingStat: "PA", tags: ["dragon", "physical"], effects: [damage("PA", 1.9), guard(5), status("intimidated", "foe", 2, { damageMultiplier: 0.9, statMods: { ACC: -6 } })] },
-  dragon_strike: { id: "dragon_strike", type: "active", apCost: 3, chance: 0.42, scalingStat: "PA", tags: ["dragon", "physical", "weapon"], effects: [damage("PA", 2.45)] },
-  berserk: { id: "berserk", type: "special", apCost: 2, chance: 0.68, maxUses: 1, priority: true, tags: ["physical", "risk", "focus"], scalingStat: "PA", effects: [status("berserk", "self", 999, { permanent: true, statMods: { PA: 6, CRD: 12 }, damageMultiplier: 1.12, damageTakenMultiplier: 1.08 })] },
-  bloodlust: { id: "bloodlust", type: "special", apCost: 3, chance: 0.42, priority: true, condition: { type: "hp_below", value: 0.6 }, scalingStat: "PA", tags: ["physical", "bleed", "risk"], effects: [status("bloodlust", "self", 2, { damageMultiplier: 1.18, statMods: { CRT: 6 } }), damage("PA", 2.2)] },
-  war_prayer: { id: "war_prayer", type: "passive", apCost: 2, tags: ["holy", "physical", "support"], passiveStats: { PA: 2, MA: 2, MD: 2 } },
-  radiant_strike: { id: "radiant_strike", type: "active", apCost: 3, chance: 0.54, scalingStat: "PA", tags: ["holy", "physical"], effects: [damage("PA", 1.65), heal("MA", 0.35)] },
-  marked_execution: { id: "marked_execution", type: "special", apCost: 3, chance: 0.42, maxUses: 1, priority: true, condition: { type: "enemy_hp_below", value: 0.45 }, scalingStat: "ACC", tags: ["critical", "ranged"], effects: [damage("ACC", 1.35, { critBonus: 16 }), status("aiming", "self", 999, { permanent: true, stack: true, statMods: { ACC: 4 } })] },
-  phase_cut: { id: "phase_cut", type: "active", apCost: 3, chance: 0.47, scalingStat: "SPD", tags: ["magic", "speed", "critical"], effects: [damage("SPD", 2.0, { critBonus: 12 }), status("phase_blur", "self", 2, { statMods: { EVA: 5, SPD: 3 } })] },
-  execution_rite: { id: "execution_rite", type: "special", apCost: 2, chance: 0.7, maxUses: 1, priority: true, tags: ["holy", "critical", "focus"], scalingStat: "MA", effects: [status("execution_rite", "self", 999, { permanent: true, statMods: { CRT: 8, CRD: 16 }, damageMultiplier: 1.07 })] },
-  final_verdict: { id: "final_verdict", type: "special", apCost: 4, chance: 0.62, maxUses: 1, priority: true, condition: { type: "enemy_hp_below", value: 0.4 }, scalingStat: "MA", tags: ["holy", "critical"], effects: [damage("MA", 3.45, { critBonus: 30 })] },
-  grave_guard: { id: "grave_guard", type: "passive", apCost: 3, tags: ["dark", "defensive"], passiveStats: { HP: 20, PD: 4, MD: 2 } },
-  death_cleave: { id: "death_cleave", type: "active", apCost: 3, chance: 0.4, scalingStat: "PA", tags: ["dark", "physical"], effects: [damage("PA", 2.35), heal("MA", 0.45)] },
-  hemorrhage: { id: "hemorrhage", type: "active", apCost: 3, chance: 0.48, scalingStat: "PA", tags: ["bleed", "physical"], effects: [damage("PA", 2.0), poison(6, 3)] },
-  red_frenzy: { id: "red_frenzy", type: "special", apCost: 2, chance: 0.68, maxUses: 1, priority: true, condition: { type: "hp_below", value: 0.75 }, tags: ["bleed", "risk", "focus"], scalingStat: "PA", effects: [status("red_frenzy", "self", 999, { permanent: true, statMods: { PA: 5, CRT: 6, CRD: 12 }, damageMultiplier: 1.12, damageTakenMultiplier: 1.06 })] },
-  dragon_heart_art: { id: "dragon_heart_art", type: "passive", apCost: 3, tags: ["dragon", "defensive"], passiveStats: { HP: 18, PA: 3, PD: 3 } },
-  wyrm_guard: { id: "wyrm_guard", type: "special", apCost: 3, chance: 0.4, priority: true, condition: { type: "hp_below", value: 0.7 }, scalingStat: "PD", tags: ["dragon", "defensive"], effects: [damage("PD", 1.8), guard(14)] },
-  soul_archive: { id: "soul_archive", type: "passive", apCost: 3, tags: ["dark", "magic"], passiveStats: { MA: 5, MD: 5 } },
-  death_pact: { id: "death_pact", type: "special", apCost: 4, chance: 0.34, priority: true, condition: { type: "hp_below", value: 0.5 }, scalingStat: "MA", tags: ["dark", "risk"], effects: [damage("MA", 3.0), heal("MA", 1.0)] },
-  grand_theory: { id: "grand_theory", type: "passive", apCost: 3, tags: ["magic", "support"], passiveStats: { MA: 4, MD: 4, ACC: 2 } },
-  miracle: { id: "miracle", type: "special", apCost: 4, chance: 0.32, priority: true, condition: { type: "hp_below", value: 0.35 }, scalingStat: "MA", tags: ["holy", "support"], effects: [heal("MA", 2.2), guard(10)] },
-  eclipse_step: { id: "eclipse_step", type: "passive", apCost: 3, tags: ["dark", "speed"], passiveStats: { SPD: 6, EVA: 5, CRT: 3 } },
-  imperial_backstab: { id: "imperial_backstab", type: "special", apCost: 4, chance: 0.32, maxUses: 1, priority: true, condition: { type: "enemy_hp_above", value: 0.5 }, scalingStat: "SPD", tags: ["dark", "critical"], effects: [damage("SPD", 2.45, { critBonus: 22 })] },
-  shadow_edict: { id: "shadow_edict", type: "passive", apCost: 4, tags: ["dark", "speed", "critical"], passiveStats: { SPD: 8, EVA: 5, CRT: 5, CRD: 14 } },
-  shadow_crown: { id: "shadow_crown", type: "passive", apCost: 5, tags: ["dark", "speed", "critical"], passiveStats: { PA: 4, SPD: 10, EVA: 6, CRT: 6, CRD: 18 } },
-  midnight_execution: { id: "midnight_execution", type: "special", apCost: 5, chance: 0.38, maxUses: 1, priority: true, condition: { type: "enemy_hp_above", value: 0.45 }, scalingStat: "SPD", tags: ["dark", "speed", "critical"], effects: [damage("SPD", 2.75, { critBonus: 24 }), status("midnight_fear", "foe", 2, { statMods: { ACC: -5, EVA: -5 }, damageTakenMultiplier: 1.08 })] },
-  sovereign_vanish: { id: "sovereign_vanish", type: "special", apCost: 4, chance: 0.52, maxUses: 1, priority: true, condition: { type: "hp_below", value: 0.75 }, scalingStat: "SPD", tags: ["dark", "speed", "defensive"], effects: [guard(14), status("sovereign_vanish", "self", 2, { statMods: { EVA: 10, SPD: 5 }, damageTakenMultiplier: 0.86 })] },
-  summon_drake: { id: "summon_drake", type: "active", apCost: 3, chance: 0.4, scalingStat: "MA", tags: ["summon", "dragon"], effects: [damage("MA", 2.35), guard(5)] },
-  legion_call: { id: "legion_call", type: "passive", apCost: 3, tags: ["summon"], passiveStats: { HP: 14, MA: 4, ACC: 3 } },
-  iron_skin: { id: "iron_skin", type: "passive", apCost: 1, tags: ["defensive", "frontline", "holy"], passiveStats: { HP: 12, PD: 3, MD: 1 } },
-  aura_cut: { id: "aura_cut", type: "active", apCost: 1, chance: 0.62, scalingStat: "MA", tags: ["holy", "weapon", "magic", "support"], effects: [damage("MA", 1.18), heal("MD", 0.35), guard(3)] },
-  curse_mark: { id: "curse_mark", type: "active", apCost: 2, chance: 0.56, scalingStat: "MA", tags: ["dark", "debuff", "weapon"], effects: [damage("MA", 1.15), status("curse_mark", "foe", 3, { damageMultiplier: 0.9, damageTakenMultiplier: 1.08, skillChanceMultiplier: 0.9 })] },
-  malice_edge: { id: "malice_edge", type: "special", apCost: 3, chance: 0.46, priority: true, condition: { type: "enemy_hp_above", value: 0.35 }, scalingStat: "MA", tags: ["dark", "debuff", "weapon"], effects: [damage("MA", 1.45), damage("PA", 0.85), status("malice_edge", "foe", 2, { statMods: { PA: -4, MA: -4, MD: -3 }, damageTakenMultiplier: 1.06 })] },
-  sigil_burst: { id: "sigil_burst", type: "active", apCost: 2, chance: 0.5, scalingStat: "MD", tags: ["magic", "arcane", "defensive"], effects: [damage("MD", 1.65)] },
-  needle_flurry: { id: "needle_flurry", type: "active", apCost: 2, chance: 0.54, scalingStat: "SPD", tags: ["critical", "ranged", "speed"], effects: [damage("SPD", 1.55, { critBonus: 18 })] },
-  plague_cloud: { id: "plague_cloud", type: "special", apCost: 3, chance: 0.42, scalingStat: "MA", tags: ["poison", "magic"], effects: [damage("MA", 1.1), poison(10, 4), status("withered", "foe", 3, { damageMultiplier: 0.9, defenseMultiplier: 0.9 })] },
-  spirit_link: { id: "spirit_link", type: "passive", apCost: 2, tags: ["summon", "support"], passiveStats: { MA: 3, MD: 3, HP: 8 } },
-  oathbreaker_stance: { id: "oathbreaker_stance", type: "passive", apCost: 3, tags: ["holy", "dark", "risk"], passiveStats: { PA: 3, MA: 3, CRT: 4 } },
-  golden_throw: { id: "golden_throw", type: "active", apCost: 2, chance: 0.44, scalingStat: "CRD", tags: ["critical", "risk", "ranged"], effects: [damage("CRD", 0.78, { critBonus: 20 })] },
-  starfall: { id: "starfall", type: "special", apCost: 4, chance: 0.58, maxUses: 1, scalingStat: "MA", tags: ["holy", "magic"], effects: [damage("MA", 3.0), status("starstruck", "foe", 2, { damageTakenMultiplier: 1.16 })] },
-  blood_seal: { id: "blood_seal", type: "passive", apCost: 2, tags: ["dark", "bleed", "risk"], passiveStats: { PA: 3, MA: 2, CRD: 8 } },
-  phantom_army: { id: "phantom_army", type: "special", apCost: 4, chance: 0.36, scalingStat: "MA", tags: ["summon", "dark"], effects: [damage("MA", 2.35), guard(6)] },
-  venom_bloom: { id: "venom_bloom", type: "active", apCost: 2, chance: 0.48, scalingStat: "MA", tags: ["poison", "bleed"], effects: [damage("MA", 1.35), poison(9, 3)] },
-  reversal_prayer: { id: "reversal_prayer", type: "special", apCost: 3, chance: 0.38, priority: true, condition: { type: "hp_below", value: 0.45 }, scalingStat: "MD", tags: ["holy", "risk", "support"], effects: [heal("MD", 1.55), damage("MD", 1.25)] },
-  rune_barrier: { id: "rune_barrier", type: "passive", apCost: 2, tags: ["magic", "defensive", "arcane"], passiveStats: { MD: 5, ACC: 2 } },
-  monster_tamer: { id: "monster_tamer", type: "active", apCost: 2, chance: 0.5, scalingStat: "ACC", tags: ["summon", "beast", "ranged"], effects: [damage("ACC", 0.48), guard(4)] },
-  trail_grit: { id: "trail_grit", type: "passive", apCost: 1, tags: ["foundation", "survival", "utility"], passiveStats: { HP: 12, PD: 2, MD: 1 }, eventChoiceBonus: 1, eventWeightMultipliers: { advanced_job_training: 1.1, stat_growth_event: 1.15 } },
-  emergency_bandage: { id: "emergency_bandage", type: "special", apCost: 1, chance: 0.58, maxUses: 1, priority: true, condition: { type: "hp_below", value: 0.55 }, scalingStat: "HP", tags: ["survival", "support"], effects: [heal("HP", 0.2), guard(7), status("patched_up", "self", 2, { damageTakenMultiplier: 0.92 })] },
-  bone_phalanx: { id: "bone_phalanx", type: "active", apCost: 2, chance: 0.52, scalingStat: "PD", tags: ["dark", "undead", "defensive"], effects: [damage("PD", 1.55), guard(5)] },
-  marrow_order: { id: "marrow_order", type: "passive", apCost: 2, tags: ["dark", "undead", "frontline"], passiveStats: { HP: 14, PA: 2, PD: 3 } },
-  palm_break: { id: "palm_break", type: "active", apCost: 1, chance: 0.58, scalingStat: "PA", tags: ["physical", "martial", "seal"], effects: [damage("PA", 1.25), guard(2), status("palm_seal", "foe", 1, { skillChanceMultiplier: 0.82 })] },
-  flowing_form: { id: "flowing_form", type: "passive", apCost: 2, tags: ["martial", "speed", "defensive"], passiveStats: { SPD: 3, EVA: 3, PD: 2 } },
-  pinning_bolt: { id: "pinning_bolt", type: "active", apCost: 2, chance: 0.56, scalingStat: "ACC", tags: ["ranged", "critical", "utility", "focus"], effects: [damage("ACC", 0.32), guard(4), status("aiming", "self", 999, { permanent: true, stack: true, statMods: { ACC: 3 } }), status("pinned", "foe", 1, { statMods: { SPD: -3, EVA: -3 } })] },
-  rewind_bolt: { id: "rewind_bolt", type: "special", apCost: 3, chance: 0.38, priority: true, condition: { type: "enemy_hp_above", value: 0.55 }, scalingStat: "SPD", tags: ["ranged", "time", "critical"], effects: [damage("SPD", 1.8, { critBonus: 16 }), guard(4)] },
-  paradox_bolt: { id: "paradox_bolt", type: "special", apCost: 4, chance: 0.42, maxUses: 1, priority: true, condition: { type: "enemy_hp_above", value: 0.45 }, scalingStat: "ACC", tags: ["ranged", "time", "critical"], effects: [damage("ACC", 0.82, { critBonus: 16 }), guard(6), status("paradox_mark", "foe", 2, { statMods: { SPD: -4, EVA: -4 }, damageTakenMultiplier: 1.05 }), status("aiming", "self", 999, { permanent: true, stack: true, statMods: { ACC: 4 } })] },
-  spirit_talisman: { id: "spirit_talisman", type: "passive", apCost: 2, tags: ["spirit", "magic", "support"], passiveStats: { MA: 3, MD: 4, SPD: 1 } },
-  time_charm: { id: "time_charm", type: "special", apCost: 3, chance: 0.58, maxUses: 1, priority: true, condition: { type: "hp_below", value: 0.7 }, scalingStat: "MD", tags: ["time", "spirit", "defensive"], effects: [heal("MD", 1.45, { maxHpRatio: 0.03 }), guard(10), status("time_charm", "self", 2, { damageTakenMultiplier: 0.86 })] },
-  hearty_meal: { id: "hearty_meal", type: "passive", apCost: 1, tags: ["preparation", "food", "support"], passiveStats: { HP: 18, MD: 1 } },
-  battle_spice: { id: "battle_spice", type: "active", apCost: 2, chance: 0.48, scalingStat: "PA", tags: ["preparation", "risk", "support"], effects: [damage("PA", 1.25), heal("HP", 0.08)] },
-  meridian_burst: { id: "meridian_burst", type: "special", apCost: 3, chance: 0.42, priority: true, condition: { type: "enemy_hp_below", value: 0.6 }, scalingStat: "SPD", tags: ["martial", "critical", "seal"], effects: [dispel("foe", { positiveOnly: true }), damage("SPD", 2.05, { critBonus: 14 }), status("meridian_lock", "foe", 2, { skillChanceMultiplier: 0.75 })] },
-  ancestor_banner: { id: "ancestor_banner", type: "passive", apCost: 3, tags: ["undead", "dark", "support"], passiveStats: { HP: 18, PA: 3, MD: 3 } },
-  astral_seal: { id: "astral_seal", type: "active", apCost: 2, chance: 0.5, scalingStat: "MA", tags: ["spirit", "magic", "control"], effects: [damage("MA", 1.55), guard(3)] },
-  feast_of_omens: { id: "feast_of_omens", type: "special", apCost: 3, chance: 0.36, priority: true, condition: { type: "hp_below", value: 0.6 }, scalingStat: "HP", tags: ["food", "risk", "support"], effects: [heal("HP", 0.22), damage("HP", 0.18, { inverseScaleStat: "EVA", inverseScaleBase: 28, inverseScalePower: 5 })] },
-  omen_banquet: { id: "omen_banquet", type: "special", apCost: 4, chance: 0.4, maxUses: 1, priority: true, condition: { type: "hp_below", value: 0.75 }, scalingStat: "HP", tags: ["food", "risk", "support"], effects: [heal("HP", 0.2, { maxHpRatio: 0.03 }), damage("HP", 0.22, { inverseScaleStat: "EVA", inverseScaleBase: 34, inverseScalePower: 6 }), status("omen_banquet", "self", 999, { permanent: true, statMods: { HP: 18, PD: 3 }, damageTakenMultiplier: 0.94 })] },
-  horizon_oath: { id: "horizon_oath", type: "passive", apCost: 2, tags: ["foundation", "holy", "survival"], passiveStats: { HP: 18, MD: 3, SPD: 2 } },
-  last_campfire: { id: "last_campfire", type: "special", apCost: 3, chance: 0.42, priority: true, condition: { type: "hp_below", value: 0.55 }, scalingStat: "HP", tags: ["survival", "holy", "support"], effects: [heal("HP", 0.2), guard(10)] },
-  black_standard: { id: "black_standard", type: "passive", apCost: 3, tags: ["undead", "dark", "frontline"], passiveStats: { HP: 22, PA: 3, PD: 4, MD: 2 } },
-  bone_court: { id: "bone_court", type: "special", apCost: 3, chance: 0.38, scalingStat: "PD", tags: ["undead", "dark", "summon"], effects: [damage("PD", 2.0), guard(8)] },
-  empty_palm: { id: "empty_palm", type: "active", apCost: 2, chance: 0.56, scalingStat: "PA", tags: ["martial", "physical", "defensive"], effects: [damage("PA", 1.75), guard(4), status("unbalanced", "foe", 1, { defenseMultiplier: 0.82 })] },
-  sealed_heart: { id: "sealed_heart", type: "special", apCost: 2, chance: 0.72, maxUses: 1, priority: true, tags: ["martial", "speed", "defensive", "focus"], scalingStat: "SPD", effects: [status("sealed_heart", "self", 999, { permanent: true, statMods: { PA: 3, SPD: 5, EVA: 5 }, defenseMultiplier: 0.92 })] },
-  time_barrage: { id: "time_barrage", type: "special", apCost: 3, chance: 0.58, maxUses: 1, priority: true, condition: { type: "enemy_hp_below", value: 0.65 }, scalingStat: "ACC", tags: ["ranged", "time", "critical"], effects: [damage("ACC", 0.92, { critBonus: 18 }), guard(4), status("aiming", "self", 999, { permanent: true, stack: true, statMods: { ACC: 5 } }), status("time_slow", "foe", 2, { statMods: { SPD: -5, EVA: -4 } })] },
-  clockwork_sight: { id: "clockwork_sight", type: "special", apCost: 2, chance: 0.74, maxUses: 1, priority: true, tags: ["ranged", "time", "utility", "focus"], scalingStat: "ACC", effects: [status("clockwork_sight", "self", 999, { permanent: true, statMods: { ACC: 4, CRT: 4, CRD: 8 } })] },
-  horizon_scope: { id: "horizon_scope", type: "passive", apCost: 4, tags: ["ranged", "time", "critical", "focus"], passiveStats: { ACC: 9, SPD: 4, CRT: 5, CRD: 16 } },
-  terminal_barrage: { id: "terminal_barrage", type: "special", apCost: 5, chance: 0.5, maxUses: 1, priority: true, condition: { type: "enemy_hp_below", value: 0.7 }, scalingStat: "ACC", tags: ["ranged", "time", "critical"], effects: [damage("ACC", 1.18, { critBonus: 22 }), status("aiming", "self", 999, { permanent: true, stack: true, statMods: { ACC: 7 } }), status("terminal_lock", "foe", 2, { statMods: { EVA: -8, SPD: -4 }, damageTakenMultiplier: 1.06 })] },
-  deadeye_execution: { id: "deadeye_execution", type: "special", apCost: 5, chance: 0.44, maxUses: 1, priority: true, condition: { type: "enemy_hp_below", value: 0.45 }, scalingStat: "ACC", tags: ["ranged", "critical"], effects: [damage("ACC", 1.45, { critBonus: 26 }), status("deadeye_calm", "self", 999, { permanent: true, statMods: { ACC: 5, CRD: 10 } })] },
-  constellation_edict: { id: "constellation_edict", type: "active", apCost: 3, chance: 0.48, scalingStat: "MA", tags: ["spirit", "magic", "holy"], effects: [damage("MA", 2.05), guard(5)] },
-  fate_reversal: { id: "fate_reversal", type: "special", apCost: 4, chance: 0.34, priority: true, condition: { type: "hp_below", value: 0.45 }, scalingStat: "MD", tags: ["spirit", "time", "support"], effects: [heal("MD", 1.8), damage("MA", 1.25)] },
-  final_course: { id: "final_course", type: "special", apCost: 3, chance: 0.36, priority: true, condition: { type: "enemy_hp_below", value: 0.55 }, scalingStat: "HP", tags: ["food", "risk", "critical"], effects: [damage("HP", 0.28, { critBonus: 10, inverseScaleStat: "EVA", inverseScaleBase: 32, inverseScalePower: 6 }), heal("HP", 0.12)] },
-  lucky_leftovers: { id: "lucky_leftovers", type: "passive", apCost: 2, tags: ["food", "risk", "support"], passiveStats: { HP: 24, PD: 3, MD: 2, EVA: -4 } },
-  iron_pot_stance: { id: "iron_pot_stance", type: "passive", apCost: 3, tags: ["food", "frontline", "survival"], passiveStats: { HP: 34, PA: 2, PD: 5, MD: 3, EVA: -8 } },
-  cauldron_slam: { id: "cauldron_slam", type: "active", apCost: 3, chance: 0.5, scalingStat: "HP", tags: ["food", "physical", "frontline"], effects: [damage("HP", 0.2, { inverseScaleStat: "EVA", inverseScaleBase: 36, inverseScalePower: 7 }), guard(8)] },
-  last_supper: { id: "last_supper", type: "special", apCost: 4, chance: 0.42, maxUses: 1, priority: true, condition: { type: "hp_below", value: 0.7 }, scalingStat: "HP", tags: ["food", "survival", "frontline"], effects: [heal("HP", 0.18, { maxHpRatio: 0.04 }), damage("HP", 0.24, { inverseScaleStat: "EVA", inverseScaleBase: 40, inverseScalePower: 8 }), status("last_supper", "self", 2, { damageTakenMultiplier: 0.88 })] },
-  fortress_doctrine: { id: "fortress_doctrine", type: "passive", apCost: 3, tags: ["frontline", "defensive", "absolute"], passiveStats: { HP: 24, PA: 2, PD: 7, MD: 3, CRT: -6 } },
-  iron_rebuttal: { id: "iron_rebuttal", type: "special", apCost: 3, chance: 0.48, priority: true, condition: { type: "hp_below", value: 0.75 }, scalingStat: "PD", tags: ["frontline", "defensive", "absolute"], effects: [damage("PD", 2.15, { absolute: true }), guard(12)] },
-  bastion_edict: { id: "bastion_edict", type: "passive", apCost: 4, tags: ["frontline", "defensive", "absolute"], passiveStats: { HP: 36, PA: 3, PD: 9, MD: 5, CRT: -8 } },
-  unbroken_counter: { id: "unbroken_counter", type: "special", apCost: 4, chance: 0.42, priority: true, condition: { type: "hp_below", value: 0.8 }, scalingStat: "PD", tags: ["frontline", "defensive", "absolute"], effects: [damage("PD", 2.75, { absolute: true }), guard(18)] },
-  twin_formula: { id: "twin_formula", type: "passive", apCost: 3, tags: ["magic", "physical", "weapon", "arcane"], passiveStats: { PA: 4, MA: 4, MD: 2 } },
-  reality_cleave: { id: "reality_cleave", type: "active", apCost: 4, chance: 0.46, scalingStat: "MA", tags: ["magic", "physical", "weapon", "arcane"], effects: [damage("MA", 1.5), damage("PA", 1.5), status("split_guard", "foe", 2, { defenseMultiplier: 0.88 })] },
-  rift_formula: { id: "rift_formula", type: "passive", apCost: 5, tags: ["magic", "physical", "weapon", "arcane"], passiveStats: { PA: 7, MA: 7, MD: 4, SPD: 3 } },
-  reality_sunder: { id: "reality_sunder", type: "active", apCost: 5, chance: 0.48, scalingStat: "MA", tags: ["magic", "physical", "weapon", "arcane"], effects: [damage("MA", 1.85), damage("PA", 1.85), status("reality_sunder", "foe", 2, { defenseMultiplier: 0.84, damageTakenMultiplier: 1.06 })] },
-  void_feint: { id: "void_feint", type: "passive", apCost: 3, tags: ["dark", "speed", "magic", "critical"], passiveStats: { SPD: 5, MA: 3, EVA: 5, CRT: 3 } },
-  null_lunge: { id: "null_lunge", type: "special", apCost: 4, chance: 0.4, priority: true, condition: { type: "enemy_hp_above", value: 0.45 }, scalingStat: "SPD", tags: ["dark", "speed", "magic", "critical"], effects: [damage("SPD", 2.05, { critBonus: 18 }), damage("MA", 1.25)] },
-  reverse_grip: { id: "reverse_grip", type: "passive", apCost: 2, tags: ["physical", "speed", "reverse_crit"], passiveStats: { PA: 3, SPD: 4, EVA: 2, CRT: -10, CRD: 12 } },
-  reverse_blade: { id: "reverse_blade", type: "active", apCost: 2, chance: 0.54, scalingStat: "PA", tags: ["physical", "speed", "reverse_crit"], effects: [damage("PA", 1.55, { inverseCrit: true, inverseCritBase: 44, inverseCritFloor: 6 })] },
-  blind_spot_cut: { id: "blind_spot_cut", type: "special", apCost: 3, chance: 0.42, maxUses: 1, priority: true, condition: { type: "enemy_hp_above", value: 0.45 }, scalingStat: "SPD", tags: ["physical", "speed", "reverse_crit"], effects: [damage("SPD", 1.9, { inverseCrit: true, inverseCritBase: 48, inverseCritFloor: 8 }), status("blind_spot", "foe", 2, { statMods: { ACC: -4, EVA: -4 } })] },
-  hidden_edge_form: { id: "hidden_edge_form", type: "passive", apCost: 3, tags: ["physical", "speed", "reverse_crit"], passiveStats: { PA: 5, SPD: 5, PD: 2, CRT: -14, CRD: 18 } },
-  no_moon_cut: { id: "no_moon_cut", type: "special", apCost: 4, chance: 0.44, maxUses: 1, priority: true, condition: { type: "enemy_hp_above", value: 0.4 }, scalingStat: "PA", tags: ["physical", "speed", "reverse_crit"], effects: [damage("PA", 2.2, { inverseCrit: true, inverseCritBase: 54, inverseCritFloor: 10 }), status("no_moon_wound", "foe", 2, { damageMultiplier: 0.9, statMods: { ACC: -5 } })] },
-  dusk_blindfold: { id: "dusk_blindfold", type: "special", apCost: 4, chance: 0.46, maxUses: 1, priority: true, condition: { type: "enemy_hp_above", value: 0.35 }, scalingStat: "SPD", tags: ["physical", "speed", "reverse_crit"], effects: [damage("SPD", 2.15, { inverseCrit: true, inverseCritBase: 56, inverseCritFloor: 10 }), status("dusk_blindfold", "foe", 2, { statMods: { ACC: -6, EVA: -6 }, skillChanceMultiplier: 0.86 })] },
-  zero_crit_doctrine: { id: "zero_crit_doctrine", type: "passive", apCost: 4, tags: ["physical", "reverse_crit", "frontline"], passiveStats: { HP: 18, PA: 7, PD: 4, SPD: 4, CRT: -20, CRD: 28 } },
-  kingless_execution: { id: "kingless_execution", type: "special", apCost: 5, chance: 0.46, maxUses: 1, priority: true, condition: { type: "enemy_hp_below", value: 0.65 }, scalingStat: "PA", tags: ["physical", "reverse_crit"], effects: [damage("PA", 2.65, { inverseCrit: true, inverseCritBase: 62, inverseCritFloor: 12 }), guard(10)] },
-  silent_regicide: { id: "silent_regicide", type: "special", apCost: 5, chance: 0.4, maxUses: 1, priority: true, condition: { type: "enemy_hp_below", value: 0.5 }, scalingStat: "PA", tags: ["physical", "reverse_crit"], effects: [damage("PA", 2.95, { inverseCrit: true, inverseCritBase: 68, inverseCritFloor: 14 }), status("regicide_wound", "foe", 2, { damageMultiplier: 0.88, damageTakenMultiplier: 1.08 })] },
-  crusade_banner: { id: "crusade_banner", type: "passive", apCost: 3, tags: ["holy", "physical", "support", "frontline"], passiveStats: { HP: 20, PA: 4, MA: 4, MD: 4 } },
-  martyr_judgment: { id: "martyr_judgment", type: "special", apCost: 4, chance: 0.38, priority: true, condition: { type: "hp_below", value: 0.65 }, scalingStat: "MA", tags: ["holy", "physical", "support"], effects: [heal("MA", 1.4, { maxHpRatio: 0.04 }), damage("PA", 1.5), damage("MA", 1.5)] },
-  relic_engine: { id: "relic_engine", type: "passive", apCost: 3, tags: ["job", "relic", "risk"], passiveStats: { CRT: 2, CRD: 8 }, passivePerRelicStats: { PA: 1, MA: 1 }, passivePerRelicCap: 8 },
-  relic_overload: { id: "relic_overload", type: "special", apCost: 4, chance: 0.42, maxUses: 1, priority: true, scalingStat: "CRD", tags: ["relic", "risk", "critical"], effects: [damage("CRD", 0.95, { critBonus: 25 }), status("overloaded", "self", 999, { permanent: true, damageTakenMultiplier: 1.08 })] },
-  contagion_crown: { id: "contagion_crown", type: "passive", apCost: 3, tags: ["poison", "dark", "support"], passiveStats: { HP: 12, MA: 5, MD: 4, ACC: 3 } },
-  plague_edict: { id: "plague_edict", type: "special", apCost: 4, chance: 0.44, scalingStat: "MA", tags: ["poison", "dark", "magic"], effects: [damage("MA", 1.35), poison(14, 5), status("sealed_lungs", "foe", 3, { damageMultiplier: 0.88, defenseMultiplier: 0.9 })] },
-  alpha_bond: { id: "alpha_bond", type: "passive", apCost: 3, tags: ["summon", "beast", "support"], passiveStats: { HP: 18, PA: 3, MA: 4, ACC: 4 } },
-  primal_command: { id: "primal_command", type: "special", apCost: 4, chance: 0.42, scalingStat: "MA", tags: ["summon", "beast", "physical"], effects: [damage("MA", 1.6), damage("PA", 1.15), guard(10), status("cornered", "foe", 2, { statMods: { EVA: -6 } })] },
-  worldsplitter: { id: "worldsplitter", type: "special", apCost: 5, chance: 0.36, maxUses: 1, priority: true, condition: { type: "enemy_hp_above", value: 0.4 }, scalingStat: "PA", tags: ["magic", "physical", "weapon", "arcane"], effects: [damage("PA", 2.15, { critBonus: 12 }), damage("MA", 2.15)] },
-  worldsplitter_true: { id: "worldsplitter_true", type: "special", apCost: 6, chance: 0.42, maxUses: 1, priority: true, condition: { type: "enemy_hp_above", value: 0.35 }, scalingStat: "PA", tags: ["magic", "physical", "weapon", "arcane"], effects: [damage("PA", 2.55, { critBonus: 16 }), damage("MA", 2.55), status("rift_opened", "foe", 2, { defenseMultiplier: 0.82, damageTakenMultiplier: 1.08 })] },
-  perfect_bastion: { id: "perfect_bastion", type: "passive", apCost: 5, tags: ["frontline", "defensive", "absolute"], passiveStats: { HP: 50, PA: 4, PD: 12, MD: 8, CRT: -10 } },
-  perfect_form: { id: "perfect_form", type: "passive", apCost: 4, tags: ["martial", "speed", "defensive"], passiveStats: { HP: 18, PA: 5, PD: 5, SPD: 5, EVA: 4 } },
-  seal_breaker_kata: { id: "seal_breaker_kata", type: "special", apCost: 4, chance: 0.58, maxUses: 1, priority: true, scalingStat: "PA", tags: ["martial", "physical", "defensive"], effects: [damage("PA", 2.25), guard(12), status("sealed_art", "foe", 2, { damageMultiplier: 0.86, statMods: { SPD: -4 } })] },
-  mapped_destiny: { id: "mapped_destiny", type: "passive", apCost: 4, tags: ["foundation", "spirit", "time", "support"], passiveStats: { HP: 22, MA: 5, MD: 5, SPD: 4 }, eventChoiceBonus: 1, eventWeightMultipliers: { advanced_job_training: 1.25, relic_event: 1.15, stat_growth_event: 1.15 } },
-  grave_summons: { id: "grave_summons", type: "active", apCost: 3, chance: 0.52, scalingStat: "MA", tags: ["summon", "dark", "undead"], effects: [damage("MA", 1.75), guard(4), status("grave_summons", "self", 999, { permanent: true, statMods: { MD: 2 } })] },
-  phase_blast: { id: "phase_blast", type: "active", apCost: 2, chance: 0.54, scalingStat: "MA", tags: ["magic", "speed", "critical"], effects: [damage("MA", 1.45), damage("SPD", 0.75, { critBonus: 10 }), status("phase_blast", "self", 1, { statMods: { EVA: 4 } })] },
-  wild_link: { id: "wild_link", type: "passive", apCost: 2, tags: ["summon", "beast", "support"], passiveStats: { HP: 10, PA: 2, MA: 2, ACC: 3 } },
-  wild_bear: { id: "wild_bear", type: "special", apCost: 3, chance: 0.44, scalingStat: "MA", tags: ["summon", "beast", "defensive"], effects: [damage("MA", 1.95), guard(10), status("maul_mark", "foe", 2, { statMods: { EVA: -4 } })] },
-  oracle_barrier: { id: "oracle_barrier", type: "passive", apCost: 2, tags: ["magic", "holy", "defensive"], passiveStats: { MD: 5, ACC: 2, SPD: 1 } },
-  oracle_cut: { id: "oracle_cut", type: "active", apCost: 2, chance: 0.56, scalingStat: "MA", tags: ["holy", "weapon", "magic", "support"], effects: [damage("MA", 1.35), heal("MD", 0.45), guard(4)] },
-  relic_throw: { id: "relic_throw", type: "active", apCost: 2, chance: 0.48, scalingStat: "CRD", tags: ["critical", "relic", "risk", "ranged"], effects: [damage("CRD", 0.82, { critBonus: 18 }), status("relic_mark", "foe", 2, { damageTakenMultiplier: 1.05 })] },
-  relic_burst: { id: "relic_burst", type: "active", apCost: 2, chance: 0.52, scalingStat: "MD", tags: ["magic", "relic", "arcane", "defensive"], effects: [damage("MD", 1.7), guard(4)] },
-  ruin_oath: { id: "ruin_oath", type: "passive", apCost: 3, tags: ["holy", "dark", "risk"], passiveStats: { PA: 3, MA: 4, CRT: 4, MD: -2 } },
-  ruin_starfall: { id: "ruin_starfall", type: "special", apCost: 4, chance: 0.58, maxUses: 1, scalingStat: "MA", tags: ["holy", "dark", "magic"], effects: [damage("MA", 2.75), status("ruined_star", "foe", 2, { damageTakenMultiplier: 1.14, damageMultiplier: 0.92 })] },
-  void_pact: { id: "void_pact", type: "special", apCost: 4, chance: 0.38, priority: true, condition: { type: "hp_below", value: 0.55 }, scalingStat: "MA", tags: ["dark", "summon", "risk"], effects: [damage("MA", 2.75), heal("MA", 0.8), status("void_pact", "self", 999, { permanent: true, damageTakenMultiplier: 1.05, damageMultiplier: 1.07 })] },
-  bolt_flurry: { id: "bolt_flurry", type: "active", apCost: 2, chance: 0.56, scalingStat: "SPD", tags: ["critical", "ranged", "speed", "focus"], effects: [damage("SPD", 1.35, { critBonus: 14 }), status("aiming", "self", 999, { permanent: true, stack: true, statMods: { ACC: 3 } })] },
-  astral_link: { id: "astral_link", type: "passive", apCost: 2, tags: ["spirit", "summon", "support"], passiveStats: { HP: 8, MA: 3, MD: 4, SPD: 1 } },
-  astral_charm: { id: "astral_charm", type: "special", apCost: 3, chance: 0.58, maxUses: 1, priority: true, condition: { type: "hp_below", value: 0.7 }, scalingStat: "MD", tags: ["spirit", "time", "defensive"], effects: [heal("MD", 1.5, { maxHpRatio: 0.03 }), guard(10), status("astral_charm", "self", 2, { damageTakenMultiplier: 0.85, statMods: { EVA: 3 } })] },
-  omen_meal: { id: "omen_meal", type: "passive", apCost: 2, tags: ["food", "risk", "support"], passiveStats: { HP: 26, PD: 2, MD: 2, EVA: -5 } },
-  omen_spice: { id: "omen_spice", type: "active", apCost: 2, chance: 0.5, scalingStat: "HP", tags: ["food", "risk", "support"], effects: [damage("HP", 0.16, { inverseScaleStat: "EVA", inverseScaleBase: 30, inverseScalePower: 5 }), heal("HP", 0.1)] },
-  marrow_army: { id: "marrow_army", type: "special", apCost: 4, chance: 0.4, scalingStat: "PD", tags: ["undead", "dark", "summon"], effects: [damage("PD", 2.1), guard(10), status("marrow_army", "self", 999, { permanent: true, statMods: { HP: 12, PD: 3 } })] },
-  meridian_overflow: { id: "meridian_overflow", type: "special", apCost: 4, chance: 0.44, priority: true, condition: { type: "enemy_hp_below", value: 0.65 }, scalingStat: "SPD", tags: ["martial", "critical", "seal"], effects: [dispel("foe", { positiveOnly: true }), damage("SPD", 2.25, { critBonus: 16 }), status("meridian_overflow", "foe", 2, { skillChanceMultiplier: 0.72, statMods: { SPD: -4 } })] },
-  constellation_fall: { id: "constellation_fall", type: "special", apCost: 4, chance: 0.6, maxUses: 1, scalingStat: "MA", tags: ["spirit", "magic", "holy"], effects: [damage("MA", 3.1), guard(6), status("constellation_fall", "foe", 2, { damageTakenMultiplier: 1.12 })] },
-  null_phase_cut: { id: "null_phase_cut", type: "special", apCost: 4, chance: 0.42, priority: true, condition: { type: "enemy_hp_above", value: 0.45 }, scalingStat: "SPD", tags: ["dark", "speed", "magic", "critical"], effects: [damage("SPD", 2.15, { critBonus: 18 }), damage("MA", 1.35), status("null_phase", "foe", 2, { statMods: { EVA: -6 }, defenseMultiplier: 0.9 })] },
-  reliquary_oath: { id: "reliquary_oath", type: "passive", apCost: 4, tags: ["holy", "dark", "relic", "risk"], passiveStats: { PA: 4, MA: 4, CRT: 3, CRD: 10 }, passivePerRelicStats: { MD: 1 }, passivePerRelicCap: 8 },
-  adamant_sentence: { id: "adamant_sentence", type: "special", apCost: 5, chance: 0.44, maxUses: 1, priority: true, condition: { type: "hp_below", value: 0.85 }, scalingStat: "PD", tags: ["frontline", "defensive", "absolute"], effects: [damage("PD", 3.05, { absolute: true }), guard(22), status("adamant_sentence", "foe", 2, { statMods: { PA: -6, ACC: -6 }, skillChanceMultiplier: 0.88 })] },
-  ruin_verdict: { id: "ruin_verdict", type: "special", apCost: 4, chance: 0.46, maxUses: 1, priority: true, condition: { type: "enemy_hp_below", value: 0.55 }, scalingStat: "MA", tags: ["holy", "dark", "critical"], effects: [damage("MA", 2.65, { critBonus: 24 }), damage("CRD", 0.55), status("ruin_verdict", "foe", 2, { damageTakenMultiplier: 1.1 })] },
-  void_legion: { id: "void_legion", type: "special", apCost: 5, chance: 0.42, maxUses: 1, priority: true, scalingStat: "MA", tags: ["summon", "dark", "void"], effects: [damage("MA", 2.5), guard(14), status("void_legion", "self", 999, { permanent: true, statMods: { MA: 4, MD: 4 }, damageMultiplier: 1.06 })] },
-  horizon_miracle: { id: "horizon_miracle", type: "special", apCost: 4, chance: 0.4, priority: true, condition: { type: "hp_below", value: 0.5 }, scalingStat: "MD", tags: ["holy", "foundation", "support"], effects: [heal("MD", 2.15, { maxHpRatio: 0.05 }), guard(16), status("horizon_miracle", "self", 2, { damageTakenMultiplier: 0.84 })] },
-  crusade_verdict: { id: "crusade_verdict", type: "special", apCost: 5, chance: 0.48, maxUses: 1, priority: true, condition: { type: "enemy_hp_below", value: 0.6 }, scalingStat: "MA", tags: ["holy", "physical", "critical"], effects: [heal("MA", 1.15, { maxHpRatio: 0.03 }), damage("PA", 1.75, { critBonus: 12 }), damage("MA", 1.75, { critBonus: 12 })] },
-  plague_reversal: { id: "plague_reversal", type: "special", apCost: 5, chance: 0.4, priority: true, condition: { type: "hp_below", value: 0.6 }, scalingStat: "MD", tags: ["poison", "holy", "risk", "support"], effects: [heal("MD", 1.65), poison(18, 4), status("plague_reversal", "foe", 3, { damageMultiplier: 0.86, defenseMultiplier: 0.88 })] },
-  primal_legion: { id: "primal_legion", type: "special", apCost: 5, chance: 0.44, maxUses: 1, priority: true, scalingStat: "MA", tags: ["summon", "beast", "physical"], effects: [damage("MA", 1.85), damage("PA", 1.45), guard(16), status("primal_legion", "self", 999, { permanent: true, statMods: { HP: 16, PA: 3, MA: 3 } })] },
-  immortal_palm: { id: "immortal_palm", type: "active", apCost: 4, chance: 0.52, scalingStat: "PA", tags: ["martial", "physical", "defensive"], effects: [damage("PA", 2.15), guard(8), status("immortal_palm", "foe", 1, { defenseMultiplier: 0.8, skillChanceMultiplier: 0.82 })] },
-  mapped_reversal: { id: "mapped_reversal", type: "special", apCost: 5, chance: 0.42, maxUses: 1, priority: true, condition: { type: "hp_below", value: 0.55 }, scalingStat: "MD", tags: ["foundation", "spirit", "time", "support"], effects: [heal("MD", 2.1, { maxHpRatio: 0.05 }), damage("MA", 1.55), status("mapped_reversal", "self", 999, { permanent: true, statMods: { SPD: 4, MD: 4 }, damageMultiplier: 1.05 })] },
-  returning_charm: { id: "returning_charm", type: "special", apCost: 4, chance: 0.52, maxUses: 1, priority: true, condition: { type: "hp_below", value: 0.45 }, scalingStat: "MD", tags: ["spirit", "time", "support", "defensive"], effects: [heal("MD", 2.0, { maxHpRatio: 0.05 }), guard(14), status("returned_path", "self", 999, { permanent: true, damageMultiplier: 1.06 })] }
+  basic_attack: { id: "basic_attack", type: "active", apCost: 0, chance: 1, priority: false, scalingStat: "PA", tags: ["physical"], effects: [damage("PA", 1)] },
+  magic_attack: { id: "magic_attack", type: "active", apCost: 0, chance: 1, priority: false, scalingStat: "MA", tags: ["magic"], effects: [damage("MA", 1)] },
+  ...generatedSkills
 };
