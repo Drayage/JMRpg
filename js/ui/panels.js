@@ -396,15 +396,15 @@ function skillRow(state, skillId) {
 
 function equipBlockReasonText(reason) {
   if (reason.type === "slot") {
-    return `?μ갑 遺덇?: ${reason.skillType} ?щ’ ${reason.current}/${reason.limit}`;
+    return `장착 불가: ${ko.tags?.[reason.skillType] ?? reason.skillType} 슬롯 ${reason.current}/${reason.limit}`;
   }
   if (reason.type === "ap") {
-    return `?μ갑 遺덇?: AP ${reason.currentAp}+${reason.cost}/${reason.totalAp}`;
+    return `장착 불가: AP ${reason.currentAp}+${reason.cost}/${reason.totalAp}`;
   }
   if (reason.type === "unavailable") {
-    return "?μ갑 遺덇?: ?꾩옱 吏곸뾽 ?ㅽ궗???꾨땲嫄곕굹 ?꾩쭅 留덉뒪?곕릺吏 ?딆븯?듬땲??";
+    return "장착 불가: 마스터하지 않았고 현재 직업의 스킬도 아닙니다.";
   }
-  return "?μ갑 遺덇?";
+  return "장착 불가";
 }
 
 function choiceButton(choice, state) {
@@ -531,11 +531,11 @@ function fighterBox(name, fighter, tone) {
       ${progressBar(fighter.hp, fighter.stats.HP, tone)}
       <div class="tag-list">
         ${fighter.guard ? tag(`${ko.ui.block} ${fighter.guard}`, "ok") : ""}
-        ${fighter.poison ? tag(`poison ${fighter.poison}`, "warn") : ""}
-        ${Object.entries(fighter.typedStatuses ?? {}).map(([id, status]) => tag(`${id} ${status.amount}${status.turns ? `/${status.turns}T` : ""}`, "warn")).join("")}
-        ${(fighter.summons ?? []).length ? tag(`summons ${(fighter.summons ?? []).length}`, "ok") : ""}
-        ${Object.entries(fighter.resources ?? {}).filter(([, value]) => value > 0).map(([id, value]) => tag(`${id} ${value}`, "ok")).join("")}
-        ${(fighter.statuses ?? []).map((status) => tag(`${status.id} ${status.permanent ? "battle" : status.turns}`, "warn")).join("")}
+        ${fighter.poison ? tag(`${ko.statuses?.poison ?? "독"} ${fighter.poison}`, "warn") : ""}
+        ${Object.entries(fighter.typedStatuses ?? {}).map(([id, status]) => tag(`${displayLabel(id)} ${status.amount}${status.turns ? `/${status.turns}T` : ""}`, "warn")).join("")}
+        ${(fighter.summons ?? []).length ? tag(`${ko.effects?.summon ?? "소환"} ${(fighter.summons ?? []).length}`, "ok") : ""}
+        ${Object.entries(fighter.resources ?? {}).filter(([, value]) => value > 0).map(([id, value]) => tag(`${displayLabel(id)} ${value}`, "ok")).join("")}
+        ${(fighter.statuses ?? []).map((status) => tag(`${displayLabel(status.id)} ${status.permanent ? ko.ui.battleLong : status.turns}`, "warn")).join("")}
       </div>
     </div>
   `;
@@ -543,19 +543,40 @@ function fighterBox(name, fighter, tone) {
 
 function statusEffectText(effect) {
   if (effect.type === "typed_status") {
-    return `${effect.kind} ${effect.amount}${effect.turns ? ` ${effect.turns}T` : ""}`;
+    return `${displayLabel(effect.kind)} ${effect.amount}${effect.turns ? ` ${effect.turns}T` : ""}`;
   }
   if (effect.type === "poison") {
-    return `poison ${effect.amount ?? effect.power ?? 0}`;
+    return `${ko.statuses?.poison ?? "독"} ${effect.amount ?? effect.power ?? 0}`;
   }
   if (effect.type === "summon") {
-    return `summon ${effect.summonId}`;
+    return `${ko.effects?.summon ?? "소환"} ${displayLabel(effect.summonId)}`;
   }
   if (effect.type === "rune") {
-    return `rune ${effect.runeId}`;
+    return `${ko.effects?.rune ?? "룬 설치"} ${displayLabel(effect.runeId)}`;
   }
   if (effect.type === "shield") {
-    return `shield ${effect.amount ?? 0}`;
+    return `${ko.effects?.shield ?? ko.ui.block} ${effect.amount ?? 0}`;
+  }
+  if (effect.type === "resource") {
+    return `${ko.effects?.resource ?? "자원"} ${displayLabel(effect.key)} +${effect.amount ?? 0}`;
+  }
+  if (effect.type === "consume_resource") {
+    return `${ko.effects?.consume_resource ?? "자원 소비"} ${displayLabel(effect.key)}`;
+  }
+  if (effect.type === "consume_status") {
+    return `${ko.effects?.consume_status ?? "상태 소비"} ${displayLabel(effect.kind)}`;
+  }
+  if (effect.type === "clear_resource") {
+    return `${ko.effects?.clear_resource ?? "자원 초기화"} ${displayLabel(effect.key)}`;
+  }
+  if (effect.type === "extra_action") {
+    return `${ko.effects?.extra_action ?? "재행동"} ${Math.round((effect.chance ?? 1) * 100)}%`;
+  }
+  if (effect.type === "sacrifice") {
+    return `${ko.effects?.sacrifice ?? "HP 소모"} ${Math.round((effect.ratio ?? 0) * 100)}%`;
+  }
+  if (effect.type === "stat_tradeoff") {
+    return `${ko.effects?.stat_tradeoff ?? "능력치 전환"} ${Object.entries(effect.statMods ?? {}).map(([key, value]) => `${ko.stats[key] ?? key}${value > 0 ? "+" : ""}${value}`).join(", ")}`;
   }
   const parts = [`${effect.id} ${effect.permanent ? (ko.ui.battleLong ?? "battle-long") : `${effect.turns ?? 1}T`}`];
   if (effect.damageMultiplier && effect.damageMultiplier !== 1) {
@@ -718,7 +739,7 @@ function panel(content, className = "") {
 }
 
 function tag(text, tone = "") {
-  return `<span class="tag ${tone}">${text}</span>`;
+  return `<span class="tag ${tone}">${displayLabel(text)}</span>`;
 }
 
 function changedClass(active) {
@@ -755,15 +776,15 @@ function difficultyName(difficulty) {
 
 function conditionText(condition) {
   if (condition.type === "hp_below") {
-    return `Player HP <= ${Math.round(condition.value * 100)}%`;
+    return `플레이어 HP <= ${Math.round(condition.value * 100)}%`;
   }
   if (condition.type === "enemy_hp_above") {
-    return `Enemy HP >= ${Math.round(condition.value * 100)}%`;
+    return `적 HP >= ${Math.round(condition.value * 100)}%`;
   }
   if (condition.type === "enemy_hp_below") {
-    return `Enemy HP <= ${Math.round(condition.value * 100)}%`;
+    return `적 HP <= ${Math.round(condition.value * 100)}%`;
   }
-  return condition.type;
+  return displayLabel(condition.type);
 }
 
 function jobName(id) {
@@ -775,7 +796,7 @@ function jobDesc(id) {
 }
 
 function skillName(id) {
-  return ko.skills[id]?.name ?? id;
+  return ko.skills[id]?.name ?? ko.enemySkills?.[id] ?? displayLabel(id);
 }
 
 function skillDesc(id) {
@@ -812,23 +833,38 @@ function eventDesc(id) {
 
 function formatLogText(text) {
   let output = text;
-  for (const id of Object.keys(jobs)) {
-    output = output.replaceAll(id, jobName(id));
+  const replacements = {
+    ...Object.fromEntries(Object.keys(jobs).map((id) => [id, jobName(id)])),
+    ...Object.fromEntries(Object.keys(skills).map((id) => [id, skillName(id)])),
+    ...Object.fromEntries(Object.keys(ko.enemySkills ?? {}).map((id) => [id, skillName(id)])),
+    ...Object.fromEntries(Object.keys(relics).map((id) => [id, relicName(id)])),
+    ...Object.fromEntries(Object.keys(monsters).map((id) => [id, monsterName(id)])),
+    ...Object.fromEntries(Object.keys(bosses).map((id) => [id, bossName(id)]))
+  };
+  for (const [id, label] of Object.entries(replacements).sort((a, b) => b[0].length - a[0].length)) {
+    output = replaceToken(output, id, label);
   }
-  for (const id of Object.keys(skills)) {
-    output = output.replaceAll(id, skillName(id));
-  }
-  for (const id of Object.keys(ko.skills)) {
-    output = output.replaceAll(id, skillName(id));
-  }
-  for (const id of Object.keys(relics)) {
-    output = output.replaceAll(id, relicName(id));
-  }
-  for (const id of Object.keys(monsters)) {
-    output = output.replaceAll(id, monsterName(id));
-  }
-  for (const id of Object.keys(bosses)) {
-    output = output.replaceAll(id, bossName(id));
-  }
+  output = output
+    .replace(/\bused\b/g, "사용")
+    .replace(/\bdealt\b/g, "피해")
+    .replace(/\bfor\b/g, "")
+    .replace(/\bdamage\b/g, "피해")
+    .replace(/\bcritical\b/g, "치명타")
+    .replace(/\bmissed\b/g, "빗나감")
+    .replace(/\brecovered\b/g, "회복")
+    .replace(/\bhealed\b/g, "회복")
+    .replace(/\bgained\b/g, "획득")
+    .replace(/\bblock\b/g, "보호막")
+    .replace(/\bshield\b/g, "보호막")
+    .replace(/\bafter\b/g, "후");
   return output;
+}
+
+function replaceToken(text, token, label) {
+  const escaped = token.replace(/[.*+?^${}()|[]\]/g, "\\$&");
+  return text.replace(new RegExp(`(^|[^A-Za-z0-9_])(${escaped})(?=$|[^A-Za-z0-9_])`, "g"), `$1${label}`);
+}
+
+function displayLabel(text) {
+  return ko.tags?.[text] ?? ko.statuses?.[text] ?? ko.effects?.[text] ?? text;
 }

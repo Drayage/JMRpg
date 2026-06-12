@@ -12,6 +12,9 @@ const rune = (id, trigger, effects, extra = {}) => ({ type: "rune", runeId: id, 
 const extraAction = (chance = 1, limit = 10) => ({ type: "extra_action", chance, limit });
 const sacrifice = (ratio) => ({ type: "sacrifice", ratio });
 const consumeResource = (key, power, extra = {}) => ({ type: "consume_resource", key, power, ...extra });
+const consumeStatus = (kind, power, extra = {}) => ({ type: "consume_status", kind, power, ...extra });
+const clearResource = (key) => ({ type: "clear_resource", key });
+const statTradeoff = (statMods, extra = {}) => ({ type: "stat_tradeoff", statMods, ...extra });
 
 const tierCost = (tier, offset = 0) => Math.max(1, Math.min(6, Math.ceil(tier / 2) + offset));
 const activeChance = (tier) => Math.max(0.38, 0.68 - tier * 0.035);
@@ -104,8 +107,244 @@ for (const job of Object.values(jobs)) {
   for (const stage of ["init", "core", "art"]) generatedSkills[`${job.id}_${stage}`] = makeSkill(job, stage);
 }
 
+const manualSkills = {};
+for (const job of Object.values(jobs).filter((item) => item.tier <= 3)) {
+  for (const stage of ["init", "core", "art"]) {
+    manualSkills[`${job.id}_${stage}`] = makeManualSkill(job, stage);
+  }
+}
+
 export const skills = {
   basic_attack: { id: "basic_attack", type: "active", apCost: 0, chance: 1, priority: false, scalingStat: "PA", tags: ["physical"], effects: [damage("PA", 1)] },
   magic_attack: { id: "magic_attack", type: "active", apCost: 0, chance: 1, priority: false, scalingStat: "MA", tags: ["magic"], effects: [damage("MA", 1)] },
-  ...generatedSkills
+  ...generatedSkills,
+  ...manualSkills
 };
+
+function makeManualSkill(job, stage) {
+  const base = {
+    id: `${job.id}_${stage}`,
+    type: stage === "init" ? "active" : "special",
+    apCost: manualApCost(job, stage),
+    chance: stage === "init" ? 0.68 : stage === "core" ? 0.5 : 0.46,
+    priority: stage !== "init",
+    condition: null,
+    scalingStat: coreDamageStat(job),
+    tags: job.themes ?? [],
+    effects: []
+  };
+  if (job.tier === 1) return makeTierOneSkill(job, stage, base);
+  if (has(job, "low_hp")) return skillFromSet(base, stage, [
+    [damage("PA", 1.08, { missingHpPower: 0.75 }), sacrifice(0.03)],
+    [status("rage_heat", "self", 999, { permanent: true, statMods: { PA: 5, MA: -2 }, damageMultiplier: 1.08 })],
+    [damage("PA", 1.35, { missingHpPower: 1.55, lowMaPower: 0.015 }), sacrifice(0.06)]
+  ], { art: { condition: { type: "hp_below", value: 0.58 } } });
+  if (has(job, "swordsmanship")) return skillFromSet(base, stage, [
+    [damage("PA", 0.86, { swordsmanshipPower: 0.05 }), resource("swordsmanship", 1)],
+    [resource("swordsmanship", 3), status("trained_edge", "self", 999, { permanent: true, statMods: { ACC: 3, PA: 1 } })],
+    [damage("PA", 1.0, { swordsmanshipPower: 0.12 })]
+  ]);
+  if (has(job, "shield_break")) return skillFromSet(base, stage, [
+    [damage("PA", 0.9, { shieldBreak: 16, shieldPower: 0.4 })],
+    [damage("PA", 1.05, { shieldBreak: 28, shieldPower: 0.8 }), typedStatus("fracture", 5, 3)],
+    [damage("PA", 1.06, { targetStatus: "fracture", targetStatusPower: 1.5 }), typedStatus("fracture", 4, 3)]
+  ], { core: { condition: { type: "target_has_shield", amount: 0 } } });
+  if (has(job, "absolute") && has(job, "pd_to_pa")) return skillFromSet(base, stage, [
+    [damage("PD", 0.86, { absolute: true, pdToPa: 0.25 })],
+    [status("dragon_shift", "self", 3, { statMods: { PA: 6, PD: -2 }, damageMultiplier: 1.08 })],
+    [damage("PD", 1.08, { absolute: true, pdToPa: 0.75 }), damage("PA", 0.55, { absolute: true })]
+  ]);
+  if (has(job, "absolute") || has(job, "shield") || has(job, "pd")) return skillFromSet(base, stage, [
+    [damage("PD", 0.78, { absolute: has(job, "absolute") }), shield(4 + job.tier, "PD", 0.28)],
+    [shield(8 + job.tier * 2, "PD", 0.5), statTradeoff({ CRT: -4, PD: 5, PA: 1 }, { id: `${job.id}_guard_oath` })],
+    [damage("PD", 1.1, { absolute: true, shieldPower: 0.45 }), shield(6 + job.tier, "PD", 0.3)]
+  ]);
+  if (has(job, "enemy_current_hp")) return skillFromSet(base, stage, [
+    [damage("SPD", 0.86, { enemyCurrentHpPower: 0.08 }), typedStatus("bleed", 4, 3)],
+    [status("ambush_focus", "self", 3, { statMods: { CRT: 8, SPD: 3 } })],
+    [damage("SPD", 1.05, { enemyCurrentHpPower: 0.16, critBonus: 8 }), typedStatus("bleed", 6, 3)]
+  ], { init: { condition: { type: "enemy_hp_above", value: 0.5 } }, art: { condition: { type: "target_has_status", kind: "bleed" } } });
+  if (has(job, "reverse_crit")) return skillFromSet(base, stage, [
+    [damage("PA", 0.98, { inverseCrit: true, inverseCritBase: 42, inverseCritFloor: 8 }), typedStatus("bleed", 3, 2)],
+    [statTradeoff({ CRT: -8, CRD: 22, PA: 2 }, { id: "reverse_edge" })],
+    [damage("PA", 1.25, { inverseCrit: true, inverseCritBase: 55, inverseCritFloor: 12, critBonus: 6 })]
+  ]);
+  if (has(job, "rhythm")) return skillFromSet(base, stage, [
+    [damage("EVA", 0.65), resource("rhythm", 1)],
+    [resource("rhythm", 3), status("chorus", "self", 999, { permanent: true, stack: true, statMods: { EVA: 2, ACC: 1 } })],
+    [damage("EVA", 1.05, { resourceKey: "rhythm", resourcePower: 0.08 }), clearResource("rhythm")]
+  ], { art: { condition: { type: "has_resource", key: "rhythm", amount: 3 } } });
+  if (has(job, "evasion")) return skillFromSet(base, stage, [
+    [damage("EVA", 0.82), status("flow_step", "self", 2, { statMods: { EVA: 2 } })],
+    [status("dance_guard", "self", 999, { permanent: true, statMods: { EVA: 5, PA: 2 } })],
+    [damage("EVA", 1.16, { critBonus: 8 }), extraAction(0.22, 3)]
+  ]);
+  if (has(job, "predation") || has(job, "enemy_missing_hp")) return skillFromSet(base, stage, [
+    [damage("ACC", 0.62), resource("mark", 1), status("aiming", "self", 999, { permanent: true, stack: true, statMods: { ACC: 2 } })],
+    [resource("mark", 2), status("hunter_patience", "self", 999, { permanent: true, statMods: { ACC: 4, SPD: 2 } })],
+    [damage("ACC", 1.0, { enemyMissingHpPower: 0.18, resourceKey: "mark", resourcePower: 0.04 }), clearResource("mark")]
+  ], { art: { maxUses: 1, condition: { type: "enemy_hp_below", value: 0.45 } } });
+  if (has(job, "extra_action")) return skillFromSet(base, stage, [
+    [damage("ACC", 0.48), status("calibrated_reload", "self", 999, { permanent: true, stack: true, statMods: { ACC: 3 } })],
+    [damage("ACC", 0.42), extraAction(0.42, 5)],
+    [damage("ACC", 0.72, { resourceKey: "mark", resourcePower: 0.08 }), extraAction(0.35, 5)]
+  ]);
+  if (has(job, "summon")) return makeSummonSkill(job, stage, base);
+  if (has(job, "food")) return skillFromSet(base, stage, [
+    [damage("HP", 0.055, { currentHpPower: 0.12, lowEvaPower: 1.4 }), heal("HP", 0.06, { overheal: true })],
+    [heal("HP", 0.14, { overheal: true }), statTradeoff({ EVA: -3, HP: 6, PD: 2 }, { id: `${job.id}_full_stomach` })],
+    [damage("HP", 0.085, { currentHpPower: 0.2, lowEvaPower: 2.5 })]
+  ]);
+  if (has(job, "heal")) return makeHealSkill(job, stage, base);
+  if (has(job, "max_hp") || has(job, "hp_cost")) return skillFromSet(base, stage, [
+    [damage("HP", 0.06, { currentHpPower: 0.12 }), sacrifice(0.02)],
+    [statTradeoff({ HP: 10, PA: 2, EVA: -2 }, { id: `${job.id}_bone_frame` })],
+    [damage("HP", 0.095, { currentHpPower: 0.2, absolute: true }), sacrifice(0.05)]
+  ], { art: { condition: { type: "hp_below", value: 0.75 } } });
+  if (has(job, "decay") || has(job, "curse") || has(job, "weaken")) return makeCurseSkill(job, stage, base);
+  if (has(job, "rune")) return skillFromSet(base, stage, [
+    [damage("MA", 0.65), rune(`${job.id}_spark_rune`, "after_damage", [damage("MA", 0.4)], { maxInstalled: 100 })],
+    [rune(`${job.id}_ward_rune`, "on_hit", [shield(6, "MA", 0.2)], { maxInstalled: 100 })],
+    [rune(`${job.id}_collapse_rune`, "turn_end", [damage("MA", 0.75), typedStatus("shock", 3, 2)], { maxInstalled: 100 })]
+  ]);
+  if (has(job, "life_cost")) return skillFromSet(base, stage, [
+    [sacrifice(0.04), damage("MA", 1.05, { lifeSteal: 0.18 })],
+    [status("blood_pact", "self", 999, { permanent: true, statMods: { MA: 6, HP: -4 }, damageMultiplier: 1.08 })],
+    [sacrifice(0.08), damage("MA", 1.35, { lifeSteal: 0.35 })]
+  ], { art: { condition: { type: "hp_below", value: 0.8 } } });
+  if (has(job, "magic") || has(job, "element")) return makeMagicSkill(job, stage, base);
+  return skillFromSet(base, stage, [
+    [damage(coreDamageStat(job), 0.92)],
+    [status(`${job.id}_focus`, "self", 999, { permanent: true, statMods: { [coreDamageStat(job)]: 4 } })],
+    [damage(coreDamageStat(job), 1.12)]
+  ]);
+}
+
+function makeTierOneSkill(job, stage, base) {
+  if (job.id === "cleric") {
+    return skillFromSet(base, stage, [
+      [heal("MA", 2.1, { maxHpRatio: 0.06 })],
+      [shield(4, "MD", 0.25), status("small_prayer", "self", 999, { permanent: true, statMods: { MD: 3 } })],
+      [damage("MA", 0.72, { absolute: true })]
+    ], { init: { type: "special", condition: { type: "hp_below", value: 0.5 }, minChance: 0.1, repeatChancePenalty: 0.12 } });
+  }
+  if (job.id === "archer") {
+    return skillFromSet(base, stage, [
+      [damage("ACC", 0.52), status("aiming", "self", 999, { permanent: true, stack: true, statMods: { ACC: 2 } })],
+      [status("steady_aim", "self", 999, { permanent: true, statMods: { ACC: 5 } })],
+      [damage("ACC", 0.72), resource("mark", 1)]
+    ]);
+  }
+  if (job.id === "rogue") {
+    return skillFromSet(base, stage, [
+      [damage("SPD", 0.82)],
+      [status("light_step", "self", 999, { permanent: true, statMods: { EVA: 3, CRT: 1 } })],
+      [damage("EVA", 0.95, { critBonus: 4 })]
+    ]);
+  }
+  if (job.id === "mystic") {
+    return skillFromSet(base, stage, [
+      [damage("MA", 0.86)],
+      [status("mana_focus", "self", 999, { permanent: true, statMods: { MA: 3 } })],
+      [damage("MA", 1.02)]
+    ]);
+  }
+  return skillFromSet(base, stage, [
+    [damage("PA", 0.92)],
+    [status("steady_grip", "self", 999, { permanent: true, statMods: { PA: 2, PD: 1 } })],
+    [damage("PA", 1.12, { enemyMissingHpPower: 0.04 })]
+  ]);
+}
+
+function makeHealSkill(job, stage, base) {
+  return skillFromSet(base, stage, [
+    [heal("MA", 2.0, { maxHpRatio: 0.08 }), typedStatus("regeneration", 5, 3)],
+    [typedStatus("regeneration", 8, 4), status(`${job.id}_vow`, "self", 999, { permanent: true, statMods: { MD: 5, MA: 2 } })],
+    [heal("MA", 2.6, { maxHpRatio: 0.14, overheal: true })]
+  ], {
+    init: { condition: { type: "hp_below", value: 0.58 }, minChance: 0.1, repeatChancePenalty: 0.1 },
+    art: { condition: { type: "hp_below", value: 0.42 }, maxUses: 1 }
+  });
+}
+
+function makeMagicSkill(job, stage, base) {
+  if (has(job, "burn")) return skillFromSet(base, stage, [[damage("MA", 0.82), typedStatus("burn", 4, 3)], [status("fire_focus", "self", 999, { permanent: true, statMods: { MA: 5 } })], [damage("MA", 1.0, { targetStatus: "burn", targetStatusPower: 1.6 }), typedStatus("burn", 7, 3)]]);
+  if (has(job, "freeze")) return skillFromSet(base, stage, [[damage("MA", 0.76), typedStatus("freeze", 3, 3)], [status("frost_focus", "self", 999, { permanent: true, statMods: { MD: 4, MA: 2 } })], [damage("MA", 0.95, { targetStatus: "freeze", targetStatusPower: 1.4 }), typedStatus("freeze", 6, 3)]]);
+  if (has(job, "shock")) return skillFromSet(base, stage, [[damage("MA", 0.9), typedStatus("shock", 3, 3)], [status("storm_focus", "self", 999, { permanent: true, statMods: { MA: 4, CRT: 3 } })], [damage("MA", 1.14, { targetStatus: "shock", targetStatusPower: 1.2 }), typedStatus("shock", 6, 3)]]);
+  if (has(job, "fracture")) return skillFromSet(base, stage, [[damage("MA", 0.78), typedStatus("fracture", 4, 3)], [shield(6, "MD", 0.3), status("earth_focus", "self", 999, { permanent: true, statMods: { MD: 4 } })], [damage("MA", 0.98, { targetStatus: "fracture", targetStatusPower: 1.6 }), typedStatus("fracture", 6, 3)]]);
+  return skillFromSet(base, stage, [
+    [damage("MA", 0.92)],
+    [status("spell_focus", "self", 999, { permanent: true, statMods: { MA: 5, MD: 2 } })],
+    [damage("MA", 0.9), typedStatus("fracture", 3, 3)]
+  ]);
+}
+
+function makeCurseSkill(job, stage, base) {
+  if (has(job, "fate") || has(job, "misfortune")) {
+    return skillFromSet(base, stage, [
+      [damage("MA", 0.68), typedStatus("misfortune", 4, 3)],
+      [status("fate_thread", "self", 999, { permanent: true, statMods: { CRT: 4, EVA: 2 }, skillChanceMultiplier: 1.04 })],
+      [damage("MA", 1.0, { targetStatus: "misfortune", targetStatusPower: 1.5 }), typedStatus("blind", 2, 2)]
+    ], { art: { condition: { type: "target_has_status", kind: "misfortune" } } });
+  }
+  return skillFromSet(base, stage, [
+    [damage("MA", 0.72), typedStatus("weaken", 3, 3)],
+    [typedStatus("weaken", 5, 3), typedStatus("misfortune", 4, 3)],
+    [damage("MA", 1.05, { targetStatus: "decay", targetStatusPower: 1.7 }), typedStatus("decay", 6, 4), typedStatus("silence", 1, 2)]
+  ]);
+}
+
+function makeSummonSkill(job, stage, base) {
+  if (has(job, "contract")) {
+    const summonStat = has(job, "bear") ? "HP" : has(job, "dragon") ? "PD" : has(job, "wolf") ? "SPD" : "MA";
+    const role = has(job, "bear") || has(job, "dragon") || has(job, "earth") ? "tank" : "striker";
+    return skillFromSet(base, stage, [
+      [damage(summonStat, has(job, "bear") ? 0.055 : 0.72), summon(`${job.id}_entity`, role, 1, { contract: true, stat: summonStat })],
+      [resource(`${job.id}_contract`, 1), status(`${job.id}_inheritance`, "self", 999, { permanent: true, statMods: contractStatMods(job) })],
+      [damage(summonStat, has(job, "dragon") ? 1.1 : 1.0, contractDamageExtra(job)), clearResource(`${job.id}_contract`)]
+    ], { art: { condition: { type: "has_resource", key: `${job.id}_contract`, amount: 1 } } });
+  }
+  const count = has(job, "legion") ? 3 : 1;
+  const role = has(job, "frontline") || has(job, "bear") ? "tank" : has(job, "legion") ? "legion" : "striker";
+  return skillFromSet(base, stage, [
+    [damage(coreDamageStat(job), 0.55), summon(`${job.id}_ally`, role, count, { stat: coreDamageStat(job) })],
+    [summon(`${job.id}_guard`, "tank", 1, { stat: "HP" }), status(`${job.id}_command`, "self", 999, { permanent: true, statMods: { [coreDamageStat(job)]: 3 } })],
+    [summon(`${job.id}_pack`, role, count + 1, { stat: coreDamageStat(job) }), damage(coreDamageStat(job), 0.74, { aoe: true })]
+  ]);
+}
+
+function contractStatMods(job) {
+  if (has(job, "wolf")) return { SPD: 5, EVA: 3 };
+  if (has(job, "bear")) return { HP: 10, PD: 4 };
+  if (has(job, "fire")) return { MA: 5 };
+  if (has(job, "earth")) return { MD: 5, PD: 3 };
+  if (has(job, "demon")) return { MA: 7, MD: -3 };
+  if (has(job, "dragon")) return { PD: 5, PA: 4 };
+  return { MA: 3, EVA: 3, CRT: 3 };
+}
+
+function contractDamageExtra(job) {
+  if (has(job, "dragon")) return { absolute: true, pdToPa: 0.8, resourceKey: `${job.id}_contract`, resourcePower: 0.1 };
+  if (has(job, "fire")) return { targetStatus: "burn", targetStatusPower: 1.6, resourceKey: `${job.id}_contract`, resourcePower: 0.08 };
+  if (has(job, "earth")) return { targetStatus: "fracture", targetStatusPower: 1.6, resourceKey: `${job.id}_contract`, resourcePower: 0.08 };
+  if (has(job, "demon")) return { lifeSteal: 0.35, resourceKey: `${job.id}_contract`, resourcePower: 0.1 };
+  return { resourceKey: `${job.id}_contract`, resourcePower: 0.08 };
+}
+
+function skillFromSet(base, stage, effectsByStage, overrides = {}) {
+  const stageIndex = stage === "init" ? 0 : stage === "core" ? 1 : 2;
+  const override = overrides[stage] ?? {};
+  return {
+    ...base,
+    ...override,
+    effects: effectsByStage[stageIndex],
+    maxUses: override.maxUses ?? (stage === "core" ? 1 : null)
+  };
+}
+
+function manualApCost(job, stage) {
+  if (job.tier === 1) return 1;
+  if (stage === "init") return job.tier === 2 ? 1 : 2;
+  if (stage === "core") return job.tier === 2 ? 1 : 2;
+  return job.tier === 2 ? 2 : 3;
+}

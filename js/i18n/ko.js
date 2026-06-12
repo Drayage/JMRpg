@@ -1,4 +1,8 @@
+import { bosses } from "../data/bosses.js";
+import { eventTemplates } from "../data/events.js?v=20260607-15";
 import { jobs } from "../data/jobs.js?v=20260607-15";
+import { monsters } from "../data/monsters.js?v=20260607-15";
+import { relics } from "../data/relics.js?v=20260607-15";
 import { skills } from "../data/skills.js?v=20260607-15";
 
 const jobNames = {
@@ -49,22 +53,28 @@ const jobEntries = Object.fromEntries(Object.values(jobs).map((job) => {
   return [job.id, { name, desc }];
 }));
 
-const stageNames = { init: "입문", core: "핵심", art: "비기" };
-const skillEntries = Object.fromEntries(Object.values(skills).map((skill) => {
-  if (skill.id === "basic_attack") return [skill.id, { name: "기본 공격", desc: "PA 기반 기본 공격입니다." }];
-  if (skill.id === "magic_attack") return [skill.id, { name: "마력탄", desc: "MA 기반 기본 마법 공격입니다." }];
-  const match = skill.id.match(/^(.*)_(init|core|art)$/);
-  if (!match) return [skill.id, { name: skill.id, desc: "전투 스킬입니다." }];
-  const jobName = jobNames[match[1]] ?? match[1];
-  const stage = stageNames[match[2]];
-  const mechanics = [];
-  for (const effect of skill.effects ?? []) {
-    if (effect.type === "typed_status") mechanics.push(effect.kind);
-    if (["poison", "summon", "rune", "extra_action", "shield", "resource", "consume_resource", "sacrifice"].includes(effect.type)) mechanics.push(effect.type);
-    if (effect.type === "damage" && effect.absolute) mechanics.push("absolute damage");
-  }
-  return [skill.id, { name: `${jobName} ${stage}`, desc: mechanics.length ? `${jobName}의 ${stage} 기술입니다. 효과: ${mechanics.join(", ")}.` : `${jobName}의 ${stage} 기술입니다.` }];
-}));
+const skillNameSets = {
+  warrior:["힘찬 베기","굳은 손아귀","마무리 일격"],fighter:["전력 타격","전투 호흡","압도"],berserker:["피의 난타","분노 가열","광폭 돌진"],swordsman:["정석 베기","검술 수련","연속 검격"],destroyer:["갑옷 깨기","방패 분쇄","약점 노출"],knight:["방패 치기","수호 맹세","철벽 응징"],guardian_knight:["수호 강타","철벽 태세","절대 반격"],dragon_knight:["용혈 찌르기","용화","용의 심판"],
+  rogue:["빠른 찌르기","가벼운 발걸음","그림자 급습"],assassin:["개전 암습","살의 집중","깊은 상처"],cutthroat:["목덜미 베기","급소 노림","피의 낙인"],salsoo:["역날 베기","역치명 자세","뒤집힌 급소"],dancer:["흐름 찌르기","회피 보법","나선 춤"],blade_dancer:["칼날 선율","검무 자세","회전 절단"],musician:["박자 치기","전투 리듬","고조의 일격"],bard:["공명탄","후렴 축적","울림 폭발"],
+  archer:["가늠 사격","정조준","표식 화살"],hunter:["추적 사격","사냥 준비","포식"],executioner:["처형 준비","죽음의 표식","마지막 화살"],loader_engineer:["시험 사격","재장전","연발 사격"],beast_lord:["협공 사격","야수 호출","무리 사냥"],cook:["묵직한 던지기","든든한 식사","포만 강타"],chef:["솥뚜껑 강타","진수성찬","만찬 압박"],
+  cleric:["응급 치유","작은 기도","빛의 징벌"],priest:["치유의 손길","재생 기도","구원의 빛"],pure_priest:["순백 치유","평온의 서약","대치유"],dark_priest:["타락한 빛","부패 기도","검은 성찬"],skeleton:["뼈 조각 투척","골격 강화","생명 연소"],skeleton_warrior:["뼈칼 베기","골갑 형성","골수 폭발"],
+  mystic:["마력탄","마력 집중","압축 마탄"],mage:["비전 화살","주문 집중","마력 파열"],elementalist:["원소탄","원소 조율","원소 균열"],rune_mage:["각인 타격","수호 룬","붕괴 룬"],warlock:["흡혈 탄환","피의 계약","심장 관통"],legion_mage:["군단 호출","지휘 인장","집단 돌격"],shaman:["불길한 빛","주술 집중","운명 비틀기"],fate_weaver:["불운 부여","운명의 실","확률 붕괴"],hexer:["쇠약 저주","불운 저주","침묵 부패"],
+  contractor:["계약 호출","계승 준비","계약 해방"],wolf_contract:["늑대 발톱","늑대 계승","질풍 물어뜯기"],bear_contract:["곰 앞발","곰 가죽","육중한 반격"],fire_spirit_contract:["불꽃 계승","화염 각인","불꽃 해방"],earth_spirit_contract:["대지 계승","암석 피부","지맥 파열"],demon_contract:["악마의 대가","금단 계승","지옥 강타"],dragon_contract:["용의 숨결","용린 계승","용혈 해방"],special_contract:["미지의 손길","불명 계승","정체불명 해방"]
+};
+const fallbackStageNames={init:"기초술",core:"전투술",art:"결전기"};
+const statusNames={bleed:"출혈",burn:"화상",freeze:"빙결",shock:"감전",fracture:"균열",poison:"독",decay:"부패",weaken:"쇠약",silence:"침묵",blind:"실명",misfortune:"불운",regeneration:"재생",rage_heat:"분노 가열",trained_edge:"단련된 칼날",guarded:"방어 태세",dragon_shift:"용화",ambush_focus:"암습 집중",reverse_edge:"역날",flow_step:"흐름 보법",dance_guard:"춤의 수비",aiming:"조준",hunter_patience:"사냥 인내",calibrated_reload:"재장전 보정",small_prayer:"작은 기도",mana_focus:"마력 집중",spell_focus:"주문 집중",fate_thread:"운명의 실",blood_pact:"피의 계약"};
+const effectNames={damage:"피해",heal:"회복",shield:"보호막",guard:"방어",status:"버프",typed_status:"상태이상",poison:"독",summon:"소환",resource:"자원 축적",consume_resource:"자원 소비",consume_status:"상태 소비",clear_resource:"자원 초기화",rune:"룬 설치",extra_action:"재행동",sacrifice:"HP 소모",stat_tradeoff:"능력치 전환"};
+const monsterNames={training_dummy:"훈련용 허수아비",skeleton:"해골",cave_wolf:"동굴 늑대",goblin_hexer:"고블린 주술사",bone_spearman:"해골 창병",swamp_witch:"늪지 마녀",shrine_keeper:"성소 수호자",toxic_slime:"독성 슬라임",mirror_duelist:"거울 결투가",ember_mage:"잿불 마법사",grave_paladin:"무덤 성기사",venom_archer:"맹독 궁수",ogre:"오우거",young_drake:"어린 비룡",abyss_knight:"심연 기사",lich:"리치",chimera:"키메라",seraphic_hound:"성흔 사냥개",void_reaper:"공허 수확자",elder_treant:"고대 나무정령",dragon_priest:"용 사제",arena_champion:"투기장 챔피언",abyss_dragon:"심연룡",silver_wraith:"은빛 망령",clockwork_imp:"태엽 임프",scarlet_assassin:"진홍 암살자",plague_monk:"역병 수도승",runed_golem:"룬 골렘",oathless_saint:"맹세 잃은 성자",coin_mimic:"동전 미믹",grave_summoner:"무덤 소환사",thorn_hydra:"가시 히드라",fallen_oracle:"타락한 예언자",crimson_duelist:"핏빛 결투가",void_dragon:"공허룡"};
+const bossNames={fallen_seraph:"타락한 세라프",iron_tyrant:"강철 폭군",plague_dragon:"역병룡",mirror_queen:"거울 여왕",world_serpent:"세계 뱀",oathbreaker:"맹세 파괴자",void_acolyte:"공허 수행자",dragon_herald:"용의 전령"};
+const relicNameMap = {
+  wanderer_compass: "방랑자의 나침반", hero_oath: "영웅의 맹세", forbidden_tome: "금서", explorer_journal: "탐험가의 일지", ancient_map: "고대 지도", golden_dice: "황금 주사위", berserker_blood: "광전사의 피", dark_contract: "어둠의 계약", ascetic_beads: "수행자의 염주", mirror_shard: "거울 조각", blood_hourglass: "피의 모래시계", sealed_badge: "봉인된 배지", dragon_heart: "용의 심장", holy_grail: "성배", summoner_chalk: "소환사의 분필", black_candle: "검은 양초", cartographers_badge: "지도 제작자의 배지", pilgrim_boots: "순례자의 장화", echo_manual: "메아리 교본", glass_metronome: "유리 메트로놈", empty_socket: "빈 소켓", compact_grimoire: "압축 마도서", martyr_lantern: "순교자의 등불", verdict_scale: "심판의 저울", cursed_heart: "저주받은 심장", void_tithe: "공허 십일조", trophy_brand: "전리품 낙인", drake_scale_map: "비룡 비늘 지도", chorus_bell: "합창 종", puppet_crown: "인형 왕관", loaded_feather: "장전된 깃털", execution_coin: "처형 동전", venom_censer: "맹독 향로", rusted_needle: "녹슨 바늘", shortcut_contract: "지름길 계약서", hungry_purse: "굶주린 주머니", broken_crown: "부서진 왕관"
+};
+const relicNames=Object.fromEntries(Object.values(relics).map((relic)=>[relic.id,{name:relicNameMap[relic.id] ?? relic.id,desc:`${relic.category} 계열 유물입니다.`}]));
+const eventEntries=Object.fromEntries(eventTemplates.map((event)=>{const names={basic_job_training:["기본 직업 훈련","기본 직업 후보 중 하나를 선택해 전직할 수 있습니다."],advanced_job_training:["상위 전직 이벤트","후보 풀에 들어온 상위 직업 중 하나로 전직할 수 있습니다."],hunt:["사냥","세 몬스터 중 하나를 골라 전투합니다."],elite_hunt:["정예 사냥","강한 적을 골라 전투하고 승리 시 유물을 얻습니다."],relic_event:["유물 발견","경험치 없이 유물만 선택합니다."],stat_growth_event:["능력치 단련","직접적인 능력치 성장을 얻습니다."]};const [name,desc]=names[event.id]??[event.id,"이벤트입니다."];return [event.id,{name,desc}];}));
+const enemySkillNames={enemy_heavy_swing:"육중한 휘두르기",enemy_guard_break:"방어 파괴",enemy_war_cry:"전투 함성",enemy_quick_rend:"빠른 찢기",enemy_aimed_thrust:"조준 찌르기",enemy_blur_step:"흐릿한 발걸음",enemy_arcane_bolt:"비전 화살",enemy_mana_burn:"마나 연소",enemy_arcane_seal:"비전 봉인",enemy_dark_pulse:"어둠 파동",enemy_life_leech:"생명 흡수",enemy_dread_mark:"공포의 낙인",enemy_toxic_spit:"독액 뱉기",enemy_venom_sting:"맹독 찌르기",enemy_sickening_cloud:"병든 구름",enemy_radiant_smite:"찬란한 강타",enemy_blessed_guard:"축복 방어",enemy_judgment_mark:"심판 낙인",enemy_flame_breath:"화염 숨결",enemy_dragon_claw:"용의 발톱",enemy_scale_harden:"비늘 경화",enemy_root_crush:"뿌리 압착",enemy_spirit_swarm:"정령 떼",enemy_pack_howl:"무리의 울음",enemy_desperation_strike:"필사의 일격"};
+function localizedStatus(kind){return statusNames[kind]??kind;}
+function effectSummary(skill){const items=[];for(const effect of skill.effects??[]){if(effect.type==="damage"){const parts=[`${effect.stat??skill.scalingStat} 피해`];if(effect.absolute)parts.push("절대대미지");if(effect.enemyCurrentHpPower)parts.push("적 현재 HP 비례");if(effect.enemyMissingHpPower||effect.predation)parts.push("적 잃은 HP 비례");if(effect.missingHpPower)parts.push("잃은 HP 비례");if(effect.swordsmanshipPower)parts.push("검술 스택 강화");if(effect.lowMaPower)parts.push("낮은 MA 보너스");if(effect.inverseCrit)parts.push("역치명");if(effect.targetStatus)parts.push(`${localizedStatus(effect.targetStatus)} 대상 강화`);if(effect.resourceKey)parts.push(`${effect.resourceKey} 자원 사용`);items.push(parts.join(" / "));}else if(effect.type==="heal"){const parts=[`${effect.stat??skill.scalingStat} 회복`];if(effect.maxHpRatio)parts.push("최대 HP 보정");if(effect.overheal)parts.push("초과 회복");items.push(parts.join(" / "));}else if(effect.type==="typed_status")items.push(`${effect.target==="self"?"자신":"적"} ${localizedStatus(effect.kind)} 부여`);else if(effect.type==="status")items.push(effect.target==="self"?"자기 버프":"적 약화");else if(effect.type==="poison")items.push("독 누적");else if(effect.type==="shield")items.push("보호막 생성");else if(effect.type==="summon")items.push("소환수 호출");else if(effect.type==="rune")items.push("룬 설치");else if(effect.type==="extra_action")items.push("재행동");else if(effect.type==="sacrifice")items.push("HP 소모");else if(effect.type==="resource")items.push(`${effect.key} 축적`);else if(effect.type==="consume_resource")items.push(`${effect.key} 소비`);else if(effect.type==="clear_resource")items.push(`${effect.key} 초기화`);else if(effect.type==="stat_tradeoff")items.push("능력치 전환 버프");}return items.length?items.join(", "):"전투 효과";}
+const skillEntries=Object.fromEntries(Object.values(skills).map((skill)=>{if(skill.id==="basic_attack")return[skill.id,{name:"기본 공격",desc:"PA 기반 기본 공격입니다."}];if(skill.id==="magic_attack")return[skill.id,{name:"마력탄",desc:"MA 기반 기본 마법 공격입니다."}];if(enemySkillNames[skill.id])return[skill.id,{name:enemySkillNames[skill.id],desc:"적이 사용하는 전투 기술입니다."}];const match=skill.id.match(/^(.*)_(init|core|art)$/);if(!match)return[skill.id,{name:skill.id,desc:"전투 스킬입니다."}];const jobName=jobNames[match[1]]??match[1];const stageIndex=match[2]==="init"?0:match[2]==="core"?1:2;const skillName=skillNameSets[match[1]]?.[stageIndex]??`${jobName} ${fallbackStageNames[match[2]]}`;return[skill.id,{name:skillName,desc:effectSummary(skill)}];}));
 
 export const ko = {
   ui: {
@@ -73,7 +83,7 @@ export const ko = {
   stats: { HP: "HP", PA: "물리 공격", PD: "물리 방어", MA: "마법 공격", MD: "마법 방어", SPD: "속도", ACC: "명중", EVA: "회피", CRT: "치명률", CRD: "치명 피해" },
   jobs: jobEntries,
   skills: skillEntries,
-  relics: {}, monsters: {}, bosses: {}, events: {},
+  relics: relicNames, monsters: Object.fromEntries(Object.values(monsters).map((monster)=>[monster.id,{name:monsterNames[monster.id]??monster.id,desc:"전투 대상입니다."}])), bosses: Object.fromEntries(Object.values(bosses).map((boss)=>[boss.id,{name:bossNames[boss.id]??boss.id,desc:"보스입니다."}])), events: eventEntries,
   categories: { job: "직업", mastery: "숙련", ap: "AP", holy: "신성", dark: "어둠", dragon: "용", summon: "소환", critical: "치명", poison: "독", bleed: "출혈", risk: "위험", magic: "마법" },
-  traits: { holy_vulnerability: "신성 취약", poison_immunity: "독 면역", physical_resistance: "물리 저항", summon_resistance: "소환 저항", critical_resistance: "치명 저항", dark_resistance: "어둠 저항", critical_weakness: "치명 취약", holy_weakness: "신성 약점", magic_weakness: "마법 약점", fire_weakness: "화염 약점" }
+  traits: { holy_vulnerability: "신성 취약", poison_immunity: "독 면역", physical_resistance: "물리 저항", summon_resistance: "소환 저항", critical_resistance: "치명 저항", dark_resistance: "어둠 저항", critical_weakness: "치명 취약", holy_weakness: "신성 약점", magic_weakness: "마법 약점", fire_weakness: "화염 약점", poison_resistance: "독 저항", dark_weakness: "어둠 약점", fire_damage: "화염 피해", high_physical_damage: "높은 물리 피해", poison_damage: "독 피해", physical_fire: "물리+화염", dragon_magic: "용 마법", high_physical_defense: "높은 물리 방어", dragon: "용", magic_resistance: "마법 저항", poison_vulnerability: "독 취약", dragon_resistance: "용 저항", summon_weakness: "소환 취약", critical_damage: "치명 피해", low_speed: "낮은 속도", greed: "탐욕", bleed_damage: "출혈 피해" }, statuses: statusNames, effects: effectNames, enemySkills: enemySkillNames
 };

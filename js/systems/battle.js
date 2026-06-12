@@ -247,7 +247,7 @@ function resolvePlayerTurn(state, battle, player, foe, traits) {
   const priority = activeSkills.filter((skill) => skill.priority && canUseBattleSkill(battle, skill));
 
   for (const skill of priority) {
-    if (conditionMet(skill, player, foe) && rollSkill(state, battle, skill)) {
+    if (conditionMet(skill, player, foe, battle) && rollSkill(state, battle, skill)) {
       return executeSkill(state, battle, skill, player, foe, traits);
     }
   }
@@ -256,7 +256,7 @@ function resolvePlayerTurn(state, battle, player, foe, traits) {
   while (pool.length > 0) {
     const index = Math.floor(Math.random() * pool.length);
     const skill = pool[index];
-    if (conditionMet(skill, player, foe) && rollSkill(state, battle, skill)) {
+    if (conditionMet(skill, player, foe, battle) && rollSkill(state, battle, skill)) {
       return executeSkill(state, battle, skill, player, foe, traits);
     }
     pool.splice(index, 1);
@@ -279,7 +279,7 @@ function resolveEnemyTurn(state, battle, player, foe, enemyId) {
   const priority = enemySkills.filter((skill) => skill.priority);
 
   for (const skill of priority) {
-    if (conditionMet(skill, foe, player) && rollEnemySkill(skill, foe)) {
+    if (conditionMet(skill, foe, player, battle) && rollEnemySkill(skill, foe)) {
       return executeEnemySkill(state, battle, skill, foe, player, enemyId);
     }
   }
@@ -288,7 +288,7 @@ function resolveEnemyTurn(state, battle, player, foe, enemyId) {
   while (pool.length > 0) {
     const index = Math.floor(Math.random() * pool.length);
     const skill = pool[index];
-    if (conditionMet(skill, foe, player) && rollEnemySkill(skill, foe)) {
+    if (conditionMet(skill, foe, player, battle) && rollEnemySkill(skill, foe)) {
       return executeEnemySkill(state, battle, skill, foe, player, enemyId);
     }
     pool.splice(index, 1);
@@ -520,6 +520,30 @@ function executeEnemySkill(state, battle, skill, actor, target, enemyId) {
       action.damage += result.hpDamage;
       lines.push(`${enemyId} spent ${spent} ${effect.key} for ${result.hpDamage}${effect.absolute ? " absolute" : ""} damage`);
     }
+    if (effect.type === "consume_status") {
+      const targetFighter = effect.target === "self" ? actor : target;
+      const consumed = consumeTypedStatus(targetFighter, effect.kind);
+      if (consumed > 0) {
+        const result = dealDamage(target, consumed * (effect.power ?? 1), { shieldBreak: 6, ignoreShield: effect.ignoreShield });
+        action.damage += result.hpDamage;
+        lines.push(`${enemyId} consumed ${effect.kind} for ${result.hpDamage} damage`);
+      }
+    }
+    if (effect.type === "clear_resource") {
+      const spent = consumeResource(actor, effect.key);
+      lines.push(`${enemyId} cleared ${spent} ${effect.key}`);
+    }
+    if (effect.type === "stat_tradeoff") {
+      applyStatus(actor, {
+        id: effect.id ?? `${skill.id}_tradeoff`,
+        target: "self",
+        turns: effect.turns ?? 999,
+        permanent: effect.permanent ?? true,
+        stack: effect.stack ?? false,
+        statMods: effect.statMods ?? {}
+      });
+      lines.push(`${enemyId} changed stance`);
+    }
     if (effect.type === "extra_action" && (battle.extraActionUses?.enemy ?? 0) < (effect.limit ?? 10) && Math.random() < (effect.chance ?? 1)) {
       battle.extraActions.enemy = Math.min(10, (battle.extraActions.enemy ?? 0) + 1);
       battle.extraActionUses.enemy = (battle.extraActionUses.enemy ?? 0) + 1;
@@ -644,6 +668,30 @@ function executeSkill(state, battle, skill, player, foe, traits) {
       const result = dealDamage(foe, rawDamage, { shieldBreak: 8 });
       action.damage += result.hpDamage;
       lines.push(`${skill.id} spent ${spent} ${effect.key} for ${result.hpDamage}${effect.absolute ? " absolute" : ""} damage`);
+    }
+    if (effect.type === "consume_status") {
+      const targetFighter = effect.target === "self" ? player : foe;
+      const consumed = consumeTypedStatus(targetFighter, effect.kind);
+      if (consumed > 0) {
+        const result = dealDamage(foe, consumed * (effect.power ?? 1), { shieldBreak: 6, ignoreShield: effect.ignoreShield });
+        action.damage += result.hpDamage;
+        lines.push(`${skill.id} consumed ${effect.kind} for ${result.hpDamage} damage`);
+      }
+    }
+    if (effect.type === "clear_resource") {
+      const spent = consumeResource(player, effect.key);
+      lines.push(`${skill.id} cleared ${spent} ${effect.key}`);
+    }
+    if (effect.type === "stat_tradeoff") {
+      applyStatus(player, {
+        id: effect.id ?? `${skill.id}_tradeoff`,
+        target: "self",
+        turns: effect.turns ?? 999,
+        permanent: effect.permanent ?? true,
+        stack: effect.stack ?? false,
+        statMods: effect.statMods ?? {}
+      });
+      lines.push(`${skill.id} changed stance`);
     }
     if (effect.type === "extra_action" && (battle.extraActionUses?.player ?? 0) < (effect.limit ?? 10) && Math.random() < (effect.chance ?? 1)) {
       battle.extraActions.player = Math.min(10, (battle.extraActions.player ?? 0) + 1);
@@ -806,6 +854,16 @@ function consumeResource(fighter, key) {
   const spent = Math.max(0, Math.round(fighter.resources[key] ?? 0));
   fighter.resources[key] = 0;
   return spent;
+}
+
+function consumeTypedStatus(fighter, kind) {
+  const status = getTypedStatus(fighter, kind);
+  if (!status) {
+    return 0;
+  }
+  const amount = Math.max(0, Math.round(status.amount ?? 0));
+  delete fighter.typedStatuses[kind];
+  return amount;
 }
 
 function addSummons(fighter, effect, owner) {
@@ -1044,6 +1102,18 @@ function getDamageExtraBase(actor, target, effect) {
   if (effect.poisonPower) {
     extra += target.poison * effect.poisonPower;
   }
+  if (effect.resourcePower) {
+    extra += (actor.resources[effect.resourceKey] ?? 0) * effect.resourcePower * getBattleStat(actor, effect.stat ?? "PA");
+  }
+  if (effect.targetStatusPower) {
+    extra += (getTypedStatus(target, effect.targetStatus)?.amount ?? 0) * effect.targetStatusPower;
+  }
+  if (effect.shieldPower) {
+    extra += Math.max(0, target.guard ?? 0) * effect.shieldPower;
+  }
+  if (effect.lowEvaPower) {
+    extra += Math.max(0, (effect.lowEvaBase ?? 30) - getBattleStat(actor, "EVA")) * effect.lowEvaPower;
+  }
   if (effect.swordsmanshipPower) {
     extra += (actor.resources.swordsmanship ?? 0) * effect.swordsmanshipPower * getBattleStat(actor, "PA");
   }
@@ -1057,9 +1127,12 @@ function getDamageExtraBase(actor, target, effect) {
   return extra;
 }
 
-function conditionMet(skill, player, foe) {
+function conditionMet(skill, player, foe, battle) {
   if (!skill.condition) {
     return true;
+  }
+  if (skill.condition.type === "battle_start") {
+    return (battle?.turn ?? 1) <= (skill.condition.turn ?? 1);
   }
   if (skill.condition.type === "hp_below") {
     return player.hp / player.stats.HP <= skill.condition.value;
@@ -1069,6 +1142,18 @@ function conditionMet(skill, player, foe) {
   }
   if (skill.condition.type === "enemy_hp_below") {
     return foe.hp / foe.stats.HP <= skill.condition.value;
+  }
+  if (skill.condition.type === "has_resource") {
+    return (player.resources?.[skill.condition.key] ?? 0) >= (skill.condition.amount ?? 1);
+  }
+  if (skill.condition.type === "target_has_status") {
+    return Boolean(getTypedStatus(foe, skill.condition.kind));
+  }
+  if (skill.condition.type === "target_has_shield") {
+    return (foe.guard ?? 0) > (skill.condition.amount ?? 0);
+  }
+  if (skill.condition.type === "self_has_status") {
+    return Boolean(getTypedStatus(player, skill.condition.kind));
   }
   return true;
 }

@@ -215,7 +215,21 @@ export function getSkillEstimate(state, skillId) {
     inverseCrit: Boolean(effect?.inverseCrit),
     inverseCritBase: effect?.inverseCritBase ?? null,
     inverseCritFloor: effect?.inverseCritFloor ?? null,
-    statusEffects: (skill.effects ?? []).filter((item) => item.type === "status" || item.type === "typed_status" || item.type === "poison" || item.type === "summon" || item.type === "rune" || item.type === "shield"),
+    statusEffects: (skill.effects ?? []).filter((item) => [
+      "status",
+      "typed_status",
+      "poison",
+      "summon",
+      "rune",
+      "shield",
+      "resource",
+      "consume_resource",
+      "consume_status",
+      "clear_resource",
+      "stat_tradeoff",
+      "extra_action",
+      "sacrifice"
+    ].includes(item.type)),
     onTheme: isSkillOnTheme(state, skill),
     mastery: state.player.skillMastery[skillId] ?? 0,
     mastered: (state.player.skillMastery[skillId] ?? 0) >= 100
