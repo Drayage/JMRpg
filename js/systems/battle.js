@@ -1,5 +1,5 @@
-import { skills } from "../data/skills.js?v=20260606-29";
-import { getDamageMultiplier, getEliteIncomingDamageMultiplier, getPoisonMultiplier } from "./relics.js";
+import { skills } from "../data/skills.js?v=20260607-14";
+import { getDamageMultiplier, getPoisonMultiplier, getRelicIncomingDamageMultiplier } from "./relics.js";
 import { getEffectiveActivationChance } from "./skills.js";
 import { getEffectiveStats } from "./stats.js";
 
@@ -28,6 +28,7 @@ export function createBattle(state, enemy, options = {}) {
     elite: Boolean(options.elite),
     boss: Boolean(options.boss),
     final: Boolean(options.final),
+    difficultyScale: options.difficultyScale ?? 1,
     traits: enemy.traits ?? [],
     turn: 1,
     actorIndex: 0,
@@ -153,7 +154,7 @@ function scaleBattleStats(stats, hpMultiplier) {
 function scaleEnemyStats(stats, options = {}) {
   const difficultyScale = options.difficultyScale ?? 1;
   const hpScale = getEnemyHpScale(options) * difficultyScale;
-  const powerScale = 0.85 + difficultyScale * 0.15;
+  const powerScale = 0.78 + difficultyScale * 0.28;
   return {
     ...stats,
     HP: Math.round(stats.HP * hpScale),
@@ -169,7 +170,7 @@ function scaleEnemyStats(stats, options = {}) {
 }
 
 function getEnemyHpScale(options = {}) {
-  return options.final ? 2.45 : options.boss ? 2.18 : options.elite ? 2.25 : 1.9;
+  return options.final ? 2.75 : options.boss ? 2.35 : options.elite ? 2.45 : 1.9;
 }
 
 function getWinRateSamples(options = {}) {
@@ -222,7 +223,7 @@ function resolveEnemyTurn(state, battle, player, foe, enemyId) {
   const priority = enemySkills.filter((skill) => skill.priority);
 
   for (const skill of priority) {
-    if (conditionMet(skill, foe, player) && rollEnemySkill(skill)) {
+    if (conditionMet(skill, foe, player) && rollEnemySkill(skill, foe)) {
       return executeEnemySkill(state, battle, skill, foe, player, enemyId);
     }
   }
@@ -231,7 +232,7 @@ function resolveEnemyTurn(state, battle, player, foe, enemyId) {
   while (pool.length > 0) {
     const index = Math.floor(Math.random() * pool.length);
     const skill = pool[index];
-    if (conditionMet(skill, foe, player) && rollEnemySkill(skill)) {
+    if (conditionMet(skill, foe, player) && rollEnemySkill(skill, foe)) {
       return executeEnemySkill(state, battle, skill, foe, player, enemyId);
     }
     pool.splice(index, 1);
@@ -240,7 +241,7 @@ function resolveEnemyTurn(state, battle, player, foe, enemyId) {
   if (Math.random() * 100 > Math.max(12, getBattleStat(foe, "ACC") - getBattleStat(player, "EVA"))) {
     return { skillId: null, text: `${enemyId} missed.`, damage: 0, heal: 0, miss: true, crit: false, block: false, status: null };
   }
-  const raw = getBattleStat(foe, "PA") * (0.64 + Math.random() * 0.28) * getOutgoingDamageMultiplier(foe) * getIncomingDamageMultiplier(player) * getEliteIncomingDamageMultiplier(state, battle) * getStalemateDamageMultiplier(battle);
+  const raw = getBattleStat(foe, "PA") * (0.64 + Math.random() * 0.28) * getOutgoingDamageMultiplier(foe) * getIncomingDamageMultiplier(player) * getRelicIncomingDamageMultiplier(state, battle) * getStalemateDamageMultiplier(battle);
   const blocked = player.guard > 0;
   const damage = Math.max(1, Math.round(raw - getBattleStat(player, "PD") * getDefenseMultiplier(player) * 0.38 - player.guard));
   player.guard = Math.max(0, player.guard - 4);
@@ -261,12 +262,14 @@ function getEnemySkills(battle) {
   const enemy = battle.enemy ?? {};
   const configuredSkills = enemy.skills ?? [];
   const skills = configuredSkills.length > 0 ? configuredSkills : getDefaultEnemySkills(enemy, battle);
-  const battleChanceBonus = battle.final ? 0.16 : battle.boss ? 0.12 : battle.elite ? 0.08 : 0;
-  const battlePowerBonus = battle.final ? 0.24 : battle.boss ? 0.18 : battle.elite ? 0.12 : 0;
+  const difficultyChanceBonus = Math.max(0, (battle.difficultyScale ?? 1) - 1) * 0.08;
+  const difficultyPowerBonus = Math.max(0, (battle.difficultyScale ?? 1) - 1) * 0.1;
+  const battleChanceBonus = (battle.final ? 0.24 : battle.boss ? 0.18 : battle.elite ? 0.14 : 0.04) + difficultyChanceBonus;
+  const battlePowerBonus = (battle.final ? 0.34 : battle.boss ? 0.25 : battle.elite ? 0.18 : 0.06) + difficultyPowerBonus;
 
   return skills.map((skill) => ({
     ...skill,
-    chance: Math.min(0.9, skill.chance + battleChanceBonus),
+    chance: Math.min(0.96, skill.chance + battleChanceBonus),
     effects: skill.effects.map((effect) => effect.type === "damage" ? { ...effect, power: effect.power + battlePowerBonus } : effect)
   }));
 }
@@ -276,36 +279,44 @@ function getDefaultEnemySkills(enemy, battle) {
   const damageType = enemy.damageType ?? "physical";
   const skillsByCategory = {
     melee: [
-      enemySkill("enemy_heavy_swing", 0.46, [{ type: "damage", stat: "PA", power: 1.42, defense: "PD", critBonus: 2 }]),
-      enemySkill("enemy_guard_break", 0.34, [{ type: "damage", stat: "PA", power: 1.18, defense: "PD", guardBreak: 6 }])
+      enemySkill("enemy_heavy_swing", 0.56, [{ type: "damage", stat: "PA", power: 1.42, defense: "PD", critBonus: 2 }]),
+      enemySkill("enemy_guard_break", 0.46, [{ type: "damage", stat: "PA", power: 1.18, defense: "PD", guardBreak: 6 }]),
+      enemySkill("enemy_war_cry", 0.36, [{ type: "status", id: "war_cry", target: "self", turns: 3, statMods: { PA: 4 }, damageMultiplier: 1.08 }])
     ],
     agile: [
-      enemySkill("enemy_quick_rend", 0.52, [{ type: "damage", stat: "SPD", power: 1.22, defense: "PD", critBonus: 8 }]),
-      enemySkill("enemy_aimed_thrust", 0.38, [{ type: "damage", stat: "ACC", power: 0.92, defense: "PD", critBonus: 12 }])
+      enemySkill("enemy_quick_rend", 0.6, [{ type: "damage", stat: "SPD", power: 1.22, defense: "PD", critBonus: 8 }]),
+      enemySkill("enemy_aimed_thrust", 0.48, [{ type: "damage", stat: "ACC", power: 0.92, defense: "PD", critBonus: 12 }]),
+      enemySkill("enemy_blur_step", 0.38, [{ type: "status", id: "blur_step", target: "self", turns: 2, statMods: { SPD: 4, EVA: 5 } }])
     ],
     magic: [
-      enemySkill("enemy_arcane_bolt", 0.5, [{ type: "damage", stat: "MA", power: 1.45, defense: "MD" }]),
-      enemySkill("enemy_mana_burn", 0.34, [{ type: "damage", stat: "MA", power: 1.16, defense: "MD" }, { type: "guard", amount: 3 }])
+      enemySkill("enemy_arcane_bolt", 0.58, [{ type: "damage", stat: "MA", power: 1.45, defense: "MD" }]),
+      enemySkill("enemy_mana_burn", 0.45, [{ type: "damage", stat: "MA", power: 1.16, defense: "MD" }, { type: "guard", amount: 3 }]),
+      enemySkill("enemy_arcane_seal", 0.36, [{ type: "status", id: "arcane_seal", target: "foe", turns: 2, damageTakenMultiplier: 1.08 }])
     ],
     dark: [
-      enemySkill("enemy_dark_pulse", 0.5, [{ type: "damage", stat: damageType === "magic" ? "MA" : "PA", power: 1.44, defense: damageType === "magic" ? "MD" : "PD" }]),
-      enemySkill("enemy_life_leech", 0.34, [{ type: "damage", stat: "MA", power: 1.1, defense: "MD" }, { type: "heal", power: 0.45 }])
+      enemySkill("enemy_dark_pulse", 0.58, [{ type: "damage", stat: damageType === "magic" ? "MA" : "PA", power: 1.44, defense: damageType === "magic" ? "MD" : "PD" }]),
+      enemySkill("enemy_life_leech", 0.44, [{ type: "damage", stat: "MA", power: 1.1, defense: "MD" }, { type: "heal", power: 0.45 }]),
+      enemySkill("enemy_dread_mark", 0.38, [{ type: "status", id: "dread_mark", target: "foe", turns: 2, damageTakenMultiplier: 1.1, statMods: { MD: -3 } }])
     ],
     poison: [
-      enemySkill("enemy_toxic_spit", 0.5, [{ type: "damage", stat: damageType === "physical" ? "PA" : "MA", power: 1.18, defense: damageType === "physical" ? "PD" : "MD" }, { type: "poison", power: 5, turns: 2 }]),
-      enemySkill("enemy_venom_sting", 0.4, [{ type: "damage", stat: "ACC", power: 0.96, defense: "PD", critBonus: 6 }])
+      enemySkill("enemy_toxic_spit", 0.58, [{ type: "damage", stat: damageType === "physical" ? "PA" : "MA", power: 1.18, defense: damageType === "physical" ? "PD" : "MD" }, { type: "poison", power: 5, turns: 2 }]),
+      enemySkill("enemy_venom_sting", 0.5, [{ type: "damage", stat: "ACC", power: 0.96, defense: "PD", critBonus: 6 }]),
+      enemySkill("enemy_sickening_cloud", 0.38, [{ type: "status", id: "sickening_cloud", target: "foe", turns: 2, damageMultiplier: 0.92 }])
     ],
     holy: [
-      enemySkill("enemy_radiant_smite", 0.48, [{ type: "damage", stat: damageType === "magic" ? "MA" : "PA", power: 1.38, defense: damageType === "magic" ? "MD" : "PD" }]),
-      enemySkill("enemy_blessed_guard", 0.34, [{ type: "damage", stat: "MA", power: 1.0, defense: "MD" }, { type: "guard", amount: 5 }])
+      enemySkill("enemy_radiant_smite", 0.56, [{ type: "damage", stat: damageType === "magic" ? "MA" : "PA", power: 1.38, defense: damageType === "magic" ? "MD" : "PD" }]),
+      enemySkill("enemy_blessed_guard", 0.46, [{ type: "damage", stat: "MA", power: 1.0, defense: "MD" }, { type: "guard", amount: 5 }]),
+      enemySkill("enemy_judgment_mark", 0.36, [{ type: "status", id: "judgment_mark", target: "foe", turns: 2, statMods: { MD: -3, EVA: -3 } }])
     ],
     dragon: [
-      enemySkill("enemy_flame_breath", 0.48, [{ type: "damage", stat: damageType === "magic" ? "MA" : "PA", power: 1.5, defense: damageType === "magic" ? "MD" : "PD" }]),
-      enemySkill("enemy_dragon_claw", 0.38, [{ type: "damage", stat: "PA", power: 1.36, defense: "PD", critBonus: 5 }])
+      enemySkill("enemy_flame_breath", 0.58, [{ type: "damage", stat: damageType === "magic" ? "MA" : "PA", power: 1.5, defense: damageType === "magic" ? "MD" : "PD" }]),
+      enemySkill("enemy_dragon_claw", 0.48, [{ type: "damage", stat: "PA", power: 1.36, defense: "PD", critBonus: 5 }]),
+      enemySkill("enemy_scale_harden", 0.36, [{ type: "guard", amount: 8 }, { type: "status", id: "scale_harden", target: "self", turns: 2, defenseMultiplier: 1.12 }])
     ],
     summon: [
-      enemySkill("enemy_root_crush", 0.46, [{ type: "damage", stat: "PA", power: 1.32, defense: "PD" }, { type: "guard", amount: 4 }]),
-      enemySkill("enemy_spirit_swarm", 0.36, [{ type: "damage", stat: "MA", power: 1.18, defense: "MD" }])
+      enemySkill("enemy_root_crush", 0.56, [{ type: "damage", stat: "PA", power: 1.32, defense: "PD" }, { type: "guard", amount: 4 }]),
+      enemySkill("enemy_spirit_swarm", 0.46, [{ type: "damage", stat: "MA", power: 1.18, defense: "MD" }]),
+      enemySkill("enemy_pack_howl", 0.38, [{ type: "status", id: "pack_howl", target: "self", turns: 3, damageMultiplier: 1.08, statMods: { ACC: 4 } }])
     ]
   };
 
@@ -331,8 +342,8 @@ function enemySkill(id, chance, effects, options = {}) {
   };
 }
 
-function rollEnemySkill(skill) {
-  return Math.random() < skill.chance;
+function rollEnemySkill(skill, actor) {
+  return Math.random() < skill.chance * getSkillChanceMultiplier(actor);
 }
 
 function executeEnemySkill(state, battle, skill, actor, target, enemyId) {
@@ -343,14 +354,14 @@ function executeEnemySkill(state, battle, skill, actor, target, enemyId) {
   const action = { skillId: skill.id, text: "", damage: 0, heal: 0, miss: false, crit: false, block: false, status: null };
   const lines = [];
   const stalemateMultiplier = getStalemateDamageMultiplier(battle);
-  const incomingMultiplier = getEliteIncomingDamageMultiplier(state, battle);
+  const incomingMultiplier = getRelicIncomingDamageMultiplier(state, battle);
 
   for (const effect of skill.effects ?? []) {
     if (effect.type === "damage") {
-      const rawStat = getBattleStat(actor, effect.stat) ?? getBattleStat(actor, "PA");
+      const rawStat = getEffectBaseStat(actor, effect);
       const defenseStat = getBattleStat(target, effect.defense ?? "PD") ?? getBattleStat(target, "PD");
       const blocked = target.guard > 0;
-      const critChance = getBattleStat(actor, "CRT") + (effect.critBonus ?? 0);
+      const critChance = getEffectCritChance(actor, effect);
       const crit = Math.random() * 100 < Math.max(0, critChance);
       const critMultiplier = crit ? 1 + getBattleStat(actor, "CRD") / 100 : 1;
       const defenseReduction = defenseStat * getDefenseMultiplier(target) * (effect.defense === "MD" ? 0.28 : 0.32);
@@ -372,6 +383,13 @@ function executeEnemySkill(state, battle, skill, actor, target, enemyId) {
       actor.guard += effect.amount;
       action.block = true;
       lines.push(`${enemyId} gained ${effect.amount} block`);
+    }
+    if (effect.type === "dispel") {
+      const targetFighter = effect.target === "self" ? actor : target;
+      const removed = dispelStatuses(targetFighter, effect);
+      if (removed > 0) {
+        lines.push(`${enemyId} removed ${removed} status effects`);
+      }
     }
     if (effect.type === "poison") {
       const poisonDamage = Math.max(1, Math.round(effect.power * (battle.elite ? 1.4 : 1) * (battle.boss ? 1.6 : 1)));
@@ -403,11 +421,18 @@ function executeSkill(state, battle, skill, player, foe, traits) {
 
   for (const effect of skill.effects ?? []) {
     if (effect.type === "damage") {
-      const base = getBattleStat(player, effect.stat) * effect.power * 0.64;
+      const base = getEffectBaseStat(player, effect) * effect.power * 0.64;
+      if (effect.absolute) {
+        const damage = Math.max(1, Math.round(base));
+        foe.hp = Math.max(0, foe.hp - damage);
+        action.damage += damage;
+        lines.push(`${skill.id} dealt ${damage} absolute damage`);
+        continue;
+      }
       const relicMultiplier = getDamageMultiplier(state, { player, battle, skill });
       const stalemateMultiplier = getStalemateDamageMultiplier(battle);
       const traitMultiplier = getTraitDamageMultiplier(skill, traits);
-      const critChance = getBattleStat(player, "CRT") + (effect.critBonus ?? 0) - (traits.includes("critical_resistance") ? 10 : 0);
+      const critChance = getEffectCritChance(player, effect) - (traits.includes("critical_resistance") ? 10 : 0);
       const crit = Math.random() * 100 < Math.max(0, critChance);
       const critMultiplier = crit ? 1 + getBattleStat(player, "CRD") / 100 : 1;
       const defense = skill.tags?.includes("magic") ? getBattleStat(foe, "MD") : getBattleStat(foe, "PD");
@@ -427,6 +452,13 @@ function executeSkill(state, battle, skill, player, foe, traits) {
       player.guard += effect.amount;
       action.block = true;
       lines.push(`${skill.id} gained ${effect.amount} block`);
+    }
+    if (effect.type === "dispel") {
+      const targetFighter = effect.target === "self" ? player : foe;
+      const removed = dispelStatuses(targetFighter, effect);
+      if (removed > 0) {
+        lines.push(`${skill.id} removed ${removed} status effects`);
+      }
     }
     if (effect.type === "poison" && !traits.includes("poison_immunity")) {
       foe.poison = { power: Math.round(effect.power * getPoisonMultiplier(state)), turns: effect.turns };
@@ -491,10 +523,48 @@ function applyStatus(fighter, effect) {
     statMods: effect.statMods ?? {},
     damageMultiplier: effect.damageMultiplier ?? 1,
     damageTakenMultiplier: effect.damageTakenMultiplier ?? 1,
-    defenseMultiplier: effect.defenseMultiplier ?? 1
+    defenseMultiplier: effect.defenseMultiplier ?? 1,
+    skillChanceMultiplier: effect.skillChanceMultiplier ?? 1
   };
+  const existing = fighter.statuses.find((item) => item.id === status.id);
+  if (effect.stack && existing) {
+    existing.turns = Math.max(existing.turns, status.turns);
+    existing.permanent = existing.permanent || status.permanent;
+    existing.statMods = mergeStatMods(existing.statMods, status.statMods);
+    existing.damageMultiplier *= status.damageMultiplier;
+    existing.damageTakenMultiplier *= status.damageTakenMultiplier;
+    existing.defenseMultiplier *= status.defenseMultiplier;
+    existing.skillChanceMultiplier *= status.skillChanceMultiplier;
+    return;
+  }
   fighter.statuses = fighter.statuses.filter((item) => item.id !== status.id);
   fighter.statuses.push(status);
+}
+
+function mergeStatMods(first = {}, second = {}) {
+  const result = { ...first };
+  for (const [key, value] of Object.entries(second)) {
+    result[key] = (result[key] ?? 0) + value;
+  }
+  return result;
+}
+
+function dispelStatuses(fighter, effect) {
+  const before = fighter.statuses.length;
+  if (effect.positiveOnly) {
+    fighter.statuses = fighter.statuses.filter((status) => !isPositiveStatus(status));
+  } else {
+    fighter.statuses = [];
+  }
+  return before - fighter.statuses.length;
+}
+
+function isPositiveStatus(status) {
+  return Object.values(status.statMods ?? {}).some((value) => value > 0) ||
+    (status.damageMultiplier ?? 1) > 1 ||
+    (status.defenseMultiplier ?? 1) > 1 ||
+    (status.skillChanceMultiplier ?? 1) > 1 ||
+    (status.damageTakenMultiplier ?? 1) < 1;
 }
 
 function tickStatuses(fighter) {
@@ -521,6 +591,26 @@ function getIncomingDamageMultiplier(fighter) {
 
 function getDefenseMultiplier(fighter) {
   return fighter.statuses.reduce((multiplier, status) => multiplier * (status.defenseMultiplier ?? 1), 1);
+}
+
+function getSkillChanceMultiplier(fighter) {
+  return fighter.statuses.reduce((multiplier, status) => multiplier * (status.skillChanceMultiplier ?? 1), 1);
+}
+
+function getEffectCritChance(fighter, effect) {
+  if (effect.inverseCrit) {
+    return Math.max(effect.inverseCritFloor ?? 5, (effect.inverseCritBase ?? 42) - getBattleStat(fighter, "CRT") + (effect.critBonus ?? 0));
+  }
+  return getBattleStat(fighter, "CRT") + (effect.critBonus ?? 0);
+}
+
+function getEffectBaseStat(fighter, effect) {
+  const main = getBattleStat(fighter, effect.stat) ?? getBattleStat(fighter, "PA");
+  if (!effect.inverseScaleStat) {
+    return main;
+  }
+  const lowStatBonus = Math.max(0, (effect.inverseScaleBase ?? 30) - getBattleStat(fighter, effect.inverseScaleStat)) * (effect.inverseScalePower ?? 1);
+  return main + lowStatBonus;
 }
 
 function conditionMet(skill, player, foe) {

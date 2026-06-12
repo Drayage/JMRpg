@@ -1,12 +1,14 @@
-const cacheName = "job-master-rpg-20260606-29";
+const cacheName = "job-master-rpg-20260607-14";
 
 const appShell = [
   "./",
   "./index.html",
+  "./db.html",
   "./manifest.webmanifest",
   "./icons/icon.svg",
   "./css/style.css",
   "./js/main.js",
+  "./js/db-viewer.js",
   "./js/state.js",
   "./js/data/jobs.js",
   "./js/data/skills.js",

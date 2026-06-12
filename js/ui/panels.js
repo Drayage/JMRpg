@@ -1,14 +1,14 @@
 import { bosses } from "../data/bosses.js";
-import { jobs } from "../data/jobs.js?v=20260606-29";
-import { monsters } from "../data/monsters.js?v=20260606-29";
-import { relics } from "../data/relics.js?v=20260606-29";
-import { skills } from "../data/skills.js?v=20260606-29";
+import { jobs } from "../data/jobs.js?v=20260607-14";
+import { monsters } from "../data/monsters.js?v=20260607-14";
+import { relics } from "../data/relics.js?v=20260607-14";
+import { skills } from "../data/skills.js?v=20260607-14";
 import { getCurrentJobProgress, getEffectiveJobXpRequired, getJobRequirementHints, getJobState, isJobDiscovered, isJobUnlocked } from "../systems/jobs.js";
-import { canEquipSkill, canUseSkill, getEffectiveApCost, getEquippedApCost, getEquippedSlotCount, getSkillEstimate, skillSlotLimits } from "../systems/skills.js";
+import { canUseSkill, getEffectiveApCost, getEquippedApCost, getEquippedSlotCount, getSkillEquipBlockReason, getSkillEstimate, skillSlotLimits } from "../systems/skills.js";
 import { getRelicCurrentValue } from "../systems/relics.js";
 import { getStalemateDamageMultiplier } from "../systems/battle.js";
 import { clampPercent, getEffectiveStats, statKeys } from "../systems/stats.js";
-import { ko } from "../i18n/ko.js?v=20260606-29";
+import { ko } from "../i18n/ko.js?v=20260607-14";
 
 export function statusPanel(state) {
   const progress = getCurrentJobProgress(state);
@@ -368,7 +368,8 @@ function skillRow(state, skillId) {
   const mastery = state.player.skillMastery[skillId] ?? 0;
   const usable = canUseSkill(state, skillId);
   const action = equipped ? "unequip-skill" : "equip-skill";
-  const disabled = !equipped && !canEquipSkill(state, skillId);
+  const equipBlockReason = equipped ? null : getSkillEquipBlockReason(state, skillId);
+  const disabled = Boolean(equipBlockReason);
   return `
     <div class="card skill-row ${changedClass(state.changed.skills?.[skillId])}">
       <div>
@@ -383,6 +384,7 @@ function skillRow(state, skillId) {
         </div>
         ${skill.type === "passive" ? passiveSkillDetails(skill) : activeSkillDetails(estimate)}
         <p class="small muted">AP Cost: ${estimate.baseApCost}${estimate.baseApCost !== estimate.apCost ? ` -> ${estimate.apCost}` : ""}</p>
+        ${equipBlockReason ? `<p class="small danger-text">${equipBlockReasonText(equipBlockReason)}</p>` : ""}
         ${estimate.condition ? `<p class="small muted">Condition: ${conditionText(estimate.condition)}</p>` : ""}
         ${progressBar(mastery, 100, "mastery")}
         <p class="small muted">${mastered ? ko.ui.mastered : `${mastery}%`}</p>
@@ -390,6 +392,19 @@ function skillRow(state, skillId) {
       <button data-action="${action}" data-skill-id="${skillId}" ${disabled ? "disabled" : ""}>${equipped ? ko.ui.unequip : ko.ui.equip}</button>
     </div>
   `;
+}
+
+function equipBlockReasonText(reason) {
+  if (reason.type === "slot") {
+    return `?μ갑 遺덇?: ${reason.skillType} ?щ’ ${reason.current}/${reason.limit}`;
+  }
+  if (reason.type === "ap") {
+    return `?μ갑 遺덇?: AP ${reason.currentAp}+${reason.cost}/${reason.totalAp}`;
+  }
+  if (reason.type === "unavailable") {
+    return "?μ갑 遺덇?: ?꾩옱 吏곸뾽 ?ㅽ궗???꾨땲嫄곕굹 ?꾩쭅 留덉뒪?곕릺吏 ?딆븯?듬땲??";
+  }
+  return "?μ갑 遺덇?";
 }
 
 function choiceButton(choice, state) {
@@ -440,6 +455,9 @@ function activeSkillDetails(estimate) {
   return `
     <p class="small">${ko.ui.skillUsed}: ${Math.round(estimate.activationChance * 100)}% (${Math.round(estimate.baseActivationChance * 100)}% base)</p>
     <p class="small">Formula: ${estimate.scalingStat} ${estimate.scalingValue} x ${estimate.power} = ${estimate.baseValue}</p>
+    ${estimate.inverseScaleStat ? `<p class="small muted">Inverse Scaling: low ${estimate.inverseScaleStat} adds +${Math.round(estimate.inverseScaleBonus)} effective ${estimate.scalingStat} before scaling.</p>` : ""}
+    ${estimate.absolute ? `<p class="small muted">Absolute Damage: ignores defense, block, critical, resistance, and damage multipliers.</p>` : ""}
+    ${estimate.inverseCrit ? `<p class="small muted">Reverse Crit: lower CRT increases critical chance. Formula: ${estimate.inverseCritBase ?? 42} - CRT, minimum ${estimate.inverseCritFloor ?? 5}%.</p>` : ""}
     ${estimate.maxHpValue ? `<p class="small">MHP Bonus: +${estimate.maxHpValue}</p>` : ""}
     ${estimate.repeatChancePenalty ? `<p class="small muted">${ko.ui.repeatChancePenalty ?? "Repeated uses"}: -${Math.round(estimate.repeatChancePenalty * 100)}% / ${ko.ui.minChance ?? "Min"} ${Math.round((estimate.minChance ?? 0) * 100)}%</p>` : ""}
     ${estimate.maxUses ? `<p class="small muted">${ko.ui.oncePerBattle ?? "Battle Limit"}: ${estimate.maxUses} / battle</p>` : ""}
@@ -449,8 +467,19 @@ function activeSkillDetails(estimate) {
 }
 
 function passiveSkillDetails(skill) {
-  const stats = Object.entries(skill.passiveStats ?? {}).map(([key, value]) => `${key} +${value}`).join(", ");
-  return `<p class="small">Passive Bonus: ${stats || "No passive stat bonus"}</p>`;
+  const stats = Object.entries(skill.passiveStats ?? {}).map(([key, value]) => formatStatDelta(key, value)).join(", ");
+  const perRelic = Object.entries(skill.passivePerRelicStats ?? {}).map(([key, value]) => formatStatDelta(key, value)).join(", ");
+  const eventWeights = Object.entries(skill.eventWeightMultipliers ?? {}).map(([key, value]) => `${key} x${value}`).join(", ");
+  return `
+    <p class="small">Passive Bonus: ${stats || "No passive stat bonus"}</p>
+    ${perRelic ? `<p class="small muted">Per Relic Bonus: ${perRelic} each, up to ${skill.passivePerRelicCap ?? "no"} relics</p>` : ""}
+    ${skill.eventChoiceBonus ? `<p class="small muted">Event Choices: +${skill.eventChoiceBonus}</p>` : ""}
+    ${eventWeights ? `<p class="small muted">Event Weights: ${eventWeights}</p>` : ""}
+  `;
+}
+
+function formatStatDelta(key, value) {
+  return `${key} ${value > 0 ? "+" : ""}${value}`;
 }
 
 function skillFeatureTags(skill) {
@@ -519,6 +548,9 @@ function statusEffectText(effect) {
   }
   if (effect.defenseMultiplier && effect.defenseMultiplier !== 1) {
     parts.push(`DEF x${effect.defenseMultiplier}`);
+  }
+  if (effect.skillChanceMultiplier && effect.skillChanceMultiplier !== 1) {
+    parts.push(`Skill chance x${effect.skillChanceMultiplier}`);
   }
   const stats = Object.entries(effect.statMods ?? {}).map(([key, value]) => `${key}${value > 0 ? "+" : ""}${value}`);
   if (stats.length) {

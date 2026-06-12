@@ -1,5 +1,5 @@
-import { relics } from "../data/relics.js?v=20260606-29";
-import { skills } from "../data/skills.js?v=20260606-29";
+import { relics } from "../data/relics.js?v=20260607-14";
+import { skills } from "../data/skills.js?v=20260607-14";
 
 export function getRelicsByCategory(category) {
   return Object.values(relics).filter((relic) => relic.category === category);
@@ -76,11 +76,12 @@ export function getEliteIncomingDamageMultiplier(state, battle) {
   return getRelicRules(state, "elite_reward_damage").reduce((multiplier, entry) => multiplier * entry.rule.incomingDamageMultiplier, 1);
 }
 
-export function getNormalLossXpMultiplier(state, battle) {
-  if (battle?.boss || battle?.final || battle?.elite) {
-    return 1;
+export function getRelicIncomingDamageMultiplier(state, battle) {
+  let multiplier = getEliteIncomingDamageMultiplier(state, battle);
+  if (!battle?.boss && !battle?.final && !battle?.elite) {
+    multiplier *= getRelicRules(state, "normal_incoming_damage").reduce((total, entry) => total * entry.rule.multiplier, 1);
   }
-  return getRelicRules(state, "normal_loss_xp").reduce((multiplier, entry) => multiplier * entry.rule.multiplier, 1);
+  return multiplier;
 }
 
 export function getMasteryMultiplier(state, targets) {
@@ -145,16 +146,6 @@ export function getEventXpMultiplier(state, category = null, options = {}) {
     multiplier *= 1 + state.masteredJobs.length * rule.perJob;
   }
   return multiplier;
-}
-
-export function getApDiscountFromRelics(state, skill) {
-  let discount = 0;
-  for (const { rule } of getRelicRules(state, "mastered_skill_ap_discount")) {
-    if ((state.player.skillMastery[skill.id] ?? 0) >= 100 && skill.apCost > rule.minimumCost) {
-      discount += rule.amount;
-    }
-  }
-  return discount;
 }
 
 export function getRelicActivationBonus(state, skill, context = {}) {
@@ -232,7 +223,9 @@ export function getRelicCurrentValue(state, relicId) {
     }
     if (rule.type === "boss_damage") {
       lines.push(`Boss Damage Multiplier: x${rule.multiplier}`);
-      lines.push("Normal battle failures award no XP.");
+    }
+    if (rule.type === "normal_incoming_damage") {
+      lines.push(`Normal battle incoming damage: x${rule.multiplier}`);
     }
     if (rule.type === "low_ap_mastery") {
       const equippedAp = state.player.equippedSkills.reduce((total, skillId) => total + (skills[skillId]?.apCost ?? 0), 0);
@@ -245,11 +238,6 @@ export function getRelicCurrentValue(state, relicId) {
     if (rule.type === "elite_reward_damage") {
       lines.push(`Elite rewards: x${rule.rewardMultiplier}`);
       lines.push(`Elite incoming damage: x${rule.incomingDamageMultiplier}`);
-    }
-    if (rule.type === "mastered_skill_ap_discount") {
-      const masteredEquipped = state.player.equippedSkills.filter((skillId) => (state.player.skillMastery[skillId] ?? 0) >= 100).length;
-      lines.push(`Mastered equipped skills: ${masteredEquipped}`);
-      lines.push(`AP discount: -${rule.amount}, minimum cost ${rule.minimumCost}`);
     }
   }
   return lines;

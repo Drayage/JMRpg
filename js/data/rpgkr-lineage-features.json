@@ -1,0 +1,396 @@
+{
+  "profile": "rpgkr-benchmark-lineage-features",
+  "purpose": "Benchmark RPG.kr job-lineage design patterns without copying exact data.",
+  "numericPolicy": "No exact AP, chance, mastery, stat thresholds, coefficients, or percent bonuses are stored.",
+  "lineages": [
+    {
+      "id": "common_adventurer",
+      "nameKo": "모험가 계열",
+      "nameEn": "Adventurer",
+      "role": "starter survival and shared utility base",
+      "coreIdentity": "A foundation route that gives early survival tools and opens many later branches.",
+      "signatureMechanics": [
+        "Basic shove, grit, emergency survival, and small recovery tools.",
+        "Works as a hub before entering physical, magic, ranged, or eastern routes.",
+        "Good benchmark for tutorial jobs that are useful without defining a final build."
+      ],
+      "benchmarkIdeas": [
+        "Early job that grants one universal survival passive.",
+        "Branch-key job that unlocks several later families.",
+        "Low damage, high stability, broad compatibility."
+      ],
+      "tags": ["starter", "foundation", "survival", "utility", "branching"]
+    },
+    {
+      "id": "common_rogue",
+      "nameKo": "도적 계열",
+      "nameEn": "Rogue",
+      "role": "evasion and opportunistic critical utility",
+      "coreIdentity": "A fast, evasive utility route that rewards dodging, stealth, and weak-point attacks.",
+      "signatureMechanics": [
+        "Evasion and turn-tempo tools define the early identity.",
+        "Critical chance and ambush behavior make it useful as a side route.",
+        "Can bridge into assassin or speed-based builds."
+      ],
+      "benchmarkIdeas": [
+        "A dodge action that also shortens the next action delay.",
+        "Ambush bonus when enemy HP is high or enemy is marked.",
+        "Passive crit chance from stealth discipline."
+      ],
+      "tags": ["evasion", "stealth", "critical", "tempo", "utility"]
+    },
+    {
+      "id": "common_skeleton",
+      "nameKo": "해골 계열",
+      "nameEn": "Skeleton",
+      "role": "undead rank progression",
+      "coreIdentity": "An undead military-rank progression route, good for attrition, dark durability, and branching rulers.",
+      "signatureMechanics": [
+        "Rank escalation creates a clear ladder from weak undead to commanders.",
+        "Fits HP, physical attack, and physical defense growth themes.",
+        "Can split into warrior skeletons, wandering skeletons, kings, or overlords."
+      ],
+      "benchmarkIdeas": [
+        "Undead route that improves through command-rank titles.",
+        "Low finesse but high persistence and attrition.",
+        "Mastery can unlock ruler-style branch jobs."
+      ],
+      "tags": ["undead", "rank-progression", "dark", "attrition", "branching"]
+    },
+    {
+      "id": "common_extra",
+      "nameKo": "기타 계열",
+      "nameEn": "Common Extra",
+      "role": "hybrid special routes",
+      "coreIdentity": "A bucket for special fantasy identities that do not fit a single primary stat family.",
+      "signatureMechanics": [
+        "Hybrid physical/magic routes are appropriate here.",
+        "Celestial, fallen, despair, berserk, and sword-sage themes can live here.",
+        "Works best as special unlocks rather than a tightly linear family."
+      ],
+      "benchmarkIdeas": [
+        "Rare branch job that changes build rules.",
+        "Mixed PA/MA scaling job.",
+        "Story-flavored special class with unusual tradeoffs."
+      ],
+      "tags": ["hybrid", "special", "fallen", "celestial", "rule-breaker"]
+    },
+    {
+      "id": "pa_knight",
+      "nameKo": "기사 계열",
+      "nameEn": "Knight",
+      "role": "defense-scaling frontline damage dealer",
+      "coreIdentity": "A durable frontline route that turns defense into offense and uses absolute or defense-ignoring damage with low critical reliance.",
+      "signatureMechanics": [
+        "PD and MD can directly improve attack performance.",
+        "Absolute damage and defense-ignoring damage fit the family.",
+        "Criticals can be disabled, ignored, or made less important.",
+        "Defensive passives and basic-attack conversions define the progression.",
+        "Dragon knight or holy knight branches are natural extensions."
+      ],
+      "benchmarkIdeas": [
+        "Damage scales from defense instead of attack.",
+        "Cannot crit, but ignores enemy defense.",
+        "Builds guard stacks, then converts them into a heavy strike.",
+        "Wins long fights through reliable fixed damage."
+      ],
+      "tags": ["defense-scaling", "absolute-damage", "defense-ignore", "frontline", "low-critical-reliance"]
+    },
+    {
+      "id": "pa_executor",
+      "nameKo": "집행자/성기사/망자기사 계열",
+      "nameEn": "Executor and Holy/Apocalypse Knight",
+      "role": "holy or apocalyptic knight hybrid",
+      "coreIdentity": "A knight-derived route that mixes frontline durability with holy judgment, apocalypse themes, and enemy debuffs.",
+      "signatureMechanics": [
+        "Holy knight side emphasizes protection, judgment, and balanced defense.",
+        "Apocalypse knight side emphasizes death, plague, war, famine, and negative enemy states.",
+        "Works well when enemy debuffs feed finishing damage.",
+        "Can sit between tank, debuffer, and executioner."
+      ],
+      "benchmarkIdeas": [
+        "Judgment skill that becomes stronger on weakened enemies.",
+        "Debuff aura that lowers enemy defense before execution.",
+        "Apocalypse branch where each job represents a different combat pressure."
+      ],
+      "tags": ["holy", "apocalypse", "execution", "debuff", "frontline-hybrid"]
+    },
+    {
+      "id": "pa_assassin",
+      "nameKo": "살수 계열",
+      "nameEn": "Salsu Assassin",
+      "role": "conditional burst assassin",
+      "coreIdentity": "A burst route that exploits negative enemy defense/evasion, critical stats, marks, and delay tradeoffs.",
+      "signatureMechanics": [
+        "Enemy AV or PD below zero can unlock bonus damage.",
+        "CT and CD are highly relevant.",
+        "Large attacks can create self-delay or recoil.",
+        "Marks, back attacks, and prior setup are good activation conditions.",
+        "Pairs well with allies or jobs that shred enemy defense/evasion first."
+      ],
+      "benchmarkIdeas": [
+        "Extra damage if enemy evasion or defense is negative.",
+        "Assassination skill scales with critical damage.",
+        "Big strike followed by delayed next turn.",
+        "Execution only against marked targets."
+      ],
+      "tags": ["negative-stat-synergy", "critical-damage", "burst", "mark", "delay-tradeoff"]
+    },
+    {
+      "id": "pa_martial",
+      "nameKo": "무인 계열",
+      "nameEn": "Martial Artist",
+      "role": "stacking debuff physical scaler",
+      "coreIdentity": "A martial route that lowers enemy defense/evasion and grows through realm-like progression stages.",
+      "signatureMechanics": [
+        "Repeated attacks can shred enemy PD and AV.",
+        "Early jobs are modest, but higher realms unlock stronger stances or attack conversions.",
+        "Late power can depend heavily on critical support.",
+        "Realm, inner-power, outer-power, and stance themes fit well."
+      ],
+      "benchmarkIdeas": [
+        "Each hit applies a small defense/evasion shred.",
+        "Realm upgrades change the default attack behavior.",
+        "Strong in longer fights where debuffs have time to accumulate."
+      ],
+      "tags": ["defense-shred", "evasion-shred", "stance", "realm-progression", "martial"]
+    },
+    {
+      "id": "pa_fallen_martial",
+      "nameKo": "타락 무인 계열",
+      "nameEn": "Fallen Martial Artist",
+      "role": "dark martial critical finisher",
+      "coreIdentity": "A fallen martial route that trades stability for violent burst and high critical dependency.",
+      "signatureMechanics": [
+        "Dark martial flavor should feel more explosive and less stable than normal martial jobs.",
+        "Critical support is important before the route reaches full value.",
+        "Works as a late-game route after mastering both orthodox and fallen martial identities."
+      ],
+      "benchmarkIdeas": [
+        "Critical burst increases as enemy debuffs stack.",
+        "Dark stance with self-risk but higher finishing power.",
+        "Final class that combines martial shreds with critical nukes."
+      ],
+      "tags": ["fallen", "dark-martial", "critical-dependent", "burst", "late-game"]
+    },
+    {
+      "id": "agi_archer",
+      "nameKo": "궁수 계열",
+      "nameEn": "Archer",
+      "role": "speed and critical ranged damage dealer",
+      "coreIdentity": "A ranged route based on speed, accuracy, critical chance, critical damage, and frequent actions.",
+      "signatureMechanics": [
+        "Action delay reduction and fast tempo are core.",
+        "CT and CD improve damage efficiency.",
+        "Fragile body, high output, and short fight windows fit the route.",
+        "Late jobs can pivot into burst, absolute damage, or defense-ignoring shots."
+      ],
+      "benchmarkIdeas": [
+        "Ranged damage boosted by critical chance.",
+        "Charge or reload state after several attacks.",
+        "Fast but fragile glass-cannon identity."
+      ],
+      "tags": ["speed", "ranged", "critical-scaling", "tempo", "fragile"]
+    },
+    {
+      "id": "agi_fallen_archer",
+      "nameKo": "타락 궁수 계열",
+      "nameEn": "Fallen Archer",
+      "role": "opening burst dark ranged damage dealer",
+      "coreIdentity": "A dark ranged route that trades HP or defense for high CT/CD and strong early-fight burst.",
+      "signatureMechanics": [
+        "Self-penalty in exchange for critical power.",
+        "Limited-use or opening-window attacks fit well.",
+        "Defense debuffs plus ranged burst are a strong identity."
+      ],
+      "benchmarkIdeas": [
+        "Spend HP to force a critical shot.",
+        "Powerful shot only near the start of battle.",
+        "Weak durability compensated by high crit damage."
+      ],
+      "tags": ["opening-burst", "self-penalty", "critical", "dark-ranged", "debuff"]
+    },
+    {
+      "id": "agi_crossbow",
+      "nameKo": "노사수 계열",
+      "nameEn": "Crossbowman",
+      "role": "time and delay manipulation ranged support",
+      "coreIdentity": "A ranged utility route that supports AGI builds through delay reduction, turn push, time rewind, and critical-damage passives.",
+      "signatureMechanics": [
+        "Manipulates combat order rather than only increasing raw speed.",
+        "Can refund self time or delay enemy turns.",
+        "Critical-damage passives make it attractive as a side route for archers."
+      ],
+      "benchmarkIdeas": [
+        "After attacking, refund part of the user's action time.",
+        "Shot that delays the enemy's next turn.",
+        "Passive route for critical-damage scaling."
+      ],
+      "tags": ["time-rewind", "turn-delay", "critical-damage", "utility-ranged", "support"]
+    },
+    {
+      "id": "ma_western_mage",
+      "nameKo": "서양술사 계열",
+      "nameEn": "Western Mage",
+      "role": "elemental magic damage and utility",
+      "coreIdentity": "An elemental magic route where fire, ice, earth, and lightning each imply different combat jobs.",
+      "signatureMechanics": [
+        "Fire fits growth-style pure damage.",
+        "Ice fits enemy MD/AV weakening and next-hit setup.",
+        "Earth fits turn push, control, and disabling value.",
+        "Lightning fits high damage and accuracy/critical bonuses with recoil.",
+        "MA growth passives form the route backbone."
+      ],
+      "benchmarkIdeas": [
+        "Split elements into damage, debuff, control, and recoil roles.",
+        "Early reliable spell that later gets replaced by specialized magic.",
+        "Late mages provide defense reduction and utility, not only bigger numbers."
+      ],
+      "tags": ["elemental", "magic", "utility", "growth-passive", "defense-debuff"]
+    },
+    {
+      "id": "ma_fallen_western_mage",
+      "nameKo": "타락 서양술사 계열",
+      "nameEn": "Fallen Western Mage",
+      "role": "dark magic risk scaler",
+      "coreIdentity": "A dark magic route built around curses, forbidden power, summons, and risky late-game scaling.",
+      "signatureMechanics": [
+        "Curses and dark stacks can amplify later damage.",
+        "Self-risk or instability distinguishes it from normal elemental magic.",
+        "Summon or forbidden-entity flavor fits the higher jobs."
+      ],
+      "benchmarkIdeas": [
+        "Dark stacks increase damage but also increase danger.",
+        "Summoned entity adds attacks while draining resources.",
+        "Curse route that weakens both sides but favors the caster."
+      ],
+      "tags": ["dark-magic", "curse", "summon", "risk", "late-scaling"]
+    },
+    {
+      "id": "ma_cleric",
+      "nameKo": "성직자 계열",
+      "nameEn": "Cleric",
+      "role": "healing and holy support mage",
+      "coreIdentity": "A holy route focused on healing, protection, survival triggers, judgment, and miracle-like saves.",
+      "signatureMechanics": [
+        "Low-HP triggers for healing or protection are appropriate.",
+        "Holy damage can coexist with support utility.",
+        "Last-stand, blessing, barrier, and miracle themes fit well."
+      ],
+      "benchmarkIdeas": [
+        "Auto-heal in critical situations.",
+        "Attack that also heals a portion.",
+        "Holy barrier that reduces the next incoming hit."
+      ],
+      "tags": ["holy", "heal", "survival", "support", "protective"]
+    },
+    {
+      "id": "ma_eastern_mage",
+      "nameKo": "동양술사 계열",
+      "nameEn": "Eastern Mage",
+      "role": "daoist buff and time/spirit utility",
+      "coreIdentity": "A daoist-flavored magic route suited to buffs, spirit arts, time tricks, and immortal progression.",
+      "signatureMechanics": [
+        "Buffs and setup effects can matter more than direct damage.",
+        "Time manipulation and spirit-themed skills fit the route.",
+        "Immortal-stage progression provides a natural high-tier fantasy."
+      ],
+      "benchmarkIdeas": [
+        "Temporary talisman buff that changes the next action.",
+        "Small time rewind or action-speed manipulation.",
+        "Spirit body or immortal form as a late upgrade."
+      ],
+      "tags": ["daoist", "buff", "time", "spirit", "immortal"]
+    },
+    {
+      "id": "ma_fallen_eastern_mage",
+      "nameKo": "타락 동양술사 계열",
+      "nameEn": "Fallen Eastern Mage",
+      "role": "curse, deception, and demon control mage",
+      "coreIdentity": "A corrupted daoist route focused on curses, deception, demon power, and control effects.",
+      "signatureMechanics": [
+        "Control and debuff effects should be more important than raw spell spam.",
+        "Demonization or corruption can trade safety for stronger control.",
+        "Fits enemy weakening, turn disruption, and curse stacking."
+      ],
+      "benchmarkIdeas": [
+        "Curse that worsens when the enemy acts.",
+        "Illusion skill that causes enemy miss or self-delay.",
+        "Demon stance with stronger spells and defensive penalty."
+      ],
+      "tags": ["curse", "deception", "demon", "control", "dark-daoist"]
+    },
+    {
+      "id": "ma_extra",
+      "nameKo": "기타 MA 계열",
+      "nameEn": "Extra Magic",
+      "role": "summon, destruction, and transformation magic",
+      "coreIdentity": "A set of nonstandard magic routes for spirits, summoning, destruction, and transformation.",
+      "signatureMechanics": [
+        "Summoners can shift power into companions or spirits.",
+        "Destruction magic can emphasize raw spell damage with drawbacks.",
+        "Transformation magic can change stat use or available actions."
+      ],
+      "benchmarkIdeas": [
+        "Spirit companion that changes based on equipped element.",
+        "Destructive spell with self-delay or self-damage.",
+        "Transformation state that swaps MA scaling into another stat."
+      ],
+      "tags": ["summon", "elemental", "destruction", "transform", "nonstandard"]
+    },
+    {
+      "id": "ts_hunter",
+      "nameKo": "사냥꾼 계열",
+      "nameEn": "Hunter",
+      "role": "tracking, beast, and field utility",
+      "coreIdentity": "A technical side route for tracking, hunting, field control, and beast-related utility.",
+      "signatureMechanics": [
+        "Works well with mark, trap, tracking, and monster-knowledge effects.",
+        "Can support physical and ranged jobs without being pure archer.",
+        "Field utility should matter as much as direct damage."
+      ],
+      "benchmarkIdeas": [
+        "Mark prey to improve follow-up attacks.",
+        "Trap that delays or weakens the enemy.",
+        "Bonus against beasts or previously studied monsters."
+      ],
+      "tags": ["tracking", "beast", "trap", "field-utility", "mark"]
+    },
+    {
+      "id": "ts_cook",
+      "nameKo": "요리사 계열",
+      "nameEn": "Cook",
+      "role": "food craft and support utility",
+      "coreIdentity": "A technical side route that turns preparation, food, and crafting into combat support.",
+      "signatureMechanics": [
+        "Pre-battle preparation can create temporary buffs.",
+        "Food effects can cover sustain, stat buffs, or special utility.",
+        "Works best as a support route that improves many builds."
+      ],
+      "benchmarkIdeas": [
+        "Cooked meal grants a temporary combat modifier.",
+        "Ingredient quality changes the buff type, not exact copied values.",
+        "Support route that rewards preparation before difficult fights."
+      ],
+      "tags": ["food", "craft", "preparation", "support", "temporary-buff"]
+    },
+    {
+      "id": "unimplemented",
+      "nameKo": "미구현 계열",
+      "nameEn": "Unimplemented",
+      "role": "visible but incomplete design space",
+      "coreIdentity": "A group of visible but unfinished jobs, useful only as future-theme placeholders.",
+      "signatureMechanics": [
+        "Do not treat as reliable gameplay data.",
+        "Useful for spotting planned fantasy themes such as lower god, lower angel, undead, or skeleton mage.",
+        "Should be marked incomplete in any derived design database."
+      ],
+      "benchmarkIdeas": [
+        "Keep planned jobs separate from implemented balance references.",
+        "Use as inspiration for future silhouettes, not mechanics.",
+        "Add an explicit incomplete flag in tools."
+      ],
+      "tags": ["unimplemented", "placeholder", "future-theme", "incomplete"]
+    }
+  ]
+}

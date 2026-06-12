@@ -1,6 +1,6 @@
-import { jobs } from "../data/jobs.js?v=20260606-29";
-import { skills } from "../data/skills.js?v=20260606-29";
-import { getApDiscountFromRelics, getMasteryMultiplier, getRelicActivationBonus } from "./relics.js";
+import { jobs } from "../data/jobs.js?v=20260607-14";
+import { skills } from "../data/skills.js?v=20260607-14";
+import { getMasteryMultiplier, getRelicActivationBonus } from "./relics.js";
 import { getEffectiveStats } from "./stats.js";
 
 export const skillSlotLimits = {
@@ -9,7 +9,7 @@ export const skillSlotLimits = {
   passive: 3
 };
 
-const skillMasteryRate = 1.7;
+const skillMasteryJobXpRatio = 0.5;
 
 export function getSkillType(skillId) {
   return skills[skillId]?.type ?? "active";
@@ -30,10 +30,7 @@ export function getEffectiveApCost(state, skillId) {
   if (!skill) {
     return 0;
   }
-  const base = skill.apCost ?? 0;
-  const jobDiscount = isSkillOnTheme(state, skill) && jobs[state.currentJobId]?.tier > 1 ? 1 : 0;
-  const relicDiscount = getApDiscountFromRelics(state, skill);
-  return Math.max(base === 0 ? 0 : 1, base - jobDiscount - relicDiscount);
+  return skill.apCost ?? 0;
 }
 
 export function getEffectiveActivationChance(state, skillId) {
@@ -49,15 +46,32 @@ export function getEffectiveActivationChance(state, skillId) {
 }
 
 export function canEquipSkill(state, skillId) {
+  return getSkillEquipBlockReason(state, skillId) === null;
+}
+
+export function getSkillEquipBlockReason(state, skillId) {
   const skill = skills[skillId];
-  if (!skill || !canUseSkill(state, skillId) || state.player.equippedSkills.includes(skillId)) {
-    return false;
+  if (!skill) {
+    return { type: "missing" };
+  }
+  if (state.player.equippedSkills.includes(skillId)) {
+    return null;
+  }
+  if (!canUseSkill(state, skillId)) {
+    return { type: "unavailable" };
   }
   const type = skill.type;
-  if (getEquippedSlotCount(state, type) >= skillSlotLimits[type]) {
-    return false;
+  const currentSlots = getEquippedSlotCount(state, type);
+  const slotLimit = skillSlotLimits[type] ?? 0;
+  if (currentSlots >= slotLimit) {
+    return { type: "slot", skillType: type, current: currentSlots, limit: slotLimit };
   }
-  return getEquippedApCost(state) + getEffectiveApCost(state, skillId) <= state.player.ap;
+  const currentAp = getEquippedApCost(state);
+  const cost = getEffectiveApCost(state, skillId);
+  if (currentAp + cost > state.player.ap) {
+    return { type: "ap", currentAp, cost, totalAp: state.player.ap };
+  }
+  return null;
 }
 
 export function equipSkill(state, skillId) {
@@ -112,15 +126,25 @@ export function addSkillMasteryFromXp(state, xp) {
 
   const gained = [];
   const split = (xp / targets.length) * getMasteryMultiplier(state, targets);
+  const masteryRequired = getSkillMasteryXpRequired(state);
   for (const skillId of targets) {
     const current = state.player.skillMastery[skillId] ?? 0;
-    const next = Math.min(100, current + split * skillMasteryRate);
-    state.player.skillMastery[skillId] = Math.round(next);
+    const progress = (split / masteryRequired) * 100;
+    const next = Math.min(100, current + progress);
+    state.player.skillMastery[skillId] = roundMastery(next);
     if (current < 100 && next >= 100) {
       gained.push(skillId);
     }
   }
   return gained;
+}
+
+export function getSkillMasteryXpRequired(state) {
+  const job = jobs[state.currentJobId];
+  if (!job) {
+    return 100;
+  }
+  return Math.max(30, Math.round(getEffectiveJobXpRequired(job) * skillMasteryJobXpRatio));
 }
 
 function isCurrentJobSkillUnlocked(state, skillId) {
@@ -137,9 +161,15 @@ function getEffectiveJobXpRequired(job) {
     1: 1.25,
     2: 1.4,
     3: 1.55,
-    4: 1.7
+    4: 1.7,
+    5: 1.9,
+    6: 2.15
   };
   return Math.round(job.xpRequired * (multipliers[job.tier] ?? 1.5));
+}
+
+function roundMastery(value) {
+  return Math.round(value * 10) / 10;
 }
 
 export function isSkillOnTheme(state, skill) {
@@ -156,10 +186,11 @@ export function getSkillEstimate(state, skillId) {
   const effect = skill.effects?.find((item) => item.type === "damage" || item.type === "heal");
   const stat = effect?.stat ?? skill.scalingStat;
   const power = effect?.power ?? 0;
-  const baseValue = stat ? Math.round((stats[stat] ?? 0) * power) : 0;
+  const inverseScaleBonus = effect?.inverseScaleStat ? Math.max(0, (effect.inverseScaleBase ?? 30) - (stats[effect.inverseScaleStat] ?? 0)) * (effect.inverseScalePower ?? 1) : 0;
+  const baseValue = stat ? Math.round(((stats[stat] ?? 0) + inverseScaleBonus) * power) : 0;
   const combatFactor = effect?.type === "damage" ? 0.64 : effect?.type === "heal" ? effect.healScale ?? 0.72 : 1;
   const maxHpValue = effect?.type === "heal" ? Math.round(stats.HP * (effect.maxHpRatio ?? 0)) : 0;
-  const finalValue = Math.round((baseValue * combatFactor + maxHpValue) * (isSkillOnTheme(state, skill) ? 1.08 : 0.96));
+  const finalValue = effect?.absolute ? Math.round(baseValue * combatFactor) : Math.round((baseValue * combatFactor + maxHpValue) * (isSkillOnTheme(state, skill) ? 1.08 : 0.96));
   return {
     type: skill.type,
     effectType: effect?.type ?? null,
@@ -171,6 +202,8 @@ export function getSkillEstimate(state, skillId) {
     condition: skill.condition ?? null,
     scalingStat: stat,
     scalingValue: stat ? stats[stat] ?? 0 : 0,
+    inverseScaleStat: effect?.inverseScaleStat ?? null,
+    inverseScaleBonus,
     power,
     baseValue,
     maxHpValue,
@@ -178,6 +211,10 @@ export function getSkillEstimate(state, skillId) {
     minChance: skill.minChance ?? null,
     repeatChancePenalty: skill.repeatChancePenalty ?? null,
     maxUses: skill.maxUses ?? null,
+    absolute: Boolean(effect?.absolute),
+    inverseCrit: Boolean(effect?.inverseCrit),
+    inverseCritBase: effect?.inverseCritBase ?? null,
+    inverseCritFloor: effect?.inverseCritFloor ?? null,
     statusEffects: (skill.effects ?? []).filter((item) => item.type === "status"),
     onTheme: isSkillOnTheme(state, skill),
     mastery: state.player.skillMastery[skillId] ?? 0,

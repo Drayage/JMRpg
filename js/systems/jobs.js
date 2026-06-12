@@ -1,5 +1,5 @@
-import { jobs } from "../data/jobs.js?v=20260606-29";
-import { relics } from "../data/relics.js?v=20260606-29";
+import { jobs } from "../data/jobs.js?v=20260607-14";
+import { relics } from "../data/relics.js?v=20260607-14";
 import { createBaseStats, statKeys } from "./stats.js";
 import { addSkillMasteryFromXp, learnSkill, pruneUnavailableEquippedSkills } from "./skills.js";
 
@@ -81,7 +81,9 @@ export function getEffectiveJobXpRequired(job) {
     1: 1.25,
     2: 1.4,
     3: 1.55,
-    4: 1.7
+    4: 1.7,
+    5: 1.9,
+    6: 2.15
   };
   return Math.round(job.xpRequired * (multipliers[job.tier] ?? 1.5));
 }
@@ -172,7 +174,7 @@ export function grantJobXp(state, xp, tag = null) {
     }
   }
   for (const [skillId, after] of Object.entries(state.player.skillMastery)) {
-    const diff = Math.round(after - (beforeMastery[skillId] ?? 0));
+    const diff = Math.round((after - (beforeMastery[skillId] ?? 0)) * 10) / 10;
     if (diff !== 0) {
       summary.skillMasteryChanges[skillId] = diff;
     }
@@ -304,6 +306,9 @@ function areJobConditionsMet(state, job) {
   if (requires.skillMasteredAll?.length && !requires.skillMasteredAll.every((id) => (state.player.skillMastery[id] ?? 0) >= 100)) {
     return false;
   }
+  if (requires.skillMasteredAny?.length && !requires.skillMasteredAny.some((id) => (state.player.skillMastery[id] ?? 0) >= 100)) {
+    return false;
+  }
   if (requires.requiredTags?.length && !requires.requiredTags.every((tag) => getPlayerJobTags(state).includes(tag))) {
     return false;
   }
@@ -314,6 +319,12 @@ function areJobConditionsMet(state, job) {
     return false;
   }
   if (requires.relicTagsAny?.length && !state.player.relics.some((relicId) => getRelicTags(relicId).some((tag) => requires.relicTagsAny.includes(tag)))) {
+    return false;
+  }
+  if (requires.minVisitedJobs && state.visitedJobs.length < requires.minVisitedJobs) {
+    return false;
+  }
+  if (requires.minMasteredJobs && state.masteredJobs.length < requires.minMasteredJobs) {
     return false;
   }
   return true;
@@ -340,7 +351,16 @@ function shouldRevealJob(state, job) {
   if ((requires.skillMasteredAll ?? []).some((id) => state.player.learnedSkills.includes(id) || (state.player.skillMastery[id] ?? 0) > 0)) {
     return true;
   }
+  if ((requires.skillMasteredAny ?? []).some((id) => state.player.learnedSkills.includes(id) || (state.player.skillMastery[id] ?? 0) > 0)) {
+    return true;
+  }
   if ((requires.relicCategoriesAny ?? []).some((category) => state.player.relics.some((relicId) => getRelicCategory(relicId) === category))) {
+    return true;
+  }
+  if (requires.minVisitedJobs && state.visitedJobs.length >= Math.max(2, requires.minVisitedJobs - 1)) {
+    return true;
+  }
+  if (requires.minMasteredJobs && state.masteredJobs.length >= Math.max(1, requires.minMasteredJobs - 1)) {
     return true;
   }
   return false;

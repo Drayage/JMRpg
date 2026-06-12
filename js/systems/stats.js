@@ -1,4 +1,4 @@
-import { skills } from "../data/skills.js?v=20260606-29";
+import { skills } from "../data/skills.js?v=20260607-14";
 
 export const statKeys = ["HP", "PA", "PD", "MA", "MD", "SPD", "ACC", "EVA", "CRT", "CRD"];
 
@@ -30,6 +30,10 @@ export function getEffectiveStats(state) {
     const skill = skills[skillId];
     if (skill?.type === "passive") {
       addStats(effective, skill.passiveStats ?? {});
+      if (skill.passivePerRelicStats) {
+        const relicCount = Math.min(state.player.relics.length, skill.passivePerRelicCap ?? state.player.relics.length);
+        addStats(effective, skill.passivePerRelicStats, relicCount);
+      }
     }
   }
 

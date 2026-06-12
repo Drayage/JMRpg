@@ -9,7 +9,7 @@ export const jobs = {
   warrior: {
     id: "warrior",
     tier: 1,
-    xpRequired: 100,
+    xpRequired: 105,
     apReward: 1,
     themes: ["physical", "weapon", "frontline"],
     growth: { HP: 12, PA: 4, PD: 2 },
@@ -36,7 +36,7 @@ export const jobs = {
   cleric: {
     id: "cleric",
     tier: 1,
-    xpRequired: 100,
+    xpRequired: 105,
     apReward: 1,
     themes: ["holy", "support", "magic"],
     growth: { HP: 8, MA: 3, MD: 4 },
@@ -45,7 +45,7 @@ export const jobs = {
   wizard: {
     id: "wizard",
     tier: 1,
-    xpRequired: 105,
+    xpRequired: 110,
     apReward: 1,
     themes: ["magic", "arcane", "fire"],
     growth: { HP: 5, MA: 5, MD: 2 },
@@ -54,7 +54,7 @@ export const jobs = {
   knight: {
     id: "knight",
     tier: 2,
-    xpRequired: 185,
+    xpRequired: 215,
     apReward: 1,
     themes: ["physical", "weapon", "frontline", "defensive"],
     requires: { masteredAny: ["warrior"], requiredTags: ["frontline"] },
@@ -65,7 +65,7 @@ export const jobs = {
   berserker: {
     id: "berserker",
     tier: 2,
-    xpRequired: 180,
+    xpRequired: 205,
     apReward: 1,
     themes: ["physical", "weapon", "bleed", "risk"],
     requires: { visitedAny: ["warrior"], statThresholds: { PA: 18 } },
@@ -76,7 +76,7 @@ export const jobs = {
   hunter: {
     id: "hunter",
     tier: 2,
-    xpRequired: 175,
+    xpRequired: 190,
     apReward: 1,
     themes: ["physical", "ranged", "beast", "critical"],
     requires: { visitedAny: ["archer"], statThresholds: { ACC: 85 } },
@@ -87,7 +87,7 @@ export const jobs = {
   assassin: {
     id: "assassin",
     tier: 2,
-    xpRequired: 190,
+    xpRequired: 230,
     apReward: 1,
     themes: ["physical", "speed", "critical", "poison"],
     requires: { visitedAll: ["archer", "rogue"] },
@@ -98,7 +98,7 @@ export const jobs = {
   priest: {
     id: "priest",
     tier: 2,
-    xpRequired: 180,
+    xpRequired: 205,
     apReward: 1,
     themes: ["holy", "support", "magic"],
     requires: { masteredAny: ["cleric"] },
@@ -109,7 +109,7 @@ export const jobs = {
   dark_acolyte: {
     id: "dark_acolyte",
     tier: 2,
-    xpRequired: 180,
+    xpRequired: 205,
     apReward: 1,
     themes: ["dark", "magic", "risk"],
     requires: { visitedAny: ["cleric", "wizard"], statThresholds: { MA: 18 } },
@@ -120,7 +120,7 @@ export const jobs = {
   elementalist: {
     id: "elementalist",
     tier: 2,
-    xpRequired: 185,
+    xpRequired: 215,
     apReward: 1,
     themes: ["magic", "fire", "ice", "lightning"],
     requires: { masteredAny: ["wizard"] },
@@ -131,7 +131,7 @@ export const jobs = {
   summoner: {
     id: "summoner",
     tier: 2,
-    xpRequired: 185,
+    xpRequired: 215,
     apReward: 1,
     themes: ["magic", "summon", "beast"],
     requires: { visitedAny: ["wizard", "cleric"], statThresholds: { MD: 15 } },
@@ -142,7 +142,7 @@ export const jobs = {
   paladin: {
     id: "paladin",
     tier: 3,
-    xpRequired: 250,
+    xpRequired: 350,
     apReward: 1,
     themes: ["holy", "frontline", "physical", "defensive"],
     requires: { masteredAll: ["knight"], visitedAll: ["cleric"] },
@@ -153,7 +153,7 @@ export const jobs = {
   magic_knight: {
     id: "magic_knight",
     tier: 3,
-    xpRequired: 240,
+    xpRequired: 330,
     apReward: 1,
     themes: ["physical", "magic", "weapon", "arcane"],
     requires: { visitedAll: ["warrior", "wizard"] },
@@ -164,7 +164,7 @@ export const jobs = {
   shadow_hunter: {
     id: "shadow_hunter",
     tier: 3,
-    xpRequired: 255,
+    xpRequired: 360,
     apReward: 1,
     themes: ["speed", "critical", "ranged", "dark"],
     requires: { masteredAll: ["hunter", "rogue"] },
@@ -172,21 +172,32 @@ export const jobs = {
     growth: { HP: 8, PA: 4, SPD: 5, ACC: 4, CRT: 5 },
     milestones: baseMilestones("shadow_step", "marked_execution")
   },
+  reverse_assassin: {
+    id: "reverse_assassin",
+    tier: 3,
+    xpRequired: 380,
+    apReward: 1,
+    themes: ["physical", "speed", "reverse_crit", "defensive"],
+    requires: { masteredAll: ["assassin"], visitedAny: ["knight", "adamant_guardian"] },
+    revealHints: ["Assassin mastered", "Knight lineage touched"],
+    growth: { HP: 9, PA: 5, PD: 3, SPD: 5, EVA: 3, CRT: -3, CRD: 8 },
+    milestones: baseMilestones("reverse_grip", "reverse_blade", "blind_spot_cut")
+  },
   necromancer: {
     id: "necromancer",
     tier: 3,
-    xpRequired: 265,
+    xpRequired: 380,
     apReward: 1,
     themes: ["dark", "magic", "summon"],
     requires: { masteredAll: ["wizard", "dark_acolyte"] },
     revealHints: ["Wizard mastered", "Dark lineage mastered"],
     growth: { HP: 7, MA: 6, MD: 4 },
-    milestones: baseMilestones("summon_skeleton", "corpse_bloom", "bone_armor")
+    milestones: baseMilestones("grave_summons", "corpse_bloom", "bone_armor")
   },
   battle_priest: {
     id: "battle_priest",
     tier: 3,
-    xpRequired: 240,
+    xpRequired: 330,
     apReward: 1,
     themes: ["holy", "physical", "support", "frontline"],
     requires: { visitedAll: ["warrior"], masteredAll: ["priest"] },
@@ -197,7 +208,7 @@ export const jobs = {
   dragon_slayer: {
     id: "dragon_slayer",
     tier: 3,
-    xpRequired: 265,
+    xpRequired: 380,
     apReward: 1,
     themes: ["physical", "weapon", "dragon", "bleed"],
     requires: { masteredAll: ["berserker", "knight"] },
@@ -208,7 +219,7 @@ export const jobs = {
   beast_lord: {
     id: "beast_lord",
     tier: 3,
-    xpRequired: 250,
+    xpRequired: 350,
     apReward: 1,
     themes: ["summon", "beast", "physical"],
     requires: { masteredAll: ["hunter"], visitedAll: ["summoner"] },
@@ -219,18 +230,18 @@ export const jobs = {
   arcane_assassin: {
     id: "arcane_assassin",
     tier: 3,
-    xpRequired: 255,
+    xpRequired: 360,
     apReward: 1,
     themes: ["magic", "speed", "critical", "arcane"],
     requires: { masteredAll: ["assassin"], visitedAll: ["wizard"] },
     revealHints: ["Assassin mastered", "Wizard visited"],
     growth: { HP: 7, MA: 4, SPD: 5, EVA: 4, CRT: 5 },
-    milestones: baseMilestones("phase_cut", "arcane_blast")
+    milestones: baseMilestones("phase_cut", "phase_blast")
   },
   holy_executor: {
     id: "holy_executor",
     tier: 4,
-    xpRequired: 330,
+    xpRequired: 565,
     apReward: 1,
     themes: ["holy", "frontline", "critical"],
     requires: { masteredAll: ["paladin"], skillMasteredAll: ["judgment"], requiredTags: ["holy", "frontline"] },
@@ -241,7 +252,7 @@ export const jobs = {
   death_knight: {
     id: "death_knight",
     tier: 4,
-    xpRequired: 315,
+    xpRequired: 520,
     apReward: 1,
     themes: ["dark", "frontline", "defensive"],
     requires: { masteredAll: ["dark_acolyte", "knight"] },
@@ -252,7 +263,7 @@ export const jobs = {
   blood_berserker: {
     id: "blood_berserker",
     tier: 4,
-    xpRequired: 315,
+    xpRequired: 520,
     apReward: 1,
     themes: ["physical", "bleed", "risk"],
     requires: { masteredAll: ["berserker"], skillMasteredAll: ["life_drain"] },
@@ -263,7 +274,7 @@ export const jobs = {
   dragon_knight: {
     id: "dragon_knight",
     tier: 4,
-    xpRequired: 340,
+    xpRequired: 595,
     apReward: 1,
     themes: ["dragon", "frontline", "physical"],
     requires: { masteredAll: ["dragon_slayer"], relicCategoriesAny: ["dragon"] },
@@ -274,7 +285,7 @@ export const jobs = {
   lich: {
     id: "lich",
     tier: 4,
-    xpRequired: 340,
+    xpRequired: 595,
     apReward: 1,
     themes: ["dark", "magic", "summon"],
     requires: { masteredAll: ["necromancer"], relicCategoriesAny: ["dark"] },
@@ -285,7 +296,7 @@ export const jobs = {
   sage: {
     id: "sage",
     tier: 4,
-    xpRequired: 330,
+    xpRequired: 565,
     apReward: 1,
     themes: ["magic", "holy", "support"],
     requires: { masteredAll: ["elementalist", "priest"] },
@@ -296,18 +307,29 @@ export const jobs = {
   shadow_emperor: {
     id: "shadow_emperor",
     tier: 4,
-    xpRequired: 350,
+    xpRequired: 620,
     apReward: 1,
     themes: ["dark", "speed", "critical"],
     requires: { masteredAll: ["assassin", "shadow_hunter"] },
     revealHints: ["Assassin mastered", "Shadow Hunter mastered"],
     growth: { HP: 9, PA: 5, SPD: 8, EVA: 5, CRT: 6 },
-    milestones: baseMilestones("eclipse_step", "imperial_backstab")
+    milestones: baseMilestones("eclipse_step", "imperial_backstab", "shadow_edict")
+  },
+  dusk_salsoo: {
+    id: "dusk_salsoo",
+    tier: 4,
+    xpRequired: 650,
+    apReward: 1,
+    themes: ["physical", "speed", "reverse_crit", "defensive"],
+    requires: { masteredAll: ["reverse_assassin"], skillMasteredAll: ["reverse_blade"] },
+    revealHints: ["Salsoo mastered", "Reverse Blade mastered"],
+    growth: { HP: 12, PA: 6, PD: 4, SPD: 6, EVA: 2, CRT: -5, CRD: 12 },
+    milestones: baseMilestones("hidden_edge_form", "no_moon_cut", "dusk_blindfold")
   },
   grand_summoner: {
     id: "grand_summoner",
     tier: 4,
-    xpRequired: 350,
+    xpRequired: 620,
     apReward: 1,
     themes: ["summon", "magic", "beast"],
     requires: { masteredAll: ["summoner", "beast_lord"] },
@@ -317,19 +339,19 @@ export const jobs = {
   },
   monk: {
     id: "monk",
-    tier: 2,
-    xpRequired: 170,
+    tier: 3,
+    xpRequired: 320,
     apReward: 1,
     themes: ["holy", "physical", "speed", "defensive"],
-    requires: { visitedAny: ["cleric", "rogue"], statThresholds: { SPD: 10 } },
-    revealHints: ["Cleric or Rogue visited", "Moderate SPD"],
+    requires: { visitedAll: ["cleric"], masteredAny: ["rogue", "warrior"] },
+    revealHints: ["Cleric visited", "Rogue or Warrior mastered"],
     growth: { HP: 9, PA: 3, PD: 3, SPD: 3, MD: 2 },
     milestones: baseMilestones("iron_skin", "aura_cut")
   },
   rune_scribe: {
     id: "rune_scribe",
     tier: 2,
-    xpRequired: 175,
+    xpRequired: 190,
     apReward: 1,
     themes: ["magic", "arcane", "defensive"],
     requires: { visitedAny: ["wizard"], statThresholds: { MD: 10 } },
@@ -339,30 +361,30 @@ export const jobs = {
   },
   coinblade: {
     id: "coinblade",
-    tier: 2,
-    xpRequired: 185,
+    tier: 3,
+    xpRequired: 320,
     apReward: 1,
     themes: ["critical", "risk", "ranged"],
-    requires: { visitedAny: ["rogue", "archer"], statThresholds: { CRT: 7 } },
-    revealHints: ["Rogue or Archer visited", "High CRT"],
+    requires: { masteredAny: ["rogue", "archer"], skillMasteredAny: ["backstab", "eagle_eye"] },
+    revealHints: ["Rogue or Archer mastered", "Backstab or Eagle Eye mastered"],
     growth: { HP: 5, PA: 3, SPD: 3, CRT: 5, CRD: 8 },
     milestones: baseMilestones("golden_throw", "needle_flurry")
   },
   hexblade: {
     id: "hexblade",
     tier: 3,
-    xpRequired: 255,
+    xpRequired: 360,
     apReward: 1,
     themes: ["dark", "magic", "weapon", "critical"],
-    requires: { masteredAll: ["dark_acolyte"], visitedAll: ["rogue"] },
-    revealHints: ["Dark Acolyte mastered", "Rogue visited"],
+    requires: { masteredAll: ["dark_acolyte"], masteredAny: ["rogue", "assassin"] },
+    revealHints: ["Dark Acolyte mastered", "Rogue or Assassin mastered"],
     growth: { HP: 8, PA: 3, MA: 5, SPD: 3, CRT: 4 },
-    milestones: baseMilestones("curse_mark", "phase_cut", "blood_seal")
+    milestones: baseMilestones("curse_mark", "malice_edge", "blood_seal")
   },
   plague_doctor: {
     id: "plague_doctor",
     tier: 3,
-    xpRequired: 260,
+    xpRequired: 370,
     apReward: 1,
     themes: ["poison", "holy", "support", "risk"],
     requires: { visitedAll: ["cleric"], skillMasteredAll: ["poison_dart"] },
@@ -373,73 +395,73 @@ export const jobs = {
   wild_speaker: {
     id: "wild_speaker",
     tier: 3,
-    xpRequired: 250,
+    xpRequired: 350,
     apReward: 1,
     themes: ["summon", "beast", "ranged"],
     requires: { masteredAll: ["hunter"], visitedAll: ["summoner"] },
     revealHints: ["Hunter mastered", "Summoner visited"],
     growth: { HP: 10, PA: 2, MA: 4, ACC: 5, MD: 3 },
-    milestones: baseMilestones("spirit_link", "monster_tamer", "summon_bear")
+    milestones: baseMilestones("wild_link", "monster_tamer", "wild_bear")
   },
   oracle_knight: {
     id: "oracle_knight",
     tier: 3,
-    xpRequired: 270,
+    xpRequired: 390,
     apReward: 1,
     themes: ["holy", "magic", "frontline", "defensive"],
     requires: { masteredAny: ["rune_scribe", "knight"], visitedAll: ["cleric"] },
     revealHints: ["Rune or Knight lineage", "Cleric visited"],
     growth: { HP: 12, PA: 2, PD: 4, MA: 4, MD: 5 },
-    milestones: baseMilestones("rune_barrier", "aura_cut", "starfall")
+    milestones: baseMilestones("oracle_barrier", "oracle_cut", "starfall")
   },
   relic_seeker: {
     id: "relic_seeker",
     tier: 3,
-    xpRequired: 245,
+    xpRequired: 340,
     apReward: 1,
     themes: ["job", "risk", "critical"],
     requires: { visitedAny: ["coinblade", "rune_scribe"], relicCategoriesAny: ["ap", "risk", "job"] },
     revealHints: ["Strange relic obtained", "Coinblade or Rune Scribe visited"],
     growth: { HP: 7, PA: 3, MA: 3, ACC: 3, CRT: 4 },
-    milestones: baseMilestones("golden_throw", "sigil_burst", "oathbreaker_stance")
+    milestones: baseMilestones("relic_throw", "relic_burst", "oathbreaker_stance")
   },
   saint_of_ruin: {
     id: "saint_of_ruin",
     tier: 4,
-    xpRequired: 360,
+    xpRequired: 650,
     apReward: 1,
     themes: ["holy", "dark", "risk", "boss"],
     requires: { masteredAll: ["holy_executor", "dark_acolyte"], skillMasteredAll: ["judgment"] },
     revealHints: ["Holy Executor mastered", "Dark lineage touched", "Judgment mastered"],
     growth: { HP: 10, PA: 4, MA: 7, CRT: 5, CRD: 8 },
-    milestones: baseMilestones("oathbreaker_stance", "starfall", "final_verdict")
+    milestones: baseMilestones("ruin_oath", "ruin_starfall", "ruin_verdict")
   },
   void_conductor: {
     id: "void_conductor",
     tier: 4,
-    xpRequired: 370,
+    xpRequired: 680,
     apReward: 1,
     themes: ["dark", "summon", "magic"],
     requires: { masteredAny: ["lich", "grand_summoner"], relicCategoriesAny: ["summon", "dark"] },
     revealHints: ["Lich or Grand Summoner mastered", "Dark or Summon relic obtained"],
     growth: { HP: 9, MA: 8, MD: 5, ACC: 3 },
-    milestones: baseMilestones("phantom_army", "death_pact", "legion_call")
+    milestones: baseMilestones("phantom_army", "void_pact", "void_legion")
   },
   trailwarden: {
     id: "trailwarden",
-    tier: 2,
-    xpRequired: 165,
+    tier: 3,
+    xpRequired: 310,
     apReward: 1,
     themes: ["foundation", "survival", "utility", "branching"],
-    requires: { visitedAny: ["warrior", "archer", "rogue", "cleric", "wizard"], statThresholds: { HP: 124 } },
-    revealHints: ["Any starter visited", "Slight HP growth"],
+    requires: { minVisitedJobs: 3, minMasteredJobs: 1, statThresholds: { HP: 128 } },
+    revealHints: ["Three jobs visited", "One job mastered", "Some HP growth"],
     growth: { HP: 12, PA: 1, PD: 2, MA: 1, MD: 2, ACC: 1 },
     milestones: baseMilestones("trail_grit", "emergency_bandage")
   },
   ossuary_guard: {
     id: "ossuary_guard",
     tier: 3,
-    xpRequired: 250,
+    xpRequired: 350,
     apReward: 1,
     themes: ["undead", "dark", "frontline", "attrition"],
     requires: { visitedAll: ["dark_acolyte"], relicCategoriesAny: ["dark"] },
@@ -450,133 +472,298 @@ export const jobs = {
   seal_martialist: {
     id: "seal_martialist",
     tier: 3,
-    xpRequired: 245,
+    xpRequired: 340,
     apReward: 1,
     themes: ["martial", "physical", "speed", "defensive"],
-    requires: { visitedAll: ["monk"], masteredAny: ["rogue", "warrior"] },
-    revealHints: ["Monk visited", "Rogue or Warrior mastered"],
+    requires: { masteredAll: ["monk"], skillMasteredAny: ["iron_skin", "aura_cut"] },
+    revealHints: ["Monk mastered", "Iron Skin or Aura Cut mastered"],
     growth: { HP: 10, PA: 5, PD: 3, SPD: 5, EVA: 3 },
     milestones: baseMilestones("palm_break", "flowing_form", "meridian_burst")
   },
   boltwright: {
     id: "boltwright",
     tier: 3,
-    xpRequired: 240,
+    xpRequired: 330,
     apReward: 1,
     themes: ["ranged", "time", "critical", "utility"],
     requires: { visitedAll: ["archer"], masteredAny: ["rune_scribe", "hunter"] },
     revealHints: ["Archer visited", "Rune Scribe or Hunter mastered"],
     growth: { HP: 7, PA: 2, SPD: 5, ACC: 6, CRT: 3, CRD: 6 },
-    milestones: baseMilestones("pinning_bolt", "rewind_bolt", "needle_flurry")
+    milestones: baseMilestones("pinning_bolt", "rewind_bolt", "bolt_flurry")
   },
   talisman_weaver: {
     id: "talisman_weaver",
-    tier: 2,
-    xpRequired: 180,
+    tier: 3,
+    xpRequired: 330,
     apReward: 1,
     themes: ["spirit", "magic", "time", "support"],
-    requires: { visitedAny: ["wizard", "cleric"], statThresholds: { MD: 10 } },
-    revealHints: ["Wizard or Cleric visited", "Moderate MD"],
+    requires: { visitedAll: ["wizard", "cleric"], masteredAny: ["wizard", "cleric"] },
+    revealHints: ["Wizard and Cleric visited", "Wizard or Cleric mastered"],
     growth: { HP: 6, MA: 4, MD: 5, SPD: 2 },
     milestones: baseMilestones("spirit_talisman", "time_charm")
   },
   camp_provisioner: {
     id: "camp_provisioner",
-    tier: 2,
-    xpRequired: 160,
+    tier: 3,
+    xpRequired: 300,
     apReward: 1,
     themes: ["preparation", "food", "support", "survival"],
-    requires: { visitedAny: ["warrior", "hunter", "cleric"], statThresholds: { HP: 124 } },
-    revealHints: ["Warrior, Hunter, or Cleric visited", "Slight HP growth"],
+    requires: { minVisitedJobs: 2, minMasteredJobs: 1, statThresholds: { HP: 128 } },
+    revealHints: ["Two jobs visited", "One job mastered", "Some HP growth"],
     growth: { HP: 14, PA: 2, MD: 2, ACC: 2 },
     milestones: baseMilestones("hearty_meal", "battle_spice")
   },
   astral_medium: {
     id: "astral_medium",
     tier: 3,
-    xpRequired: 255,
+    xpRequired: 360,
     apReward: 1,
     themes: ["spirit", "summon", "magic", "support"],
     requires: { masteredAll: ["talisman_weaver"], visitedAny: ["summoner", "cleric"] },
     revealHints: ["Talisman Weaver mastered", "Summon or Cleric lineage touched"],
     growth: { HP: 8, MA: 6, MD: 4, SPD: 2 },
-    milestones: baseMilestones("astral_seal", "spirit_link", "time_charm")
+    milestones: baseMilestones("astral_seal", "astral_link", "astral_charm")
   },
   omen_chef: {
     id: "omen_chef",
     tier: 3,
-    xpRequired: 235,
+    xpRequired: 320,
     apReward: 1,
     themes: ["food", "risk", "support", "preparation"],
     requires: { masteredAll: ["camp_provisioner"], visitedAny: ["coinblade", "plague_doctor"] },
     revealHints: ["Camp Provisioner mastered", "Greed or plague route touched"],
     growth: { HP: 16, PA: 3, MA: 2, MD: 3, CRT: 2 },
-    milestones: baseMilestones("feast_of_omens", "hearty_meal", "battle_spice")
+    milestones: baseMilestones("feast_of_omens", "omen_meal", "omen_spice")
   },
   horizon_votary: {
     id: "horizon_votary",
     tier: 4,
-    xpRequired: 330,
+    xpRequired: 565,
     apReward: 1,
     themes: ["foundation", "holy", "survival", "support"],
     requires: { masteredAll: ["trailwarden"], visitedAny: ["priest", "monk", "camp_provisioner"] },
     revealHints: ["Trailwarden mastered", "Holy, martial, or preparation route touched"],
     growth: { HP: 18, PA: 2, MA: 3, MD: 5, SPD: 3 },
-    milestones: baseMilestones("horizon_oath", "last_campfire", "miracle")
+    milestones: baseMilestones("horizon_oath", "last_campfire", "horizon_miracle")
   },
   marrow_regent: {
     id: "marrow_regent",
     tier: 4,
-    xpRequired: 355,
+    xpRequired: 635,
     apReward: 1,
     themes: ["undead", "dark", "frontline", "summon"],
     requires: { masteredAll: ["ossuary_guard"], visitedAny: ["necromancer", "death_knight", "lich"] },
     revealHints: ["Ossuary Guard mastered", "Necromancy or death knight route touched"],
     growth: { HP: 18, PA: 4, PD: 6, MA: 3, MD: 4 },
-    milestones: baseMilestones("black_standard", "bone_court", "phantom_army")
+    milestones: baseMilestones("black_standard", "bone_court", "marrow_army")
   },
   meridian_master: {
     id: "meridian_master",
     tier: 4,
-    xpRequired: 345,
+    xpRequired: 605,
     apReward: 1,
     themes: ["martial", "physical", "speed", "defensive"],
     requires: { masteredAll: ["seal_martialist"], skillMasteredAll: ["flowing_form"] },
     revealHints: ["Seal Martialist mastered", "Flowing Form mastered"],
     growth: { HP: 13, PA: 6, PD: 4, SPD: 7, EVA: 5 },
-    milestones: baseMilestones("empty_palm", "sealed_heart", "meridian_burst")
+    milestones: baseMilestones("empty_palm", "sealed_heart", "meridian_overflow")
   },
   chronobolt_savant: {
     id: "chronobolt_savant",
     tier: 4,
-    xpRequired: 340,
+    xpRequired: 595,
     apReward: 1,
     themes: ["ranged", "time", "critical", "utility"],
     requires: { masteredAll: ["boltwright"], visitedAny: ["rune_scribe", "shadow_hunter", "coinblade"] },
     revealHints: ["Boltwright mastered", "Rune, shadow, or greed route touched"],
     growth: { HP: 8, PA: 3, ACC: 8, SPD: 5, CRT: 5, CRD: 10 },
-    milestones: baseMilestones("clockwork_sight", "time_barrage", "rewind_bolt")
+    milestones: baseMilestones("clockwork_sight", "time_barrage", "paradox_bolt")
   },
   star_oracle: {
     id: "star_oracle",
     tier: 4,
-    xpRequired: 350,
+    xpRequired: 620,
     apReward: 1,
     themes: ["spirit", "magic", "holy", "time"],
     requires: { masteredAll: ["astral_medium"], visitedAny: ["sage", "oracle_knight", "grand_summoner"] },
     revealHints: ["Astral Medium mastered", "Sage, oracle, or summoner route touched"],
     growth: { HP: 9, MA: 8, MD: 6, SPD: 3 },
-    milestones: baseMilestones("constellation_edict", "fate_reversal", "starfall")
+    milestones: baseMilestones("constellation_edict", "fate_reversal", "constellation_fall")
   },
   banquet_prophet: {
     id: "banquet_prophet",
     tier: 4,
-    xpRequired: 325,
+    xpRequired: 550,
     apReward: 1,
     themes: ["food", "risk", "support", "critical"],
     requires: { masteredAll: ["omen_chef"], relicCategoriesAny: ["risk", "mastery", "ap"] },
     revealHints: ["Omen Chef mastered", "Greed, mastery, or AP relic obtained"],
-    growth: { HP: 20, PA: 4, MA: 3, MD: 4, CRT: 4, CRD: 8 },
-    milestones: baseMilestones("lucky_leftovers", "final_course", "feast_of_omens")
+    growth: { HP: 22, PA: 4, PD: 3, MA: 2, MD: 4, EVA: -2 },
+    milestones: baseMilestones("lucky_leftovers", "final_course", "omen_banquet")
+  },
+  adamant_guardian: {
+    id: "adamant_guardian",
+    tier: 5,
+    xpRequired: 915,
+    apReward: 1,
+    themes: ["frontline", "defensive", "absolute"],
+    requires: { masteredAll: ["knight"], skillMasteredAll: ["counter_attack"], statThresholds: { PD: 22 } },
+    revealHints: ["Knight mastered", "Counterattack mastered", "High PD"],
+    growth: { HP: 20, PA: 2, PD: 8, MD: 5 },
+    milestones: baseMilestones("fortress_doctrine", "iron_rebuttal", "adamant_sentence")
+  },
+  eternal_bastion: {
+    id: "eternal_bastion",
+    tier: 6,
+    xpRequired: 1350,
+    apReward: 1,
+    themes: ["frontline", "defensive", "absolute"],
+    requires: { masteredAll: ["adamant_guardian"], skillMasteredAll: ["iron_rebuttal"] },
+    revealHints: ["Adamant Guardian mastered", "Iron Rebuttal mastered"],
+    growth: { HP: 28, PD: 12, MD: 8 },
+    milestones: baseMilestones("bastion_edict", "unbroken_counter", "perfect_bastion")
+  },
+  arcane_warlord: {
+    id: "arcane_warlord",
+    tier: 5,
+    xpRequired: 1050,
+    apReward: 1,
+    themes: ["magic", "physical", "weapon", "arcane"],
+    requires: { masteredAny: ["magic_knight", "hexblade"], requiredTags: ["magic", "weapon"] },
+    revealHints: ["Magic weapon lineage", "Magic and weapon tags"],
+    growth: { HP: 14, PA: 6, MA: 6, MD: 4, CRT: 3 },
+    milestones: baseMilestones("twin_formula", "reality_cleave", "worldsplitter")
+  },
+  world_rift_blade: {
+    id: "world_rift_blade",
+    tier: 6,
+    xpRequired: 1550,
+    apReward: 1,
+    themes: ["magic", "physical", "weapon", "arcane"],
+    requires: { masteredAll: ["arcane_warlord"], skillMasteredAll: ["worldsplitter"] },
+    revealHints: ["Arcane Warlord mastered", "Worldsplitter mastered"],
+    growth: { HP: 18, PA: 9, MA: 9, SPD: 4, CRT: 4 },
+    milestones: baseMilestones("rift_formula", "reality_sunder", "worldsplitter_true")
+  },
+  void_duelist: {
+    id: "void_duelist",
+    tier: 5,
+    xpRequired: 950,
+    apReward: 1,
+    themes: ["dark", "speed", "magic", "critical"],
+    requires: { masteredAny: ["arcane_assassin", "hexblade"], skillMasteredAll: ["phase_cut"] },
+    revealHints: ["Arcane Assassin or Hexblade mastered", "Phase Cut mastered"],
+    growth: { HP: 11, MA: 6, SPD: 8, EVA: 6, CRT: 6, CRD: 10 },
+    milestones: baseMilestones("void_feint", "null_lunge", "null_phase_cut")
+  },
+  night_sovereign: {
+    id: "night_sovereign",
+    tier: 5,
+    xpRequired: 1015,
+    apReward: 1,
+    themes: ["dark", "speed", "critical"],
+    requires: { masteredAll: ["shadow_emperor"], skillMasteredAll: ["imperial_backstab"] },
+    revealHints: ["Shadow Emperor mastered", "Imperial Backstab mastered"],
+    growth: { HP: 12, PA: 7, SPD: 10, EVA: 7, CRT: 8, CRD: 18 },
+    milestones: baseMilestones("shadow_crown", "midnight_execution", "sovereign_vanish")
+  },
+  nameless_executioner: {
+    id: "nameless_executioner",
+    tier: 5,
+    xpRequired: 1050,
+    apReward: 1,
+    themes: ["physical", "reverse_crit", "frontline", "speed"],
+    requires: { masteredAll: ["dusk_salsoo"], skillMasteredAll: ["no_moon_cut"] },
+    revealHints: ["Dusk Salsoo mastered", "No Moon Cut mastered"],
+    growth: { HP: 18, PA: 8, PD: 6, SPD: 6, CRT: -8, CRD: 20 },
+    milestones: baseMilestones("zero_crit_doctrine", "kingless_execution", "silent_regicide")
+  },
+  deadeye_paragon: {
+    id: "deadeye_paragon",
+    tier: 5,
+    xpRequired: 950,
+    apReward: 1,
+    themes: ["ranged", "time", "critical", "utility"],
+    requires: { masteredAll: ["chronobolt_savant"], skillMasteredAll: ["time_barrage"] },
+    revealHints: ["Chronobolt Savant mastered", "Time Barrage mastered"],
+    growth: { HP: 10, PA: 4, ACC: 11, SPD: 6, CRT: 6, CRD: 14 },
+    milestones: baseMilestones("horizon_scope", "terminal_barrage", "deadeye_execution")
+  },
+  iron_cauldron: {
+    id: "iron_cauldron",
+    tier: 5,
+    xpRequired: 915,
+    apReward: 1,
+    themes: ["food", "frontline", "survival", "physical"],
+    requires: { masteredAll: ["banquet_prophet"], skillMasteredAll: ["final_course"] },
+    revealHints: ["Banquet Prophet mastered", "Final Course mastered"],
+    growth: { HP: 30, PA: 5, PD: 7, MD: 5, EVA: -4 },
+    milestones: baseMilestones("iron_pot_stance", "cauldron_slam", "last_supper")
+  },
+  crusade_saint: {
+    id: "crusade_saint",
+    tier: 5,
+    xpRequired: 985,
+    apReward: 1,
+    themes: ["holy", "physical", "support", "frontline"],
+    requires: { masteredAny: ["battle_priest", "holy_executor"], skillMasteredAll: ["war_prayer"] },
+    revealHints: ["Battle Priest or Holy Executor mastered", "War Prayer mastered"],
+    growth: { HP: 18, PA: 5, MA: 6, MD: 6 },
+    milestones: baseMilestones("crusade_banner", "martyr_judgment", "crusade_verdict")
+  },
+  reliquary_archon: {
+    id: "reliquary_archon",
+    tier: 5,
+    xpRequired: 850,
+    apReward: 1,
+    themes: ["job", "relic", "risk", "critical"],
+    requires: { masteredAll: ["relic_seeker"], relicCategoriesAny: ["ap", "risk", "job", "mastery"] },
+    revealHints: ["Relic Seeker mastered", "Build-shaping relic obtained"],
+    growth: { HP: 12, PA: 4, MA: 4, ACC: 4, CRT: 5, CRD: 12 },
+    milestones: baseMilestones("relic_engine", "relic_overload", "reliquary_oath")
+  },
+  plague_hierophant: {
+    id: "plague_hierophant",
+    tier: 5,
+    xpRequired: 915,
+    apReward: 1,
+    themes: ["poison", "dark", "support", "magic"],
+    requires: { masteredAll: ["plague_doctor"], skillMasteredAll: ["venom_bloom"] },
+    revealHints: ["Plague Doctor mastered", "Venom Bloom mastered"],
+    growth: { HP: 15, MA: 7, MD: 6, ACC: 5 },
+    milestones: baseMilestones("contagion_crown", "plague_edict", "plague_reversal")
+  },
+  primal_sovereign: {
+    id: "primal_sovereign",
+    tier: 5,
+    xpRequired: 1015,
+    apReward: 1,
+    themes: ["summon", "beast", "physical", "support"],
+    requires: { masteredAny: ["wild_speaker", "beast_lord", "grand_summoner"], requiredTags: ["summon", "beast"] },
+    revealHints: ["Beast summon lineage", "Summon and beast tags"],
+    growth: { HP: 18, PA: 5, MA: 6, ACC: 5, MD: 4 },
+    milestones: baseMilestones("alpha_bond", "primal_command", "primal_legion")
+  },
+  sealed_immortal: {
+    id: "sealed_immortal",
+    tier: 5,
+    xpRequired: 915,
+    apReward: 1,
+    themes: ["martial", "physical", "speed", "defensive"],
+    requires: { masteredAll: ["meridian_master"], skillMasteredAll: ["sealed_heart"] },
+    revealHints: ["Meridian Master mastered", "Sealed Heart mastered"],
+    growth: { HP: 18, PA: 7, PD: 6, SPD: 7, EVA: 5 },
+    milestones: baseMilestones("perfect_form", "seal_breaker_kata", "immortal_palm")
+  },
+  fate_cartographer: {
+    id: "fate_cartographer",
+    tier: 5,
+    xpRequired: 915,
+    apReward: 1,
+    themes: ["foundation", "spirit", "time", "support"],
+    requires: { masteredAny: ["horizon_votary", "star_oracle"], skillMasteredAny: ["last_campfire", "fate_reversal"] },
+    revealHints: ["Horizon or star route mastered", "Last Campfire or Fate Reversal mastered"],
+    growth: { HP: 16, MA: 6, MD: 7, SPD: 5 },
+    milestones: baseMilestones("mapped_destiny", "returning_charm", "mapped_reversal")
   }
 };

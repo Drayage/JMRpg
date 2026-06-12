@@ -1,29 +1,31 @@
-import { bosses } from "../data/bosses.js?v=20260606-29";
-import { eventTemplates } from "../data/events.js?v=20260606-29";
-import { jobs } from "../data/jobs.js?v=20260606-29";
-import { monsters } from "../data/monsters.js?v=20260606-29";
-import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomUnownedRelic, rejectRelic } from "./relics.js?v=20260606-29";
+import { bosses } from "../data/bosses.js?v=20260607-14";
+import { eventTemplates } from "../data/events.js?v=20260607-14";
+import { jobs } from "../data/jobs.js?v=20260607-14";
+import { monsters } from "../data/monsters.js?v=20260607-14";
+import { skills } from "../data/skills.js?v=20260607-14";
+import { addRelic, getAdvancedEventWeightMultiplier, getEventXpMultiplier, getPositiveEventRewardMultiplier, getRandomUnownedRelic, rejectRelic } from "./relics.js?v=20260607-14";
 import { addStats, createBaseStats, scoreStats } from "./stats.js";
 import { getAvailableAdvancedJobs, getAvailableBasicJobs, grantJobXp, updateJobDiscovery } from "./jobs.js";
-import { createBattle, estimateWinRate, getBattleReward } from "./battle.js?v=20260606-29";
+import { createBattle, estimateWinRate, getBattleReward } from "./battle.js?v=20260607-14";
 
 export function generateChoices(state) {
   if (state.gameOver) {
     return [];
   }
   if (state.day === 10 && state.actionInDay === 1 && !state.defeatedBosses.includes("oathbreaker")) {
-    return [createBossChoice("oathbreaker")];
+    return [createBossChoice(state, "oathbreaker")];
   }
   if (state.day === 20 && state.actionInDay === 1 && !state.defeatedBosses.includes("void_acolyte")) {
-    return [createBossChoice("void_acolyte")];
+    return [createBossChoice(state, "void_acolyte")];
   }
   if (state.day === 30 && state.actionInDay === 3) {
-    return [createBossChoice(state.finalBossId, true)];
+    return [createBossChoice(state, state.finalBossId, true)];
   }
 
   const choices = [];
   let attempts = 0;
-  while (choices.length < 3 && attempts < 80) {
+  const choiceLimit = 3 + getEventChoiceBonus(state);
+  while (choices.length < choiceLimit && attempts < 100) {
     attempts += 1;
     const template = weightedTemplate(state);
     const choice = createChoiceFromTemplate(state, template);
@@ -63,7 +65,7 @@ export function resolveChoice(state, choiceId) {
 
   if (choice.type === "boss") {
     const enemy = choice.type === "boss" ? bosses[choice.monsterId] : monsters[choice.monsterId];
-    state.battle = createBattle(state, enemy, { category: choice.category, elite: choice.elite, boss: choice.type === "boss", final: choice.final });
+    state.battle = createBattle(state, enemy, { category: choice.category, elite: choice.elite, boss: choice.type === "boss", final: choice.final, difficultyScale: choice.difficultyScale });
     state.battleSpeed = "fast";
     state.pendingBattleChoice = choice;
     state.busy = true;
@@ -332,8 +334,9 @@ export function generateAdvancedJobEvent(state) {
   };
 }
 
-function createBossChoice(bossId, final = false) {
+function createBossChoice(state, bossId, final = false) {
   const boss = bosses[bossId];
+  const difficultyScale = getBossDifficultyScale(state, final);
   return {
     id: `boss_${bossId}`,
     templateId: final ? "final_boss" : "mid_boss",
@@ -342,6 +345,7 @@ function createBossChoice(bossId, final = false) {
     final,
     category: boss.relicCategories[0],
     xp: boss.xp,
+    difficultyScale,
     enemyDamageType: boss.stats.MA > boss.stats.PA ? "magic" : "physical",
     enemyDefenseProfile: boss.stats.MD > boss.stats.PD ? "high_magic_defense" : "high_physical_defense",
     winRate: null
@@ -397,13 +401,22 @@ function getAdaptiveDifficultyScale(state, difficulty, elite, baseScale) {
   const growthRatio = getPermanentStatGrowthRatio(state);
   const pressureByDifficulty = {
     easy: 0.1,
-    normal: 0.45,
-    dangerous: 0.78
+    normal: 0.52,
+    dangerous: 0.92
   };
   const pressure = (pressureByDifficulty[difficulty] ?? 0.45) + (elite ? 0.32 : 0);
-  const cap = difficulty === "easy" ? 0.18 : elite ? 0.95 : difficulty === "dangerous" ? 0.78 : 0.55;
-  const bonus = Math.min(cap, growthRatio * pressure);
+  const cap = difficulty === "easy" ? 0.18 : elite ? 1.15 : difficulty === "dangerous" ? 0.92 : 0.65;
+  const dayPressure = Math.max(0, state.day - 18) * (elite ? 0.035 : difficulty === "dangerous" ? 0.025 : difficulty === "normal" ? 0.014 : 0.004);
+  const bonus = Math.min(cap, growthRatio * pressure + dayPressure);
   return Number((baseScale + bonus).toFixed(2));
+}
+
+function getBossDifficultyScale(state, final = false) {
+  const growthRatio = getPermanentStatGrowthRatio(state);
+  const dayBonus = Math.min(0.28, Math.max(0, state.day - 10) * 0.012);
+  const growthBonus = Math.min(final ? 0.35 : 0.25, growthRatio * 0.3);
+  const finalBonus = final ? 0.12 : 0;
+  return Number((1 + dayBonus + growthBonus + finalBonus).toFixed(2));
 }
 
 function getPermanentStatGrowthRatio(state) {
@@ -413,7 +426,8 @@ function getPermanentStatGrowthRatio(state) {
 }
 
 function chooseMonsterForSlot(state, elite, levelOffset, usedMonsterIds) {
-  const targetLevel = Math.max(1, Math.floor((state.day + 2) / 3) + (elite ? 2 : 0) + levelOffset);
+  const lateLevelBoost = state.day >= 25 ? 1 : 0;
+  const targetLevel = Math.max(1, Math.floor((state.day + 2) / 3) + lateLevelBoost + (elite ? 2 : 0) + levelOffset);
   const available = Object.values(monsters).filter((monster) => !usedMonsterIds.has(monster.id));
   const exactPool = available.filter((monster) => monster.level === targetLevel);
   if (exactPool.length > 0) {
@@ -433,7 +447,7 @@ function getEnemyDamageType(monster) {
 function weightedTemplate(state) {
   const weighted = eventTemplates.map((template) => ({
     template,
-    weight: template.id === "advanced_job_training" ? template.weight * getAdvancedEventWeightMultiplier(state) : template.weight
+    weight: (template.id === "advanced_job_training" ? template.weight * getAdvancedEventWeightMultiplier(state) : template.weight) * getTemplateWeightMultiplier(state, template.id)
   }));
   const total = weighted.reduce((sum, item) => sum + item.weight, 0);
   let roll = Math.random() * total;
@@ -444,6 +458,20 @@ function weightedTemplate(state) {
     }
   }
   return eventTemplates[0];
+}
+
+function getEquippedPassiveSkills(state) {
+  return state.player.equippedSkills
+    .map((skillId) => skills[skillId])
+    .filter((skill) => skill?.type === "passive");
+}
+
+function getEventChoiceBonus(state) {
+  return Math.min(1, getEquippedPassiveSkills(state).reduce((sum, skill) => sum + (skill.eventChoiceBonus ?? 0), 0));
+}
+
+function getTemplateWeightMultiplier(state, templateId) {
+  return getEquippedPassiveSkills(state).reduce((multiplier, skill) => multiplier * (skill.eventWeightMultipliers?.[templateId] ?? 1), 1);
 }
 
 function randomStatGrowth() {

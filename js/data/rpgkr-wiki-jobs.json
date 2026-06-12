@@ -1,0 +1,238 @@
+{
+  "collectedAt": "2026-06-06T00:00:00.000Z",
+  "profile": "benchmark-features",
+  "status": {
+    "directCrawler": "blocked",
+    "httpStatus": 522,
+    "note": "namu.moe, www.namu.moe, dark.namu.moe, d.namu.moe, m.namu.moe all returned 522 to automated Node fetch requests. This snapshot was built from search-index accessible page excerpts and excludes exact gameplay numbers by design."
+  },
+  "source": {
+    "licenseNote": "Original wiki text is marked CC BY-NC-SA 2.0 KR on the mirrored pages. Keep source attribution if deriving public artifacts.",
+    "pages": [
+      {
+        "title": "RPG.kr/직업",
+        "url": "https://dark.namu.moe/w/RPG.kr/%EC%A7%81%EC%97%85",
+        "modifiedAt": "2025-04-15 21:48:42"
+      },
+      {
+        "title": "RPG.kr/직업/공통 & 기타 계열",
+        "url": "https://www.namu.moe/w/RPG.kr/%EC%A7%81%EC%97%85/%EA%B3%B5%ED%86%B5%20%26%20%EA%B8%B0%ED%83%80%20%EA%B3%84%EC%97%B4",
+        "modifiedAt": "2026-02-07 22:09:07"
+      },
+      {
+        "title": "RPG.kr/직업/PA 계열",
+        "url": "https://namu.moe/w/RPG.kr/%EC%A7%81%EC%97%85/PA%20%EA%B3%84%EC%97%B4",
+        "modifiedAt": "2026-03-11 12:05:29"
+      },
+      {
+        "title": "RPG.kr/직업/AGI 계열",
+        "url": "https://www.namu.moe/w/RPG.kr/%EC%A7%81%EC%97%85/AGI%20%EA%B3%84%EC%97%B4",
+        "modifiedAt": "2025-11-10 12:24:50"
+      },
+      {
+        "title": "RPG.kr/직업/MA 계열",
+        "url": "https://www.namu.moe/w/RPG.kr/%EC%A7%81%EC%97%85/MA%20%EA%B3%84%EC%97%B4"
+      },
+      {
+        "title": "RPG.kr/직업/미구현",
+        "url": "https://m.namu.moe/w/RPG.kr/%EC%A7%81%EC%97%85/%EB%AF%B8%EA%B5%AC%ED%98%84",
+        "modifiedAt": "2026-02-24 00:45:59"
+      }
+    ]
+  },
+  "designRules": {
+    "excluded": ["exact AP", "mastery values", "chance values", "stat thresholds", "damage coefficients", "percentage bonuses"],
+    "included": ["job names", "lineage structure", "broad stat affinities", "combat role tags", "progression themes"]
+  },
+  "lineages": [
+    {
+      "id": "common_adventurer",
+      "page": "RPG.kr/직업/공통 & 기타 계열",
+      "category": "공통 & 기타",
+      "lineage": "모험가",
+      "featureTags": ["starter", "survival", "utility", "foundation"],
+      "statAffinities": ["HP", "EVA", "ACC"],
+      "jobs": ["여행자", "모험가", "숙련자", "무술가", "동방여행자"]
+    },
+    {
+      "id": "common_rogue",
+      "page": "RPG.kr/직업/공통 & 기타 계열",
+      "category": "공통 & 기타",
+      "lineage": "도적",
+      "featureTags": ["evasion", "stealth", "critical", "tempo"],
+      "statAffinities": ["EVA", "CRT"],
+      "jobs": ["도적", "암살자", "비영"]
+    },
+    {
+      "id": "common_skeleton",
+      "page": "RPG.kr/직업/공통 & 기타 계열",
+      "category": "공통 & 기타",
+      "lineage": "해골",
+      "featureTags": ["undead", "army-rank", "dark", "progression-branch"],
+      "statAffinities": ["HP", "PA", "PD"],
+      "jobs": ["망자", "해골 병사", "해골 십부장", "해골 백부장", "해골 천부장", "해골 장군", "해골 대장군", "사왕", "해골 장수", "해골 방랑자", "해골 유랑자", "패왕"]
+    },
+    {
+      "id": "common_extra",
+      "page": "RPG.kr/직업/공통 & 기타 계열",
+      "category": "공통 & 기타",
+      "lineage": "기타",
+      "featureTags": ["hybrid", "fallen", "celestial", "sword-sage"],
+      "statAffinities": ["PA", "MA", "HP"],
+      "jobs": ["광전사", "마검사", "천족", "타락", "절망", "검선"]
+    },
+    {
+      "id": "pa_knight",
+      "page": "RPG.kr/직업/PA 계열",
+      "category": "PA",
+      "lineage": "기사",
+      "featureTags": ["physical", "frontline", "defense-scaling", "absolute-damage", "dragon"],
+      "statAffinities": ["PA", "PD", "MD", "HP"],
+      "jobs": ["검투사", "견습기사", "기사", "정예기사", "기사단장", "방랑기사", "용살기사", "용화기사", "용혈의 계약자", "진룡기사"]
+    },
+    {
+      "id": "pa_executor",
+      "page": "RPG.kr/직업/PA 계열",
+      "category": "PA",
+      "lineage": "집행자",
+      "featureTags": ["holy", "apocalypse", "debuff", "execution", "hybrid-defense"],
+      "statAffinities": ["PA", "PD", "MD", "HP"],
+      "jobs": ["수도기사", "순례기사", "성기사", "죽음의 기사", "질병의 기사", "전쟁의 기사", "기근의 기사", "묵시의 기사", "종언의 집행자"]
+    },
+    {
+      "id": "pa_assassin",
+      "page": "RPG.kr/직업/PA 계열",
+      "category": "PA",
+      "lineage": "살수",
+      "featureTags": ["burst", "backstab", "negative-defense-synergy", "critical", "delay-tradeoff"],
+      "statAffinities": ["PA", "CRT", "CRD", "EVA"],
+      "jobs": ["견습살수", "삼류살수", "이류살수", "일류살수", "특급살수", "무급살수", "적영", "암영", "무영"]
+    },
+    {
+      "id": "pa_martial",
+      "page": "RPG.kr/직업/PA 계열",
+      "category": "PA",
+      "lineage": "무인",
+      "featureTags": ["martial-arts", "defense-shred", "evasion-shred", "stance", "long-scaling"],
+      "statAffinities": ["PA", "ACC", "EVA", "CRT", "CRD"],
+      "jobs": ["삼류무사", "이류무사", "외공수련자", "내공수련자", "일류무인", "절정무인", "초절정", "화경", "현경", "무극"]
+    },
+    {
+      "id": "pa_fallen_martial",
+      "page": "RPG.kr/직업/PA 계열",
+      "category": "PA",
+      "lineage": "타락 무인",
+      "featureTags": ["fallen", "dark-martial", "burst", "critical-dependent"],
+      "statAffinities": ["PA", "CRT", "CRD"],
+      "jobs": ["마졸", "흉적", "살귀", "악귀", "살성", "마존", "천마"]
+    },
+    {
+      "id": "agi_archer",
+      "page": "RPG.kr/직업/AGI 계열",
+      "category": "AGI",
+      "lineage": "궁수",
+      "featureTags": ["speed", "ranged", "critical-scaling", "tempo", "late-nuke"],
+      "statAffinities": ["ACC", "CRT", "CRD", "EVA"],
+      "jobs": ["궁사", "명궁", "기마궁사", "근위궁사", "고궁", "괴궁", "신궁", "현궁", "역궁"]
+    },
+    {
+      "id": "agi_fallen_archer",
+      "page": "RPG.kr/직업/AGI 계열",
+      "category": "AGI",
+      "lineage": "타락 궁수",
+      "featureTags": ["dark-ranged", "opening-burst", "critical", "self-penalty", "defense-debuff"],
+      "statAffinities": ["ACC", "CRT", "CRD", "HP", "PD", "MD"],
+      "jobs": ["귀궁", "혈궁", "마궁", "멸궁", "락궁"]
+    },
+    {
+      "id": "agi_crossbow",
+      "page": "RPG.kr/직업/AGI 계열",
+      "category": "AGI",
+      "lineage": "노사수",
+      "featureTags": ["crossbow", "turn-push", "time-rewind", "critical-damage", "archer-support"],
+      "statAffinities": ["ACC", "CRT", "CRD", "EVA"],
+      "jobs": ["소총수", "저격수", "노사수", "노기수", "연노병", "정노반", "강노반"]
+    },
+    {
+      "id": "ma_western_mage",
+      "page": "RPG.kr/직업/MA 계열",
+      "category": "MA",
+      "lineage": "서양술사",
+      "featureTags": ["magic", "elemental", "growth-passive", "utility", "defense-debuff"],
+      "statAffinities": ["MA", "MD", "HP", "CRD"],
+      "jobs": ["견습술사", "마법사", "화염의 마법사", "무빙의 마법사", "나무의 마법사", "뇌전의 마법사", "홍염의 마법사", "혹한의 마법사", "석암의 마법사", "벽력의 마법사", "마도사", "광염의 마도사", "빙하의 마도사", "대지의 마도사", "뇌운의 마도사", "대마도사", "현자"]
+    },
+    {
+      "id": "ma_fallen_western_mage",
+      "page": "RPG.kr/직업/MA 계열",
+      "category": "MA",
+      "lineage": "타락 서양술사",
+      "featureTags": ["dark-magic", "curse", "summon", "high-risk", "late-scaling"],
+      "statAffinities": ["MA", "MD", "CRT"],
+      "jobs": ["흑마술사", "흑마법사", "흑마도사", "삼혼마안의 종자", "검은 산양머리의 종자", "지옥문을 짊어진 종자", "은자"]
+    },
+    {
+      "id": "ma_cleric",
+      "page": "RPG.kr/직업/MA 계열",
+      "category": "MA",
+      "lineage": "성직자",
+      "featureTags": ["holy", "heal", "support", "survival", "miracle"],
+      "statAffinities": ["MA", "MD", "HP"],
+      "jobs": ["견습 성직자", "성직자", "주교", "사도", "교주", "구세주", "반신"]
+    },
+    {
+      "id": "ma_eastern_mage",
+      "page": "RPG.kr/직업/MA 계열",
+      "category": "MA",
+      "lineage": "동양술사",
+      "featureTags": ["daoist", "buff", "time", "spirit", "immortal"],
+      "statAffinities": ["MA", "MD", "EVA"],
+      "jobs": ["주술사", "법술사", "도술사", "구도자", "반선", "시해선", "지선", "천선"]
+    },
+    {
+      "id": "ma_fallen_eastern_mage",
+      "page": "RPG.kr/직업/MA 계열",
+      "category": "MA",
+      "lineage": "타락 동양술사",
+      "featureTags": ["curse", "deception", "demon", "dark-daoist", "control"],
+      "statAffinities": ["MA", "MD", "CRT"],
+      "jobs": ["저주술사", "요술사", "혹세자", "세객", "강마술사", "마선", "천마선"]
+    },
+    {
+      "id": "ma_extra",
+      "page": "RPG.kr/직업/MA 계열",
+      "category": "MA",
+      "lineage": "기타 MA",
+      "featureTags": ["summon", "elemental", "destruction", "transform"],
+      "statAffinities": ["MA", "MD"],
+      "jobs": ["정령사", "정령 소환사", "파괴술사", "둔갑술사"]
+    },
+    {
+      "id": "ts_hunter",
+      "page": "RPG.kr/직업/TS 계열",
+      "category": "TS",
+      "lineage": "사냥꾼",
+      "featureTags": ["tracking", "beast", "field", "utility"],
+      "statAffinities": ["ACC", "PA", "EVA"],
+      "jobs": ["사냥꾼"]
+    },
+    {
+      "id": "ts_cook",
+      "page": "RPG.kr/직업/TS 계열",
+      "category": "TS",
+      "lineage": "요리사",
+      "featureTags": ["craft", "food", "support", "utility"],
+      "statAffinities": ["HP", "PA", "MA"],
+      "jobs": ["요리사"]
+    },
+    {
+      "id": "unimplemented",
+      "page": "RPG.kr/직업/미구현",
+      "category": "미구현",
+      "lineage": "미구현",
+      "featureTags": ["unimplemented", "visible-in-temple", "incomplete"],
+      "statAffinities": [],
+      "jobs": ["해골 마법병", "하급 신", "하급천사", "좀비", "구울"]
+    }
+  ]
+}

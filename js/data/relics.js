@@ -45,7 +45,7 @@ export const relics = {
     id: "dark_contract",
     category: "dark",
     tags: ["boss", "risk"],
-    rules: [{ type: "boss_damage", multiplier: 1.55 }, { type: "normal_loss_xp", multiplier: 0 }]
+    rules: [{ type: "boss_damage", multiplier: 1.55 }, { type: "normal_incoming_damage", multiplier: 1.18 }]
   },
   ascetic_beads: {
     id: "ascetic_beads",
@@ -69,7 +69,7 @@ export const relics = {
     id: "sealed_badge",
     category: "ap",
     tags: ["ap", "mastery"],
-    rules: [{ type: "mastered_skill_ap_discount", amount: 1, minimumCost: 1 }]
+    rules: [{ type: "extra_ap", amount: 1 }, { type: "low_ap_mastery", threshold: 6, multiplier: 1.12 }]
   },
   dragon_heart: {
     id: "dragon_heart",
@@ -93,7 +93,7 @@ export const relics = {
     id: "black_candle",
     category: "mastery",
     tags: ["dark", "mastery", "risk"],
-    rules: [{ type: "focused_mastery", maxBonus: 1.2 }, { type: "normal_loss_xp", multiplier: 0.5 }]
+    rules: [{ type: "focused_mastery", maxBonus: 1.2 }, { type: "normal_incoming_damage", multiplier: 1.08 }]
   },
   cartographers_badge: {
     id: "cartographers_badge",
@@ -129,7 +129,7 @@ export const relics = {
     id: "compact_grimoire",
     category: "ap",
     tags: ["ap", "mastery"],
-    rules: [{ type: "mastered_skill_ap_discount", amount: 1, minimumCost: 1 }]
+    rules: [{ type: "extra_ap", amount: 1 }, { type: "focused_mastery", maxBonus: 0.75 }]
   },
   martyr_lantern: {
     id: "martyr_lantern",
@@ -147,7 +147,7 @@ export const relics = {
     id: "cursed_heart",
     category: "dark",
     tags: ["dark", "risk"],
-    rules: [{ type: "tag_damage", tag: "dark", multiplier: 1.26 }, { type: "normal_loss_xp", multiplier: 0.25 }]
+    rules: [{ type: "tag_damage", tag: "dark", multiplier: 1.26 }, { type: "normal_incoming_damage", multiplier: 1.14 }]
   },
   void_tithe: {
     id: "void_tithe",
@@ -177,7 +177,7 @@ export const relics = {
     id: "puppet_crown",
     category: "summon",
     tags: ["summon", "risk"],
-    rules: [{ type: "tag_damage", tag: "summon", multiplier: 1.24 }, { type: "normal_loss_xp", multiplier: 0.5 }]
+    rules: [{ type: "tag_damage", tag: "summon", multiplier: 1.24 }, { type: "tag_activation_bonus", tag: "summon", amount: 0.04 }, { type: "normal_incoming_damage", multiplier: 1.1 }]
   },
   loaded_feather: {
     id: "loaded_feather",
@@ -213,7 +213,7 @@ export const relics = {
     id: "hungry_purse",
     category: "risk",
     tags: ["risk", "ap"],
-    rules: [{ type: "extra_ap", amount: 1 }, { type: "normal_loss_xp", multiplier: 0 }]
+    rules: [{ type: "extra_ap", amount: 1 }, { type: "normal_incoming_damage", multiplier: 1.12 }]
   },
   broken_crown: {
     id: "broken_crown",
