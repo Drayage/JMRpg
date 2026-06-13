@@ -31,7 +31,8 @@ export function createBattle(state, enemy, options = {}) {
     final: Boolean(options.final),
     difficultyScale: options.difficultyScale ?? 1,
     traits: enemy.traits ?? [],
-    turn: 1,
+    turn: options.showReadyTurn ? 0 : 1,
+    readyActionShown: !options.showReadyTurn,
     actorIndex: 0,
     order,
     finished: false,
@@ -43,6 +44,7 @@ export function createBattle(state, enemy, options = {}) {
     extraActionUses: { player: 0, enemy: 0 },
     startEffects: { player: 0, enemy: 0 },
     lastAction: {
+      turn: 0,
       actor: "system",
       skillId: null,
       text: `Battle started against ${enemy.id}.`,
@@ -60,6 +62,28 @@ export function createBattle(state, enemy, options = {}) {
 export function runBattleStep(state, battle) {
   if (battle.finished) {
     return battle.lastAction;
+  }
+
+  if (!battle.readyActionShown) {
+    battle.readyActionShown = true;
+    battle.lastAction = withHpSnapshot({
+      turn: 0,
+      actor: "system",
+      skillId: null,
+      text: `Both sides are preparing to fight ${battle.enemyId}.`,
+      damage: 0,
+      heal: 0,
+      miss: false,
+      crit: false,
+      block: false,
+      status: null
+    }, battle);
+    battle.history.unshift(battle.lastAction);
+    return battle.lastAction;
+  }
+
+  if (battle.turn === 0) {
+    battle.turn = 1;
   }
 
   const actor = battle.order[battle.actorIndex];

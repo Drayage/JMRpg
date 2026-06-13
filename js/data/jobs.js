@@ -267,8 +267,8 @@ export const jobs = {
     tier: 1,
     xpRequired: 105,
     apReward: 1,
-    themes: ["speed","critical","evasion"],
-    growth: {"HP":7,"PA":2,"SPD":4,"EVA":4,"CRT":2},
+    themes: ["physical","critical","speed"],
+    growth: {"HP":7,"PA":4,"SPD":3,"EVA":2,"CRT":2},
     milestones: baseMilestones("rogue")
   },
   assassin: {
@@ -276,10 +276,10 @@ export const jobs = {
     tier: 2,
     xpRequired: 220,
     apReward: 1,
-    themes: ["critical","evasion","bleed"],
+    themes: ["physical","critical","bleed","enemy_current_hp"],
     requires: {"masteredAll":["rogue"]},
     revealHints: ["Rogue mastered"],
-    growth: {"HP":7,"PA":3,"SPD":4,"EVA":3,"CRT":5},
+    growth: {"HP":7,"PA":5,"SPD":3,"EVA":2,"CRT":5,"CRD":4},
     milestones: baseMilestones("assassin")
   },
   cutthroat: {

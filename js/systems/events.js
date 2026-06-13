@@ -65,7 +65,7 @@ export function resolveChoice(state, choiceId) {
 
   if (choice.type === "boss") {
     const enemy = choice.type === "boss" ? bosses[choice.monsterId] : monsters[choice.monsterId];
-    state.battle = createBattle(state, enemy, { category: choice.category, elite: choice.elite, boss: choice.type === "boss", final: choice.final, difficultyScale: choice.difficultyScale });
+    state.battle = createBattle(state, enemy, { category: choice.category, elite: choice.elite, boss: choice.type === "boss", final: choice.final, difficultyScale: choice.difficultyScale, showReadyTurn: true });
     state.battleSpeed = "fast";
     state.pendingBattleChoice = choice;
     state.busy = true;
@@ -98,7 +98,7 @@ export function selectHuntMonster(state, monsterChoiceId) {
     return null;
   }
   const enemy = monsters[choice.monsterId];
-  state.battle = createBattle(state, enemy, { category: choice.category, elite: choice.elite, difficultyScale: choice.difficultyScale });
+  state.battle = createBattle(state, enemy, { category: choice.category, elite: choice.elite, difficultyScale: choice.difficultyScale, showReadyTurn: true });
   state.battleSpeed = "fast";
   state.pendingBattleChoice = choice;
   state.activeHuntEvent = null;

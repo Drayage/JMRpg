@@ -5,6 +5,7 @@ const heal = (stat, power, extra = {}) => ({ type: "heal", stat, power, ...extra
 const shield = (amount, stat = null, power = 0) => ({ type: "shield", amount, stat, power });
 const status = (id, target, turns, extra = {}) => ({ type: "status", id, target, turns, ...extra });
 const typedStatus = (kind, amount, turns = null, extra = {}) => ({ type: "typed_status", kind, amount, turns, ...extra });
+const passive = (statMods, extra = {}) => ({ type: "passive", statMods, ...extra });
 const poison = (amount) => ({ type: "poison", amount });
 const summon = (id, role, count = 1, extra = {}) => ({ type: "summon", summonId: id, role, count, ...extra });
 const resource = (key, amount, extra = {}) => ({ type: "resource", key, amount, ...extra });
@@ -39,7 +40,7 @@ function activeEffects(job, tier) {
   if (has(job, "shield_break")) return [damage("PA", scale(tier, 1), { shieldBreak: 14 + tier * 4 }), typedStatus("fracture", 4 + tier, 3)];
   if (has(job, "absolute")) return [damage("PD", scale(tier, 0.9), { absolute: true }), shield(4 + tier * 2, "PD", 0.25)];
   if (has(job, "pd_to_pa")) return [damage("PD", scale(tier, 0.95), { absolute: true, pdToPa: 0.35 }), status("dragon_form", "self", 2, { statMods: { PA: 3 + tier } })];
-  if (has(job, "enemy_current_hp")) return [damage("SPD", scale(tier, 0.8), { enemyCurrentHpPower: 0.08 + tier * 0.01 }), typedStatus("bleed", 3 + tier, 3)];
+  if (has(job, "enemy_current_hp")) return [damage("PA", scale(tier, 0.78), { enemyCurrentHpPower: 0.07 + tier * 0.01, critBonus: tier * 2 }), typedStatus("bleed", 3 + tier, 3)];
   if (has(job, "reverse_crit")) return [damage("PA", scale(tier, 1.05), { inverseCrit: true, inverseCritBase: 38 + tier * 4, inverseCritFloor: 8 })];
   if (has(job, "evasion")) return [damage("EVA", scale(tier, 0.9), { evadeBonusPower: 0.12 }), status("flow", "self", 2, { statMods: { EVA: 2 + tier } })];
   if (has(job, "rhythm")) return [damage("EVA", scale(tier, 0.75), { spendEvasion: 2 + tier }), status("rhythm", "self", 2, { statMods: { EVA: 3 + tier } })];
@@ -69,14 +70,14 @@ function coreEffects(job, tier) {
   if (has(job, "balance")) return [damage("PA", scale(tier, 0.75), { balancePower: 0.04 }), damage("MA", scale(tier, 0.75), { balancePower: 0.04 })];
   if (has(job, "judgment")) return [heal("MA", scale(tier, 0.8), { maxHpRatio: 0.02 }), resource("judgment", 10 + tier * 5, { fromHeal: true })];
   if (has(job, "self_status")) return [typedStatus("weaken", 2, 2, { target: "self" }), typedStatus("bleed", 3 + tier, 2, { target: "self" }), status("cursed_rage", "self", 999, { permanent: true, stack: true, statMods: { PA: 4 + tier, CRD: 8 + tier * 2 }, damageMultiplier: 1.08 })];
-  if (has(job, "shadow_dance")) return [status("shadow_dance", "self", 999, { permanent: true, statMods: { EVA: 3 + tier, CRT: 3 + tier } })];
+  if (has(job, "shadow_dance")) return [passive({ EVA: 3 + tier, CRT: 3 + tier })];
   if (has(job, "contract")) return [summon(`${job.id}_entity`, has(job, "bear") || has(job, "dragon") ? "tank" : "striker", 1, { contract: true, stat: coreDamageStat(job), tier })];
   if (has(job, "shield") || has(job, "pd")) return [shield(8 + tier * 4, "PD", 0.45), status("guarded", "self", 2, { defenseMultiplier: 1.08 })];
   if (has(job, "swordsmanship")) return [resource("swordsmanship", 2 + tier), status("sword_form", "self", 999, { permanent: true, statMods: { PA: 2 + tier, ACC: 1 + tier } })];
   if (has(job, "rune")) return [rune(`${job.id}_guard_rune`, "on_hit", [shield(6 + tier * 2), damage("MA", scale(tier, 0.35))], { maxInstalled: 100 })];
   if (has(job, "heal")) return [heal("MD", scale(tier, 1.1), { maxHpRatio: 0.03, overheal: true }), typedStatus("regeneration", 6 + tier * 2, 3, { target: "self" })];
-  if (has(job, "rhythm")) return [status("tempo", "self", 999, { permanent: true, stack: true, statMods: { EVA: 2 + tier, SPD: 1 + tier } })];
-  return [status(`${job.id}_stance`, "self", 999, { permanent: true, stack: true, statMods: { [coreDamageStat(job)]: 2 + tier } })];
+  if (has(job, "rhythm")) return [passive({ EVA: 2 + tier, SPD: 1 + tier })];
+  return [passive({ [coreDamageStat(job)]: 2 + tier })];
 }
 
 function artEffects(job, tier) {
@@ -85,7 +86,7 @@ function artEffects(job, tier) {
   if (has(job, "poison")) return [damage("ACC", accScale(tier, 0.1), { poisonPower: 0.6 }), poison(12 + tier * 6), status("aiming", "self", 999, { permanent: true, stack: true, statMods: { ACC: 4 + tier } })];
   if (has(job, "predation") || has(job, "enemy_missing_hp")) return [damage("ACC", accScale(tier, 0.12), { predation: true, enemyMissingHpPower: 0.18 + tier * 0.02 })];
   if (has(job, "extra_action")) return [damage("ACC", accScale(tier, 0.1), { resourceKey: "mark", resourcePower: 0.03 }), status("calibrated_reload", "self", 999, { permanent: true, stack: true, statMods: { ACC: 4 + tier * 2 } }), extraAction(0.35 + tier * 0.03, 5)];
-  if (has(job, "enemy_current_hp")) return [damage("SPD", scale(tier, 1.05), { enemyCurrentHpPower: 0.16 + tier * 0.015 }), typedStatus("bleed", 5 + tier * 2, 3)];
+  if (has(job, "enemy_current_hp")) return [damage("PA", scale(tier, 1.0), { enemyCurrentHpPower: 0.14 + tier * 0.015, critBonus: 4 + tier * 2 }), typedStatus("bleed", 5 + tier * 2, 3)];
   if (has(job, "low_hp")) return [damage("PA", scale(tier, 1.45), { missingHpPower: 1.8, lowMaPower: 0.03, statusCountPower: 0.08 }), sacrifice(0.08)];
   if (has(job, "absolute")) return [damage("PD", scale(tier, 1.2), { absolute: true }), shield(12 + tier * 5, "PD", 0.6)];
   if (has(job, "pd_to_pa")) return [damage("PD", scale(tier, 1.25), { absolute: true, pdToPa: 0.75 }), damage("PA", scale(tier, 0.75), { absolute: true })];
@@ -105,9 +106,10 @@ function makeSkill(job, stage) {
   const id = `${job.id}_${stage}`;
   if (stage === "init") return { id, type: "active", apCost: tierCost(tier), chance: activeChance(tier), scalingStat: coreDamageStat(job), tags: job.themes, effects: activeEffects(job, tier) };
   if (stage === "core") {
-    const maxUses = has(job, "rune") || has(job, "contract") ? null : 1;
+    const maxUses = null;
     const effects = coreEffects(job, tier);
-    return { id, type: "special", apCost: tierCost(tier), chance: adjustedSkillChance(specialChance(tier), stage, effects, { maxUses }), maxUses, priority: true, scalingStat: coreDamageStat(job), tags: job.themes, effects };
+    const type = inferSkillType(stage, effects, { maxUses });
+    return { id, type, apCost: tierCost(tier), chance: adjustedSkillChance(specialChance(tier), stage, effects, { maxUses }), maxUses, priority: inferSkillPriority(stage, effects, { maxUses }), scalingStat: coreDamageStat(job), tags: job.themes, effects, passiveStats: type === "passive" ? getPassiveStats(effects[0]) : undefined };
   }
   const effects = artEffects(job, tier);
   const condition = has(job, "predation") || has(job, "enemy_missing_hp") ? { type: "enemy_hp_below", value: 0.45 } : has(job, "enemy_current_hp") ? { type: "enemy_hp_above", value: 0.5 } : has(job, "low_hp") ? { type: "hp_below", value: 0.7 } : null;
@@ -173,13 +175,13 @@ function makeManualSkill(job, stage) {
     [damage("PD", 1.1, { absolute: canUseAbsoluteDamage(job), shieldPower: 0.45 }), shield(6 + job.tier, "PD", 0.3)]
   ]);
   if (has(job, "enemy_current_hp")) return skillFromSet(base, stage, [
-    [damage("SPD", 0.86, { enemyCurrentHpPower: 0.08 }), typedStatus("bleed", 4, 3)],
-    [status("ambush_focus", "self", 3, { statMods: { CRT: 8, SPD: 3 } })],
-    [damage("SPD", 1.05, { enemyCurrentHpPower: 0.16, critBonus: 8 }), typedStatus("bleed", 6, 3)]
+    [damage("PA", 0.88, { enemyCurrentHpPower: 0.08, critBonus: 4 }), typedStatus("bleed", 4, 3)],
+    [passive({ CRT: 6, CRD: 8, SPD: 2 })],
+    [damage("PA", 1.08, { enemyCurrentHpPower: 0.14, critBonus: 8 }), typedStatus("bleed", 6, 3)]
   ], { init: { condition: { type: "enemy_hp_above", value: 0.5 } }, art: { condition: { type: "target_has_status", kind: "bleed" } } });
   if (has(job, "reverse_crit")) return skillFromSet(base, stage, [
     [damage("PA", 0.98, { inverseCrit: true, inverseCritBase: 42, inverseCritFloor: 8 }), typedStatus("bleed", 3, 2)],
-    [statTradeoff({ CRT: -8, CRD: 22, PA: 2 }, { id: "reverse_edge" })],
+    [passive({ CRT: -8, CRD: 22, PA: 2 }, { id: "reverse_edge" })],
     [damage("PA", 1.25, { inverseCrit: true, inverseCritBase: 55, inverseCritFloor: 12, critBonus: 6 })]
   ]);
   if (has(job, "rhythm")) return skillFromSet(base, stage, [
@@ -189,7 +191,7 @@ function makeManualSkill(job, stage) {
   ], { art: { condition: { type: "has_resource", key: "rhythm", amount: 3 } } });
   if (has(job, "evasion")) return skillFromSet(base, stage, [
     [damage("EVA", 0.82), status("flow_step", "self", 2, { statMods: { EVA: 2 } })],
-    [status("dance_guard", "self", 999, { permanent: true, statMods: { EVA: 5, PA: 2 } })],
+    [passive({ EVA: 5, PA: 2 })],
     [damage("EVA", 1.16, { critBonus: 8 }), extraAction(0.22, 3)]
   ]);
   if (has(job, "predation") || has(job, "enemy_missing_hp")) return skillFromSet(base, stage, [
@@ -250,9 +252,9 @@ function makeTierOneSkill(job, stage, base) {
   }
   if (job.id === "rogue") {
     return skillFromSet(base, stage, [
-      [damage("SPD", 0.82)],
-      [status("light_step", "self", 999, { permanent: true, statMods: { EVA: 3, CRT: 1 } })],
-      [damage("EVA", 0.95, { critBonus: 4 })]
+      [damage("PA", 0.86, { critBonus: 3 })],
+      [passive({ CRT: 3, SPD: 2, EVA: 1 })],
+      [damage("PA", 1.02, { critBonus: 6, enemyCurrentHpPower: 0.06 })]
     ]);
   }
   if (job.id === "mystic") {
@@ -348,14 +350,17 @@ function skillFromSet(base, stage, effectsByStage, overrides = {}) {
   const stageIndex = stage === "init" ? 0 : stage === "core" ? 1 : 2;
   const override = overrides[stage] ?? {};
   const effects = effectsByStage[stageIndex];
+  const type = override.type ?? inferSkillType(stage, effects, override);
+  const passiveStats = type === "passive" ? getPassiveStats(effects[0]) : undefined;
   return {
     ...base,
     ...override,
-    type: override.type ?? inferSkillType(stage, effects, override),
+    type,
     priority: override.priority ?? inferSkillPriority(stage, effects, override),
     chance: override.chance ?? adjustedSkillChance(base.chance, stage, effects, override),
     effects,
-    maxUses: override.maxUses ?? (stage === "core" ? 1 : null)
+    passiveStats,
+    maxUses: override.maxUses ?? null
   };
 }
 
@@ -364,7 +369,7 @@ function manualBaseChance(job, stage) {
     return Math.max(0.38, 0.52 - job.tier * 0.03);
   }
   if (stage === "core") {
-    return 0.62;
+    return 0.5;
   }
   return Math.max(0.36, 0.46 - job.tier * 0.02);
 }
@@ -376,15 +381,6 @@ function adjustedSkillChance(baseChance, stage, effects, options = {}) {
   if (options.maxUses === 1) {
     return Math.max(baseChance, 0.66);
   }
-  if (options.condition) {
-    return Math.max(baseChance, 0.56);
-  }
-  if (stage === "core") {
-    return Math.max(baseChance, 0.6);
-  }
-  if (isSpecialEffectSet(effects, options)) {
-    return Math.max(baseChance, 0.52);
-  }
   return baseChance;
 }
 
@@ -392,8 +388,8 @@ function inferSkillType(stage, effects, options = {}) {
   if (stage === "init") {
     return "active";
   }
-  if (stage === "core") {
-    return "special";
+  if (isPassiveEffectSet(effects, options)) {
+    return "passive";
   }
   return isSpecialEffectSet(effects, options) ? "special" : "active";
 }
@@ -402,28 +398,31 @@ function inferSkillPriority(stage, effects, options = {}) {
   if (stage === "init") {
     return false;
   }
-  if (stage === "core") {
-    return true;
+  if (isPassiveEffectSet(effects, options)) {
+    return false;
   }
   return isSpecialEffectSet(effects, options);
 }
 
+function isPassiveEffectSet(effects, options = {}) {
+  if (options.type || options.condition || options.maxUses || options.basicAttackReplacement) {
+    return false;
+  }
+  return effects.length === 1 && effects[0]?.type === "passive" && effects[0].statMods;
+}
+
+function getPassiveStats(effect) {
+  if (effect?.type === "passive") {
+    return effect.statMods ?? {};
+  }
+  return {};
+}
+
 function isSpecialEffectSet(effects, options = {}) {
-  if (options.condition || options.maxUses) {
+  if (options.type === "special" || options.maxUses === 1) {
     return true;
   }
-  return effects.some((effect) => [
-    "heal",
-    "shield",
-    "summon",
-    "rune",
-    "consume_resource",
-    "consume_status",
-    "clear_resource",
-    "stat_tradeoff",
-    "extra_action",
-    "sacrifice"
-  ].includes(effect.type));
+  return false;
 }
 
 function manualApCost(job, stage) {

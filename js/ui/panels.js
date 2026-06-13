@@ -762,6 +762,9 @@ function actorName(actor) {
   if (actor === "enemy") {
     return ko.ui.enemy;
   }
+  if (actor === "system") {
+    return ko.ui.preparation ?? actor;
+  }
   return actor;
 }
 
@@ -854,6 +857,8 @@ function formatLogText(text) {
     output = replaceToken(output, id, label);
   }
   output = output
+    .replace(/Both sides are preparing to fight ([^.]+)\./g, "$1 전투 준비")
+    .replace(/Battle started against ([^.]+)\./g, "$1 전투 시작")
     .replace(/;\s*shield absorbed (\d+)/g, " (보호막 $1 흡수)")
     .replace(/\bused\b/g, "사용")
     .replace(/\bdealt\b/g, "피해")

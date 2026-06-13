@@ -21,6 +21,7 @@ const allowedEffectTypes = new Set([
   "consume_status",
   "clear_resource",
   "stat_tradeoff",
+  "passive",
   "extra_action",
   "sacrifice",
   "dispel"
@@ -131,6 +132,10 @@ function assertSkillShape(skill) {
     if (effect.type === "status") {
       assert.equal(typeof effect.id, "string", `${skill.id} status needs id`);
       assert.ok(effect.target === "self" || effect.target === "foe", `${skill.id} status has invalid target`);
+    }
+    if (effect.type === "passive") {
+      assert.ok(effect.statMods && Object.keys(effect.statMods).length > 0, `${skill.id} passive needs statMods`);
+      assert.deepEqual(skill.passiveStats ?? {}, effect.statMods, `${skill.id} passiveStats must match passive effect`);
     }
     if (effect.type === "resource" || effect.type === "consume_resource" || effect.type === "clear_resource") {
       assert.equal(typeof effect.key, "string", `${skill.id} resource effect needs key`);
