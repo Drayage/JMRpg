@@ -118,10 +118,10 @@ export function refreshHuntWinRates(state) {
 }
 
 export function finishBattleAction(state) {
-  if (!state.battle?.finished || !state.pendingBattleChoice) {
+  if (!state.battle?.finished) {
     return;
   }
-  const choice = state.pendingBattleChoice;
+  const choice = state.pendingBattleChoice ?? fallbackBattleChoice(state.battle);
   const reward = getBattleReward(state, state.battle);
   const baseXp = reward.won ? getBattleBaseXp(choice, reward) : 0;
   const xp = Math.round(baseXp * getEventXpMultiplier(state, choice.category, { elite: choice.elite }));
@@ -153,6 +153,22 @@ export function finishBattleAction(state) {
   setActionResult(state, choice, { battle: state.battle, xpSummary, noBattleRewards: !reward.won, pendingRelicId: relicId, bossWon: reward.won });
   state.pendingBattleChoice = null;
   state.busy = false;
+}
+
+function fallbackBattleChoice(battle) {
+  const enemy = battle.enemy ?? {};
+  const type = battle.boss || battle.final ? "boss" : "hunt";
+  return {
+    id: `battle_${battle.enemyId ?? enemy.id ?? "unknown"}`,
+    templateId: type,
+    type,
+    monsterId: battle.enemyId ?? enemy.id ?? "unknown",
+    final: Boolean(battle.final),
+    elite: Boolean(battle.elite),
+    category: battle.category ?? enemy.relicCategories?.[0] ?? "job",
+    xp: enemy.xp ?? 0,
+    rewardMultiplier: 1
+  };
 }
 
 function getBattleBaseXp(choice, reward) {

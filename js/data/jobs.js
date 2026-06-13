@@ -168,7 +168,7 @@ export const jobs = {
     tier: 2,
     xpRequired: 220,
     apReward: 1,
-    themes: ["physical","frontline","pd","shield"],
+    themes: ["physical","frontline","pd","shield","absolute"],
     requires: {"masteredAll":["warrior"]},
     revealHints: ["Warrior mastered"],
     growth: {"HP":15,"PA":2,"PD":6,"MD":1},

@@ -243,7 +243,9 @@ function simulateBattleOutcome(state, enemy, options = {}) {
 }
 
 function resolvePlayerTurn(state, battle, player, foe, traits) {
-  const activeSkills = state.player.equippedSkills.map((id) => skills[id]).filter((skill) => skill && skill.id !== "basic_attack" && skill.type !== "passive");
+  const activeSkills = state.player.equippedSkills
+    .map((id) => skills[id])
+    .filter((skill) => skill && skill.id !== "basic_attack" && !skill.basicAttackReplacement && skill.type !== "passive");
   const priority = activeSkills.filter((skill) => skill.priority && canUseBattleSkill(battle, skill));
 
   for (const skill of priority) {
@@ -266,10 +268,11 @@ function resolvePlayerTurn(state, battle, player, foe, traits) {
 }
 
 function getFallbackSkill(state) {
-  const magicAttack = skills.magic_attack;
-  const jobId = state.currentJobId ?? "";
-  if (jobId === "mystic" || jobId.includes("mage") || jobId.includes("priest") || jobId.includes("sage")) {
-    return magicAttack;
+  const replacement = state.player.equippedSkills
+    .map((id) => skills[id])
+    .find((skill) => skill?.basicAttackReplacement);
+  if (replacement) {
+    return replacement;
   }
   return skills.basic_attack;
 }
@@ -302,12 +305,13 @@ function resolveEnemyTurn(state, battle, player, foe, enemyId) {
   const result = dealDamage(player, mitigated, { shieldBreak: 4 });
   return {
     skillId: null,
-    text: `${enemyId} dealt ${result.hpDamage} damage${result.shieldAbsorbed ? " after shield" : ""}.`,
+    text: `${enemyId} dealt ${result.hpDamage} damage${result.shieldAbsorbed ? `; shield absorbed ${result.shieldAbsorbed}` : ""}.`,
     damage: result.hpDamage,
     heal: 0,
     miss: false,
     crit: false,
     block: result.shieldAbsorbed > 0,
+    shieldAbsorbed: result.shieldAbsorbed,
     status: null
   };
 }
@@ -416,6 +420,26 @@ function enemySkill(id, chance, effects, options = {}) {
   };
 }
 
+function statModsLog(statMods = {}) {
+  return Object.entries(statMods)
+    .map(([key, value]) => `${key} ${value > 0 ? "+" : ""}${value}`)
+    .join(", ");
+}
+
+function statusLog(effect) {
+  const statText = statModsLog(effect.statMods);
+  const durationText = effect.permanent ? "" : ` ${effect.turns ?? 1}T`;
+  const nonStatParts = [];
+  if (effect.damageMultiplier && effect.damageMultiplier !== 1) nonStatParts.push(`damage x${effect.damageMultiplier}`);
+  if (effect.damageTakenMultiplier && effect.damageTakenMultiplier !== 1) nonStatParts.push(`taken x${effect.damageTakenMultiplier}`);
+  if (effect.defenseMultiplier && effect.defenseMultiplier !== 1) nonStatParts.push(`defense x${effect.defenseMultiplier}`);
+  if (effect.skillChanceMultiplier && effect.skillChanceMultiplier !== 1) nonStatParts.push(`skill chance x${effect.skillChanceMultiplier}`);
+  if (statText && nonStatParts.length === 0) {
+    return `${statText}${durationText}`;
+  }
+  return [effect.id, statText, ...nonStatParts].filter(Boolean).join(" ") + durationText;
+}
+
 function rollEnemySkill(skill, actor) {
   return Math.random() < skill.chance * getSkillChanceMultiplier(actor);
 }
@@ -439,7 +463,8 @@ function executeEnemySkill(state, battle, skill, actor, target, enemyId) {
         const result = dealDamage(target, rawDamage, { shieldBreak: effect.guardBreak ?? 4, burn: effect.burn });
         action.damage += result.hpDamage;
         action.block = action.block || result.shieldAbsorbed > 0;
-        lines.push(`${enemyId} used ${skill.id} for ${result.hpDamage} absolute damage${result.shieldAbsorbed ? " after shield" : ""}`);
+        action.shieldAbsorbed = (action.shieldAbsorbed ?? 0) + result.shieldAbsorbed;
+        lines.push(`${enemyId} used ${skill.id} for ${result.hpDamage} absolute damage${result.shieldAbsorbed ? `; shield absorbed ${result.shieldAbsorbed}` : ""}`);
         if (effect.lifeSteal) {
           const stolen = applyHeal(actor, Math.round(result.hpDamage * effect.lifeSteal), { overheal: false });
           action.heal += stolen;
@@ -458,7 +483,8 @@ function executeEnemySkill(state, battle, skill, actor, target, enemyId) {
       action.damage += result.hpDamage;
       action.crit = action.crit || crit;
       action.block = action.block || result.shieldAbsorbed > 0 || blocked;
-      lines.push(`${enemyId} used ${skill.id} for ${result.hpDamage}${crit ? " critical" : ""} damage${result.shieldAbsorbed ? " after shield" : ""}`);
+      action.shieldAbsorbed = (action.shieldAbsorbed ?? 0) + result.shieldAbsorbed;
+      lines.push(`${enemyId} used ${skill.id} for ${result.hpDamage}${crit ? " critical" : ""} damage${result.shieldAbsorbed ? `; shield absorbed ${result.shieldAbsorbed}` : ""}`);
     }
     if (effect.type === "heal") {
       const healed = Math.round(getBattleStat(actor, effect.stat ?? "MA") * effect.power * (effect.healScale ?? 0.72) + actor.stats.HP * (effect.maxHpRatio ?? 0));
@@ -469,11 +495,13 @@ function executeEnemySkill(state, battle, skill, actor, target, enemyId) {
     if (effect.type === "guard") {
       actor.guard += effect.amount;
       action.block = true;
+      action.shieldGained = (action.shieldGained ?? 0) + effect.amount;
       lines.push(`${enemyId} gained ${effect.amount} block`);
     }
     if (effect.type === "shield") {
       const gained = applyShield(actor, effect);
       action.block = true;
+      action.shieldGained = (action.shieldGained ?? 0) + gained;
       lines.push(`${enemyId} gained ${gained} shield`);
     }
     if (effect.type === "dispel") {
@@ -493,12 +521,14 @@ function executeEnemySkill(state, battle, skill, actor, target, enemyId) {
       const targetFighter = effect.target === "self" ? actor : target;
       applyStatus(targetFighter, effect);
       action.status = effect.id;
-      lines.push(`${enemyId} applied ${effect.id}`);
+      action.statusText = statusLog(effect);
+      lines.push(`${enemyId} applied ${statusLog(effect)}`);
     }
     if (effect.type === "typed_status") {
       const targetFighter = effect.target === "self" ? actor : target;
       applyTypedStatus(targetFighter, effect);
       action.status = effect.kind;
+      action.statusText = effect.kind;
       lines.push(`${enemyId} applied ${effect.kind}`);
     }
     if (effect.type === "summon") {
@@ -561,10 +591,10 @@ function executeEnemySkill(state, battle, skill, actor, target, enemyId) {
 }
 
 function executeSkill(state, battle, skill, player, foe, traits) {
-  battle.skillUses[skill.id] = (battle.skillUses[skill.id] ?? 0) + 1;
   if (skillRequiresAccuracy(skill) && Math.random() * 100 > Math.max(8, getBattleStat(player, "ACC") - getBattleStat(foe, "EVA"))) {
     return { skillId: skill.id, text: `${skill.id} missed.`, damage: 0, heal: 0, miss: true, crit: false, block: false, status: null };
   }
+  battle.skillUses[skill.id] = (battle.skillUses[skill.id] ?? 0) + 1;
 
   const action = { skillId: skill.id, text: "", damage: 0, heal: 0, miss: false, crit: false, block: false, status: null };
   const lines = [];
@@ -577,7 +607,8 @@ function executeSkill(state, battle, skill, player, foe, traits) {
         const rawDamage = Math.max(1, Math.round(base + extraBase));
         const result = dealDamage(foe, rawDamage, { shieldBreak: effect.shieldBreak ?? 6, aoe: effect.aoe });
         action.damage += result.hpDamage;
-        lines.push(`${skill.id} dealt ${result.hpDamage} absolute damage${result.shieldAbsorbed ? " after shield" : ""}`);
+        action.shieldAbsorbed = (action.shieldAbsorbed ?? 0) + result.shieldAbsorbed;
+        lines.push(`${skill.id} dealt ${result.hpDamage} absolute damage${result.shieldAbsorbed ? `; shield absorbed ${result.shieldAbsorbed}` : ""}`);
         if (effect.lifeSteal) {
           const stolen = applyHeal(player, Math.round(result.hpDamage * effect.lifeSteal), { overheal: false });
           action.heal += stolen;
@@ -598,7 +629,8 @@ function executeSkill(state, battle, skill, player, foe, traits) {
       action.damage += result.hpDamage;
       action.crit = action.crit || crit;
       action.block = action.block || result.shieldAbsorbed > 0;
-      lines.push(`${skill.id} dealt ${result.hpDamage}${crit ? " critical" : ""} damage${result.shieldAbsorbed ? " after shield" : ""}`);
+      action.shieldAbsorbed = (action.shieldAbsorbed ?? 0) + result.shieldAbsorbed;
+      lines.push(`${skill.id} dealt ${result.hpDamage}${crit ? " critical" : ""} damage${result.shieldAbsorbed ? `; shield absorbed ${result.shieldAbsorbed}` : ""}`);
       if (effect.lifeSteal) {
         const stolen = applyHeal(player, Math.round(result.hpDamage * effect.lifeSteal), { overheal: false });
         action.heal += stolen;
@@ -618,11 +650,13 @@ function executeSkill(state, battle, skill, player, foe, traits) {
     if (effect.type === "guard") {
       player.guard += effect.amount;
       action.block = true;
+      action.shieldGained = (action.shieldGained ?? 0) + effect.amount;
       lines.push(`${skill.id} gained ${effect.amount} block`);
     }
     if (effect.type === "shield") {
       const gained = applyShield(player, effect);
       action.block = true;
+      action.shieldGained = (action.shieldGained ?? 0) + gained;
       lines.push(`${skill.id} gained ${gained} shield`);
     }
     if (effect.type === "dispel") {
@@ -642,12 +676,14 @@ function executeSkill(state, battle, skill, player, foe, traits) {
       const targetFighter = effect.target === "self" ? player : foe;
       applyStatus(targetFighter, effect);
       action.status = effect.id;
-      lines.push(`${skill.id} applied ${effect.id}`);
+      action.statusText = statusLog(effect);
+      lines.push(`${skill.id} applied ${statusLog(effect)}`);
     }
     if (effect.type === "typed_status") {
       const targetFighter = effect.target === "self" ? player : foe;
       applyTypedStatus(targetFighter, effect);
       action.status = effect.kind;
+      action.statusText = effect.kind;
       lines.push(`${skill.id} applied ${effect.kind}`);
     }
     if (effect.type === "summon") {

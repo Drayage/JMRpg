@@ -3,6 +3,8 @@
   "scripts": {
     "check": "node --check js/main.js",
     "crawl:rpgkr-jobs": "node scripts/crawl-rpgkr-jobs.mjs",
-    "test:parser": "node tests/rpgkr-job-parser.test.mjs"
+    "test:parser": "node tests/rpgkr-job-parser.test.mjs",
+    "test:combat": "node tests/combat-skill-rules.test.mjs",
+    "test:combat:audit": "node tests/combat-skill-engine-audit.test.mjs"
   }
 }

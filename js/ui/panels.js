@@ -236,8 +236,7 @@ function battleTimelineEntry(entry) {
         ${entry.heal ? tag(`${ko.ui.heal} ${entry.heal}`, "ok") : ""}
         ${entry.miss ? tag(ko.ui.miss) : ""}
         ${entry.crit ? tag(ko.ui.crit, "danger") : ""}
-        ${entry.block ? tag(ko.ui.block, "ok") : ""}
-        ${entry.status ? tag(`${ko.ui.statusEffect}: ${entry.status}`, "warn") : ""}
+        ${entry.statusText ? tag(displayLabel(entry.statusText), "warn") : entry.status ? tag(displayLabel(entry.status), "warn") : ""}
       </div>
     </div>
   `;
@@ -267,8 +266,7 @@ function battlePanel(state) {
         ${action.heal ? tag(`${ko.ui.heal} ${action.heal}`, "ok") : ""}
         ${action.miss ? tag(ko.ui.miss) : ""}
         ${action.crit ? tag(ko.ui.crit, "danger") : ""}
-        ${action.block ? tag(ko.ui.block, "ok") : ""}
-        ${action.status ? tag(`${ko.ui.statusEffect}: ${action.status}`, "warn") : ""}
+        ${action.statusText ? tag(displayLabel(action.statusText), "warn") : action.status ? tag(displayLabel(action.status), "warn") : ""}
       </div>
     </div>
     <div class="stack">
@@ -484,7 +482,7 @@ function formatStatDelta(key, value) {
 
 function skillFeatureTags(skill) {
   const features = [];
-  if (skill.id !== "basic_attack" && skill.type === "active" && skill.apCost === 0 && skill.chance >= 1) {
+  if (skill.basicAttackReplacement) {
     features.push(tag(ko.ui.basicAttackReplacement ?? "Basic Attack Replacement", "ok"));
   }
   if (skill.priority) {
@@ -535,10 +533,38 @@ function fighterBox(name, fighter, tone) {
         ${Object.entries(fighter.typedStatuses ?? {}).map(([id, status]) => tag(`${displayLabel(id)} ${status.amount}${status.turns ? `/${status.turns}T` : ""}`, "warn")).join("")}
         ${(fighter.summons ?? []).length ? tag(`${ko.effects?.summon ?? "소환"} ${(fighter.summons ?? []).length}`, "ok") : ""}
         ${Object.entries(fighter.resources ?? {}).filter(([, value]) => value > 0).map(([id, value]) => tag(`${displayLabel(id)} ${value}`, "ok")).join("")}
-        ${(fighter.statuses ?? []).map((status) => tag(`${displayLabel(status.id)} ${status.permanent ? ko.ui.battleLong : status.turns}`, "warn")).join("")}
+        ${(fighter.statuses ?? []).map((status) => tag(statusLabel(status), "warn")).join("")}
       </div>
     </div>
   `;
+}
+
+function statModsText(statMods = {}) {
+  return Object.entries(statMods)
+    .map(([key, value]) => `${key} ${value > 0 ? "+" : ""}${value}`)
+    .join(", ");
+}
+
+function durationText(effect) {
+  if (effect.afterBattle || effect.outOfBattle || effect.globalPermanent) {
+    return " 영구";
+  }
+  if (effect.permanent) {
+    return "";
+  }
+  return ` ${effect.turns ?? 1}T`;
+}
+
+function statusLabel(status) {
+  const stats = statModsText(status.statMods);
+  const parts = [];
+  if (stats) parts.push(stats);
+  if (status.damageMultiplier && status.damageMultiplier !== 1) parts.push(`DMG x${status.damageMultiplier}`);
+  if (status.damageTakenMultiplier && status.damageTakenMultiplier !== 1) parts.push(`Taken x${status.damageTakenMultiplier}`);
+  if (status.defenseMultiplier && status.defenseMultiplier !== 1) parts.push(`DEF x${status.defenseMultiplier}`);
+  if (status.skillChanceMultiplier && status.skillChanceMultiplier !== 1) parts.push(`Skill chance x${status.skillChanceMultiplier}`);
+  if (parts.length) return `${parts.join(", ")}${durationText(status)}`;
+  return `${displayLabel(status.id)}${durationText(status)}`;
 }
 
 function statusEffectText(effect) {
@@ -578,24 +604,7 @@ function statusEffectText(effect) {
   if (effect.type === "stat_tradeoff") {
     return `${ko.effects?.stat_tradeoff ?? "능력치 전환"} ${Object.entries(effect.statMods ?? {}).map(([key, value]) => `${ko.stats[key] ?? key}${value > 0 ? "+" : ""}${value}`).join(", ")}`;
   }
-  const parts = [`${effect.id} ${effect.permanent ? (ko.ui.battleLong ?? "battle-long") : `${effect.turns ?? 1}T`}`];
-  if (effect.damageMultiplier && effect.damageMultiplier !== 1) {
-    parts.push(`DMG x${effect.damageMultiplier}`);
-  }
-  if (effect.damageTakenMultiplier && effect.damageTakenMultiplier !== 1) {
-    parts.push(`Taken x${effect.damageTakenMultiplier}`);
-  }
-  if (effect.defenseMultiplier && effect.defenseMultiplier !== 1) {
-    parts.push(`DEF x${effect.defenseMultiplier}`);
-  }
-  if (effect.skillChanceMultiplier && effect.skillChanceMultiplier !== 1) {
-    parts.push(`Skill chance x${effect.skillChanceMultiplier}`);
-  }
-  const stats = Object.entries(effect.statMods ?? {}).map(([key, value]) => `${key}${value > 0 ? "+" : ""}${value}`);
-  if (stats.length) {
-    parts.push(stats.join(", "));
-  }
-  return parts.join(" ");
+  return statusLabel(effect);
 }
 
 function choicePreviewTags(choice, state) {
@@ -845,10 +854,12 @@ function formatLogText(text) {
     output = replaceToken(output, id, label);
   }
   output = output
+    .replace(/;\s*shield absorbed (\d+)/g, " (보호막 $1 흡수)")
     .replace(/\bused\b/g, "사용")
     .replace(/\bdealt\b/g, "피해")
     .replace(/\bfor\b/g, "")
     .replace(/\bdamage\b/g, "피해")
+    .replace(/\babsolute\b/g, "절대")
     .replace(/\bcritical\b/g, "치명타")
     .replace(/\bmissed\b/g, "빗나감")
     .replace(/\brecovered\b/g, "회복")
@@ -856,12 +867,16 @@ function formatLogText(text) {
     .replace(/\bgained\b/g, "획득")
     .replace(/\bblock\b/g, "보호막")
     .replace(/\bshield\b/g, "보호막")
-    .replace(/\bafter\b/g, "후");
+    .replace(/\babsorbed\b/g, "흡수")
+    .replace(/\bapplied\b/g, "부여")
+    .replace(/\bstole\b/g, "흡혈")
+    .replace(/\bafter\b/g, "후")
+    .replace(/피해 (\d+) 피해/g, "$1 피해");
   return output;
 }
 
 function replaceToken(text, token, label) {
-  const escaped = token.replace(/[.*+?^${}()|[]\]/g, "\\$&");
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return text.replace(new RegExp(`(^|[^A-Za-z0-9_])(${escaped})(?=$|[^A-Za-z0-9_])`, "g"), `$1${label}`);
 }
 

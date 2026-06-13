@@ -96,12 +96,21 @@ app.addEventListener("click", (event) => {
 redraw();
 
 async function runVisibleBattle() {
+  let safetySteps = 0;
   while (state.battle && !state.battle.finished) {
     runBattleStep(state, state.battle);
     redraw();
+    safetySteps += 1;
+    if (safetySteps > 1000) {
+      state.battle.finished = true;
+      state.battle.won = false;
+      state.log.unshift({ type: "error", text: `Battle stopped after ${safetySteps} visible steps.` });
+      break;
+    }
     await waitForBattleSpeed();
   }
   finishBattleAction(state);
+  state.busy = false;
   redraw();
 }
 

@@ -40,7 +40,7 @@ export function getEffectiveActivationChance(state, skillId) {
   }
   const base = skill.chance ?? 1;
   const onTheme = isSkillOnTheme(state, skill);
-  const jobBonus = onTheme ? 0.07 : -0.04;
+  const jobBonus = onTheme ? 0.03 : -0.05;
   const relicBonus = getRelicActivationBonus(state, skill, { offTheme: !onTheme });
   return Math.max(0.05, Math.min(0.95, base + jobBonus + relicBonus));
 }
