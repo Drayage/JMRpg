@@ -47,14 +47,14 @@ const trainingDummy = monsters.training_dummy ?? Object.values(monsters)[0];
 }
 
 {
-  const state = makeState("destroyer", ["destroyer_core"]);
+  const state = makeState("destroyer", ["destroyer_init"]);
   const battle = createBattle(state, trainingDummy);
   battle.order = ["player"];
   battle.foe.guard = 10;
   const action = withRandomSequence([0, 0, 0.99], () => runBattleStep(state, battle));
-  assert.equal(action.skillId, "destroyer_core");
+  assert.equal(action.skillId, "destroyer_init");
   assert.equal(action.miss, true);
-  assert.equal(battle.skillUses.destroyer_core ?? 0, 0);
+  assert.equal(battle.skillUses.destroyer_init ?? 0, 0);
 }
 
 {

@@ -615,7 +615,8 @@ function executeEnemySkill(state, battle, skill, actor, target, enemyId) {
 }
 
 function executeSkill(state, battle, skill, player, foe, traits) {
-  if (skillRequiresAccuracy(skill) && Math.random() * 100 > Math.max(8, getBattleStat(player, "ACC") - getBattleStat(foe, "EVA"))) {
+  const guaranteedHit = skill.effects?.some((e) => e.guaranteedHit);
+  if (!guaranteedHit && skillRequiresAccuracy(skill) && Math.random() * 100 > Math.max(8, getBattleStat(player, "ACC") - getBattleStat(foe, "EVA") + (skill.hitBonus ?? 0))) {
     return { skillId: skill.id, text: `${skill.id} missed.`, damage: 0, heal: 0, miss: true, crit: false, block: false, status: null };
   }
   battle.skillUses[skill.id] = (battle.skillUses[skill.id] ?? 0) + 1;
@@ -888,9 +889,13 @@ function applyShield(fighter, effect) {
 }
 
 function applyTypedStatus(fighter, effect) {
-  const target = effect.target === "self" ? fighter : fighter;
-  const current = target.typedStatuses[effect.kind] ?? { amount: 0, turns: effect.turns ?? null };
-  target.typedStatuses[effect.kind] = {
+  let kind = effect.kind;
+  if (kind === "element_random") {
+    const elements = ["burn", "freeze", "shock", "fracture"];
+    kind = elements[Math.floor(Math.random() * elements.length)];
+  }
+  const current = fighter.typedStatuses[kind] ?? { amount: 0, turns: effect.turns ?? null };
+  fighter.typedStatuses[kind] = {
     amount: current.amount + Math.max(0, Math.round(effect.amount ?? 0)),
     turns: effect.turns === null || effect.turns === undefined ? null : Math.max(current.turns ?? 0, effect.turns)
   };
@@ -1184,6 +1189,20 @@ function getDamageExtraBase(actor, target, effect) {
   if (effect.pdToPa) {
     extra += getBattleStat(actor, "PD") * effect.pdToPa;
   }
+  if (effect.maxHpPower) {
+    extra += actor.stats.HP * effect.maxHpPower;
+  }
+  if (effect.evadeBonusPower) {
+    extra += getBattleStat(actor, "EVA") * effect.evadeBonusPower;
+  }
+  if (effect.runeCountPower) {
+    extra += actor.runes.length * effect.runeCountPower * getBattleStat(actor, "MA");
+  }
+  if (effect.elementResonancePower) {
+    const elements = ["burn", "freeze", "shock", "fracture"];
+    const count = elements.filter((e) => getTypedStatus(target, e)).length;
+    extra += count * effect.elementResonancePower * getBattleStat(actor, "MA");
+  }
   return extra;
 }
 
@@ -1214,6 +1233,9 @@ function conditionMet(skill, player, foe, battle) {
   }
   if (skill.condition.type === "self_has_status") {
     return Boolean(getTypedStatus(player, skill.condition.kind));
+  }
+  if (skill.condition.type === "has_summon") {
+    return player.summons.length > 0;
   }
   return true;
 }

@@ -32,6 +32,7 @@ const allowedConditions = new Set([
   "enemy_hp_above",
   "enemy_hp_below",
   "has_resource",
+  "has_summon",
   "target_has_status",
   "target_has_shield",
   "self_has_status"
@@ -100,6 +101,8 @@ function prepareCondition(skill, battle) {
     battle.foe.guard = (condition.amount ?? 0) + 10;
   } else if (condition.type === "self_has_status") {
     battle.player.typedStatuses[condition.kind] = { amount: 10, turns: 3 };
+  } else if (condition.type === "has_summon") {
+    battle.player.summons.push({ id: "audit_summon", role: "striker", hp: 100, maxHp: 100, stat: "MA", power: 20, cadence: 1, share: 0.3, contract: false });
   }
 }
 

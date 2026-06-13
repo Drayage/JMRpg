@@ -139,7 +139,7 @@ export const skills = {
 function makeManualSkill(job, stage) {
   const base = {
     id: `${job.id}_${stage}`,
-    type: stage === "init" ? "active" : "special",
+    type: "active",
     apCost: manualApCost(job, stage),
     chance: manualBaseChance(job, stage),
     priority: stage !== "init",
@@ -149,84 +149,247 @@ function makeManualSkill(job, stage) {
     effects: []
   };
   if (job.tier === 1) return makeTierOneSkill(job, stage, base);
-  if (has(job, "low_hp")) return skillFromSet(base, stage, [
-    [damage("PA", 1.08, { missingHpPower: 0.75 }), sacrifice(0.03)],
-    [status("rage_heat", "self", 999, { permanent: true, statMods: { PA: 5, MA: -2 }, damageMultiplier: 1.08 })],
-    [damage("PA", 1.35, { missingHpPower: 1.55, lowMaPower: 0.015 }), sacrifice(0.06)]
-  ], { art: { condition: { type: "hp_below", value: 0.58 } } });
-  if (has(job, "swordsmanship")) return skillFromSet(base, stage, [
-    [damage("PA", 0.86, { swordsmanshipPower: 0.05 }), resource("swordsmanship", 1)],
-    [resource("swordsmanship", 3), status("trained_edge", "self", 999, { permanent: true, statMods: { ACC: 3, PA: 1 } })],
-    [damage("PA", 1.0, { swordsmanshipPower: 0.12 })]
+
+  // ── Tier 3 warrior line ────────────────────────────────────────────────
+  if (job.id === "berserker") return skillFromSet(base, stage, [
+    [damage("PA", 1.1, { missingHpPower: 0.65 })],
+    [passive({ PA: 8, HP: 15, MA: -3 })],
+    [sacrifice(0.07), status("rage_surge", "self", 2, { damageMultiplier: 1.4 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "swordsman") return skillFromSet(base, stage, [
+    [damage("PA", 1.0)],
+    [passive({ PA: 6, ACC: 8 })],
+    [damage("PA", 1.0), damage("PA", 1.0)]
+  ], {
+    init: { apCost: 0, chance: 1, priority: false, basicAttackReplacement: true, hitBonus: 25 },
+    art: { maxUses: 1, hitBonus: 25 }
+  });
+
+  if (job.id === "destroyer") return skillFromSet(base, stage, [
+    [damage("PA", 0.95, { shieldBreak: 20 })],
+    [passive({ PA: 8, ACC: 6 })],
+    [status("defense_break", "foe", 999, { permanent: true, statMods: { PD: -18 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "guardian_knight") return skillFromSet(base, stage, [
+    [damage("PA", 0.9)],
+    [passive({ PD: 10, HP: 18, CRT: -4 })],
+    [shield(30, "PD", 0.55)]
   ]);
-  if (has(job, "shield_break")) return skillFromSet(base, stage, [
-    [damage("PA", 0.9, { shieldBreak: 16, shieldPower: 0.4 })],
-    [damage("PA", 1.05, { shieldBreak: 28, shieldPower: 0.8 }), typedStatus("fracture", 5, 3)],
-    [damage("PA", 1.06, { targetStatus: "fracture", targetStatusPower: 1.5 }), typedStatus("fracture", 4, 3)]
-  ], { core: { condition: { type: "target_has_shield", amount: 0 } } });
-  if (has(job, "absolute") && has(job, "pd_to_pa")) return skillFromSet(base, stage, [
-    [damage("PD", 0.86, { absolute: true, pdToPa: 0.25 })],
-    [status("dragon_shift", "self", 3, { statMods: { PA: 6, PD: -2 }, damageMultiplier: 1.08 })],
-    [damage("PD", 1.08, { absolute: true, pdToPa: 0.75 }), damage("PA", 0.55, { absolute: true })]
+
+  if (job.id === "dragon_knight") return skillFromSet(base, stage, [
+    [damage("PA", 1.0)],
+    [passive({ PD: 8, PA: 5 })],
+    [statTradeoff({ PD: -10, PA: 12 }, { id: "dragon_form", turns: 3, permanent: false })]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 3 rogue line ──────────────────────────────────────────────────
+  if (job.id === "salsoo") return skillFromSet(base, stage, [
+    [damage("PA", 1.0, { inverseCrit: true, inverseCritBase: 44, inverseCritFloor: 8 })],
+    [passive({ CRD: 18, CRT: -8 })],
+    [status("sharp_focus", "self", 999, { permanent: true, statMods: { CRT: -8, CRD: 28 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "blade_dancer") return skillFromSet(base, stage, [
+    [damage("PA", 0.78, { evadeBonusPower: 0.18 })],
+    [passive({ EVA: 8, SPD: 5 })],
+    [status("phantom_step", "self", 1, { statMods: { EVA: 50 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "bard") return skillFromSet(base, stage, [
+    [damage("EVA", 0.7), status("melody_drain", "self", 1, { statMods: { EVA: -5 } })],
+    [passive({ EVA: 7, SPD: 4 })],
+    [status("harmony", "self", 3, { statMods: { EVA: 15 } })]
   ]);
+
+  if (job.id === "cutthroat") return skillFromSet(base, stage, [
+    [damage("PA", 0.9, { enemyCurrentHpPower: 0.09, critBonus: 6 })],
+    [passive({ PA: 5, CRT: 8 })],
+    [damage("PA", 1.08, { enemyCurrentHpPower: 0.13, critBonus: 10 }), typedStatus("bleed", 5, 3)]
+  ], {
+    init: { maxUses: 1, chance: 1.0, condition: { type: "enemy_hp_above", value: 0.75 } },
+    art: { condition: { type: "enemy_hp_above", value: 0.5 } }
+  });
+
+  // ── Tier 3 archer line ─────────────────────────────────────────────────
+  if (job.id === "executioner") return skillFromSet(base, stage, [
+    [damage("PA", 0.9, { enemyMissingHpPower: 0.12 })],
+    [passive({ ACC: 8, CRD: 12 })],
+    [damage("PA", 1.15, { guaranteedHit: true, enemyMissingHpPower: 0.25 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "loader_engineer") return skillFromSet(base, stage, [
+    [damage("ACC", 0.08), status("rapid_fire", "self", 999, { permanent: true, stack: true, statMods: { ACC: 6 } }), extraAction(0.3, 3)],
+    [passive({ ACC: 10, SPD: 4 })],
+    [status("reload_boost", "self", 999, { permanent: true, statMods: { ACC: 22 } }), extraAction(1.0, 1)]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "beast_lord") return skillFromSet(base, stage, [
+    [summon("beast_lord_beast", "striker", 1, { stat: "ACC", elite: true })],
+    [passive({ ACC: 8, SPD: 5 })],
+    [damage("ACC", 0.14, { enemyMissingHpPower: 0.18 })]
+  ], {
+    init: { maxUses: 1 },
+    art: { condition: { type: "has_summon" } }
+  });
+
+  // ── Cook line (tier 2 & 3) ─────────────────────────────────────────────
+  if (job.id === "cook") return skillFromSet(base, stage, [
+    [damage("PA", 0.7, { currentHpPower: 0.12 })],
+    [passive({ HP: 20, PD: 4, EVA: -3 })],
+    [heal("HP", 0.18, { overheal: true })]
+  ]);
+
+  if (job.id === "chef") return skillFromSet(base, stage, [
+    [damage("PA", 0.78, { currentHpPower: 0.14 })],
+    [passive({ HP: 26, PD: 5, EVA: -4 })],
+    [heal("HP", 0.22, { overheal: true })]
+  ]);
+
+  // ── Tier 3 cleric line ─────────────────────────────────────────────────
+  if (job.id === "pure_priest") return skillFromSet(base, stage, [
+    [heal("MA", 2.2, { maxHpRatio: 0.06 })],
+    [passive({ MA: 7, MD: 8 })],
+    [typedStatus("regeneration", 12, 5, { target: "self" })]
+  ], { init: { condition: { type: "hp_below", value: 0.55 }, minChance: 0.1, repeatChancePenalty: 0.08 } });
+
+  if (job.id === "dark_priest") return skillFromSet(base, stage, [
+    [status("corruption_aura", "self", 999, { permanent: true, statMods: { MA: 5 }, damageMultiplier: 1.22 }), resource("corruption", 1)],
+    [passive({ MA: 10 })],
+    [damage("MA", 1.1, { lifeSteal: 0.15 }), typedStatus("decay", 8, 4)]
+  ], {
+    init: { maxUses: 1 },
+    art: { condition: { type: "has_resource", key: "corruption", amount: 1 } }
+  });
+
+  if (job.id === "skeleton") return skillFromSet(base, stage, [
+    [damage("MA", 0.85)],
+    [passive({ HP: 18, MA: 5 })],
+    [sacrifice(0.12), damage("HP", 0.0, { maxHpPower: 0.15 })]
+  ]);
+
+  if (job.id === "skeleton_warrior") return skillFromSet(base, stage, [
+    [damage("MA", 0.9)],
+    [passive({ HP: 28, MA: 5 })],
+    [sacrifice(0.14), damage("HP", 0.0, { maxHpPower: 0.18 })]
+  ]);
+
+  // ── Tier 3 mage line ───────────────────────────────────────────────────
+  if (job.id === "elementalist") return skillFromSet(base, stage, [
+    [damage("MA", 0.85), typedStatus("element_random", 5, 3)],
+    [passive({ MA: 8, MD: 6 })],
+    [damage("MA", 1.2, { elementResonancePower: 0.15 })]
+  ]);
+
+  if (job.id === "rune_mage") return skillFromSet(base, stage, [
+    [rune("rune_mage_inscription", "after_damage", [damage("MA", 0.5)])],
+    [passive({ MA: 8, HP: 12 })],
+    [damage("MA", 1.0, { runeCountPower: 0.08 })]
+  ]);
+
+  if (job.id === "warlock") return skillFromSet(base, stage, [
+    [sacrifice(0.05), damage("MA", 1.35)],
+    [passive({ MA: 10, HP: 12 })],
+    [damage("MA", 0.95, { lifeSteal: 0.35 })]
+  ]);
+
+  if (job.id === "fate_weaver") return skillFromSet(base, stage, [
+    [damage("MA", 0.75), typedStatus("misfortune", 5, 3)],
+    [passive({ CRT: 7, EVA: 6 })],
+    [status("fate_reversal", "self", 2, { statMods: { CRD: 40 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "hexer") return skillFromSet(base, stage, [
+    [damage("MA", 0.78), typedStatus("decay", 6, 4)],
+    [passive({ MA: 8, SPD: 5 })],
+    [status("grand_curse", "foe", 999, { permanent: true, defenseMultiplier: 0.78 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "legion_mage") return skillFromSet(base, stage, [
+    [summon("legion_mage_unit", "legion", 1, { stat: "MA" })],
+    [passive({ MA: 7, HP: 12 })],
+    [status("guardian_order", "self", 3, { statMods: { PD: 10, MD: 8 } })]
+  ]);
+
+  // ── Tier 3 contract jobs ───────────────────────────────────────────────
+  if (job.id === "wolf_contract") return skillFromSet(base, stage, [
+    [summon("wolf_contract_wolf", "striker", 1, { stat: "SPD", contract: true })],
+    [passive({ SPD: 8, EVA: 6 })],
+    [status("wolf_speed", "self", 2, { statMods: { SPD: 14 } }), extraAction(0.7, 2)]
+  ]);
+
+  if (job.id === "bear_contract") return skillFromSet(base, stage, [
+    [summon("bear_contract_bear", "tank", 1, { stat: "HP", contract: true })],
+    [passive({ HP: 26, PD: 7 })],
+    [status("bear_stance", "self", 2, { statMods: { PD: 16 }, defenseMultiplier: 1.2 })]
+  ]);
+
+  if (job.id === "fire_spirit_contract") return skillFromSet(base, stage, [
+    [summon("fire_spirit_contract_spirit", "striker", 1, { stat: "MA", contract: true })],
+    [passive({ MA: 12 })],
+    [damage("MA", 1.0), typedStatus("burn", 8, 3)]
+  ]);
+
+  if (job.id === "earth_spirit_contract") return skillFromSet(base, stage, [
+    [summon("earth_spirit_contract_spirit", "tank", 1, { stat: "MA", contract: true })],
+    [passive({ PD: 8, MA: 7 })],
+    [damage("MA", 0.85), typedStatus("fracture", 7, 3), status("earth_pact", "self", 2, { statMods: { PD: 12 } })]
+  ]);
+
+  if (job.id === "demon_contract") return skillFromSet(base, stage, [
+    [summon("demon_contract_demon", "striker", 1, { stat: "MA", contract: true })],
+    [passive({ MA: 12, HP: 16 })],
+    [sacrifice(0.1), damage("MA", 1.3, { lifeSteal: 0.3 })]
+  ]);
+
+  if (job.id === "dragon_contract") return skillFromSet(base, stage, [
+    [summon("dragon_contract_dragon", "tank", 1, { stat: "PD", contract: true })],
+    [passive({ PA: 6, MA: 8 })],
+    [damage("PA", 0.75), damage("MA", 0.75)]
+  ]);
+
+  if (job.id === "special_contract") return skillFromSet(base, stage, [
+    [summon("special_contract_entity", "striker", 1, { stat: "MA", contract: true })],
+    [passive({ MA: 5, CRT: 5, SPD: 5 })],
+    [damage("MA", 1.0, { critBonus: 12 }), typedStatus("misfortune", 3, 2)]
+  ]);
+
+  // ── Tier 2 specific overrides ──────────────────────────────────────────
+  if (job.id === "assassin") return skillFromSet(base, stage, [
+    [damage("PA", 0.88, { enemyCurrentHpPower: 0.1, critBonus: 8 })],
+    [passive({ PA: 5, CRT: 7 })],
+    [damage("PA", 1.0, { enemyCurrentHpPower: 0.12, critBonus: 6 }), typedStatus("bleed", 5, 3)]
+  ], {
+    init: { maxUses: 1, chance: 1.0, condition: { type: "enemy_hp_above", value: 0.8 } },
+    art: { condition: { type: "enemy_hp_above", value: 0.5 } }
+  });
+
+  if (job.id === "dancer") return skillFromSet(base, stage, [
+    [damage("EVA", 0.72)],
+    [passive({ EVA: 6, SPD: 4 })],
+    [status("flow_step", "self", 2, { statMods: { EVA: 10 } }), extraAction(0.32, 2)]
+  ]);
+
+  // ── Theme-based fallback for remaining tier 2 jobs ─────────────────────
   if (has(job, "absolute") || has(job, "shield") || has(job, "pd")) return skillFromSet(base, stage, [
     [damage("PD", 0.78, { absolute: canUseAbsoluteDamage(job) }), shield(4 + job.tier, "PD", 0.28)],
     [shield(8 + job.tier * 2, "PD", 0.5), statTradeoff({ CRT: -4, PD: 5, PA: 1 }, { id: `${job.id}_guard_oath` })],
     [damage("PD", 1.1, { absolute: canUseAbsoluteDamage(job), shieldPower: 0.45 }), shield(6 + job.tier, "PD", 0.3)]
-  ]);
-  if (has(job, "enemy_current_hp")) return skillFromSet(base, stage, [
-    [damage("PA", 0.88, { enemyCurrentHpPower: 0.08, critBonus: 4 }), typedStatus("bleed", 4, 3)],
-    [passive({ CRT: 6, CRD: 8, SPD: 2 })],
-    [damage("PA", 1.08, { enemyCurrentHpPower: 0.14, critBonus: 8 }), typedStatus("bleed", 6, 3)]
-  ], { init: { condition: { type: "enemy_hp_above", value: 0.5 } }, art: { condition: { type: "target_has_status", kind: "bleed" } } });
-  if (has(job, "reverse_crit")) return skillFromSet(base, stage, [
-    [damage("PA", 0.98, { inverseCrit: true, inverseCritBase: 42, inverseCritFloor: 8 }), typedStatus("bleed", 3, 2)],
-    [passive({ CRT: -8, CRD: 22, PA: 2 }, { id: "reverse_edge" })],
-    [damage("PA", 1.25, { inverseCrit: true, inverseCritBase: 55, inverseCritFloor: 12, critBonus: 6 })]
   ]);
   if (has(job, "rhythm")) return skillFromSet(base, stage, [
     [damage("EVA", 0.65), resource("rhythm", 1)],
     [resource("rhythm", 3), status("chorus", "self", 999, { permanent: true, stack: true, statMods: { EVA: 2, ACC: 1 } })],
     [damage("EVA", 1.05, { resourceKey: "rhythm", resourcePower: 0.08 }), clearResource("rhythm")]
   ], { art: { condition: { type: "has_resource", key: "rhythm", amount: 3 } } });
-  if (has(job, "evasion")) return skillFromSet(base, stage, [
-    [damage("EVA", 0.82), status("flow_step", "self", 2, { statMods: { EVA: 2 } })],
-    [passive({ EVA: 5, PA: 2 })],
-    [damage("EVA", 1.16, { critBonus: 8 }), extraAction(0.22, 3)]
-  ]);
   if (has(job, "predation") || has(job, "enemy_missing_hp")) return skillFromSet(base, stage, [
     [damage("ACC", 0.1), resource("mark", 1), status("aiming", "self", 999, { permanent: true, stack: true, statMods: { ACC: 8 } })],
     [resource("mark", 2), status("hunter_patience", "self", 999, { permanent: true, statMods: { ACC: 10, SPD: 2 } })],
     [damage("ACC", 0.16, { enemyMissingHpPower: 0.2, resourceKey: "mark", resourcePower: 0.03 }), clearResource("mark")]
   ], { art: { maxUses: 1, condition: { type: "enemy_hp_below", value: 0.45 } } });
-  if (has(job, "extra_action")) return skillFromSet(base, stage, [
-    [damage("ACC", 0.08), status("calibrated_reload", "self", 999, { permanent: true, stack: true, statMods: { ACC: 8 } })],
-    [damage("ACC", 0.08), status("calibrated_reload", "self", 999, { permanent: true, stack: true, statMods: { ACC: 6 } }), extraAction(0.42, 5)],
-    [damage("ACC", 0.12, { resourceKey: "mark", resourcePower: 0.03 }), status("calibrated_reload", "self", 999, { permanent: true, stack: true, statMods: { ACC: 6 } }), extraAction(0.35, 5)]
-  ]);
   if (has(job, "summon")) return makeSummonSkill(job, stage, base);
-  if (has(job, "food")) return skillFromSet(base, stage, [
-    [damage("HP", 0.055, { currentHpPower: 0.12, lowEvaPower: 1.4 }), heal("HP", 0.06, { overheal: true })],
-    [heal("HP", 0.14, { overheal: true }), statTradeoff({ EVA: -3, HP: 6, PD: 2 }, { id: `${job.id}_full_stomach` })],
-    [damage("HP", 0.085, { currentHpPower: 0.2, lowEvaPower: 2.5 })]
-  ]);
   if (has(job, "heal")) return makeHealSkill(job, stage, base);
-  if (has(job, "max_hp") || has(job, "hp_cost")) return skillFromSet(base, stage, [
-    [damage("HP", 0.06, { currentHpPower: 0.12 }), sacrifice(0.02)],
-    [statTradeoff({ HP: 10, PA: 2, EVA: -2 }, { id: `${job.id}_bone_frame` })],
-    [damage("HP", 0.095, { currentHpPower: 0.2 }), sacrifice(0.05)]
-  ], { art: { condition: { type: "hp_below", value: 0.75 } } });
   if (has(job, "decay") || has(job, "curse") || has(job, "weaken")) return makeCurseSkill(job, stage, base);
-  if (has(job, "rune")) return skillFromSet(base, stage, [
-    [damage("MA", 0.65), rune(`${job.id}_spark_rune`, "after_damage", [damage("MA", 0.4)], { maxInstalled: 100 })],
-    [rune(`${job.id}_ward_rune`, "on_hit", [shield(6, "MA", 0.2)], { maxInstalled: 100 })],
-    [rune(`${job.id}_collapse_rune`, "turn_end", [damage("MA", 0.75), typedStatus("shock", 3, 2)], { maxInstalled: 100 })]
-  ]);
-  if (has(job, "life_cost")) return skillFromSet(base, stage, [
-    [sacrifice(0.04), damage("MA", 1.05, { lifeSteal: 0.18 })],
-    [status("blood_pact", "self", 999, { permanent: true, statMods: { MA: 6, HP: -4 }, damageMultiplier: 1.08 })],
-    [sacrifice(0.08), damage("MA", 1.35, { lifeSteal: 0.35 })]
-  ], { art: { condition: { type: "hp_below", value: 0.8 } } });
   if (has(job, "magic") || has(job, "element")) return makeMagicSkill(job, stage, base);
   return skillFromSet(base, stage, [
     [damage(coreDamageStat(job), 0.92)],
@@ -241,7 +404,7 @@ function makeTierOneSkill(job, stage, base) {
       [heal("MA", 2.1, { maxHpRatio: 0.06 })],
       [shield(4, "MD", 0.25), status("small_prayer", "self", 999, { permanent: true, statMods: { MD: 3 } })],
       [damage("MA", 0.72)]
-    ], { init: { type: "special", condition: { type: "hp_below", value: 0.5 }, minChance: 0.05, repeatChancePenalty: 0.15 } });
+    ], { init: { condition: { type: "hp_below", value: 0.5 }, minChance: 0.05, repeatChancePenalty: 0.15 } });
   }
   if (job.id === "archer") {
     return skillFromSet(base, stage, [
@@ -391,17 +554,14 @@ function inferSkillType(stage, effects, options = {}) {
   if (isPassiveEffectSet(effects, options)) {
     return "passive";
   }
-  return isSpecialEffectSet(effects, options) ? "special" : "active";
+  return "active";
 }
 
 function inferSkillPriority(stage, effects, options = {}) {
-  if (stage === "init") {
-    return false;
-  }
   if (isPassiveEffectSet(effects, options)) {
     return false;
   }
-  return isSpecialEffectSet(effects, options);
+  return options.maxUses === 1;
 }
 
 function isPassiveEffectSet(effects, options = {}) {
@@ -416,13 +576,6 @@ function getPassiveStats(effect) {
     return effect.statMods ?? {};
   }
   return {};
-}
-
-function isSpecialEffectSet(effects, options = {}) {
-  if (options.type === "special" || options.maxUses === 1) {
-    return true;
-  }
-  return false;
 }
 
 function manualApCost(job, stage) {
