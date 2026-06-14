@@ -321,6 +321,11 @@ function resolveEnemyTurn(state, battle, player, foe, enemyId) {
     pool.splice(index, 1);
   }
 
+  const dodgeStatus = player.statuses.find((s) => s.guaranteedDodge);
+  if (dodgeStatus) {
+    player.statuses = player.statuses.filter((s) => s !== dodgeStatus);
+    return { skillId: null, text: `${enemyId} missed.`, damage: 0, heal: 0, miss: true, crit: false, block: false, status: null };
+  }
   if (Math.random() * 100 > Math.max(12, getBattleStat(foe, "ACC") - getBattleStat(player, "EVA"))) {
     return { skillId: null, text: `${enemyId} missed.`, damage: 0, heal: 0, miss: true, crit: false, block: false, status: null };
   }
@@ -469,6 +474,11 @@ function rollEnemySkill(skill, actor) {
 }
 
 function executeEnemySkill(state, battle, skill, actor, target, enemyId) {
+  const dodgeStatus = target.statuses.find((s) => s.guaranteedDodge);
+  if (dodgeStatus) {
+    target.statuses = target.statuses.filter((s) => s !== dodgeStatus);
+    return { skillId: skill.id, text: `${enemyId} used ${skill.id} but missed.`, damage: 0, heal: 0, miss: true, crit: false, block: false, status: null };
+  }
   if (Math.random() * 100 > Math.max(14, getBattleStat(actor, "ACC") - getBattleStat(target, "EVA") * 0.82)) {
     return { skillId: skill.id, text: `${enemyId} used ${skill.id} but missed.`, damage: 0, heal: 0, miss: true, crit: false, block: false, status: null };
   }
@@ -1027,7 +1037,8 @@ function applyStatus(fighter, effect) {
     damageMultiplier: effect.damageMultiplier ?? 1,
     damageTakenMultiplier: effect.damageTakenMultiplier ?? 1,
     defenseMultiplier: effect.defenseMultiplier ?? 1,
-    skillChanceMultiplier: effect.skillChanceMultiplier ?? 1
+    skillChanceMultiplier: effect.skillChanceMultiplier ?? 1,
+    guaranteedDodge: Boolean(effect.guaranteedDodge)
   };
   const existing = fighter.statuses.find((item) => item.id === status.id);
   if (effect.stack && existing) {

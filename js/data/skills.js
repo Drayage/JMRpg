@@ -122,8 +122,9 @@ for (const job of Object.values(jobs)) {
   for (const stage of ["init", "core", "art"]) generatedSkills[`${job.id}_${stage}`] = makeSkill(job, stage);
 }
 
+const manualTier4Ids = new Set(["paladin", "sage", "spellblade", "shadow_dancer", "poison_hunter", "cursed_berserker", "fire_mage", "frost_mage", "lightning_mage", "earth_mage"]);
 const manualSkills = {};
-for (const job of Object.values(jobs).filter((item) => item.tier <= 3)) {
+for (const job of Object.values(jobs).filter((item) => item.tier <= 3 || manualTier4Ids.has(item.id))) {
   for (const stage of ["init", "core", "art"]) {
     manualSkills[`${job.id}_${stage}`] = makeManualSkill(job, stage);
   }
@@ -353,6 +354,68 @@ function makeManualSkill(job, stage) {
     [summon("special_contract_entity", "striker", 1, { stat: "MA", contract: true })],
     [passive({ MA: 5, CRT: 5, SPD: 5 })],
     [damage("MA", 1.0, { critBonus: 12 }), typedStatus("misfortune", 3, 2)]
+  ]);
+
+  // ── Tier 4 combo jobs ─────────────────────────────────────────────────
+  if (job.id === "paladin") return skillFromSet(base, stage, [
+    [damage("PD", 1.0, { absolute: true })],
+    [heal("MA", 2.2, { maxHpRatio: 0.03 }), resource("judgment", 55, { fromHeal: true })],
+    [consumeResource("judgment", 1.0, { absolute: true, stat: "MD" })]
+  ], { art: { condition: { type: "has_resource", key: "judgment", amount: 30 } } });
+
+  if (job.id === "sage") return skillFromSet(base, stage, [
+    [heal("MA", 2.2, { maxHpRatio: 0.04 }), typedStatus("regeneration", 12, 3, { target: "self" })],
+    [passive({ MA: 7, MD: 8 })],
+    [status("amplified_wisdom", "self", 999, { permanent: true, stack: true, statMods: { MA: 6 }, damageMultiplier: 1.07 })]
+  ]);
+
+  if (job.id === "spellblade") return skillFromSet(base, stage, [
+    [damage("PA", 0.72, { balancePower: 0.045 }), damage("MA", 0.72, { balancePower: 0.045 })],
+    [passive({ PA: 7, MA: 7 })],
+    [status("equilibrium", "self", 3, { statMods: { PA: 8, MA: 8 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "shadow_dancer") return skillFromSet(base, stage, [
+    [damage("EVA", 0.9, { evadeBonusPower: 0.16, critBonus: 8 })],
+    [passive({ EVA: 7, CRT: 7 })],
+    [status("shadow_veil", "self", 1, { guaranteedDodge: true })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "poison_hunter") return skillFromSet(base, stage, [
+    [damage("ACC", 0.08), poison(14)],
+    [passive({ ACC: 8, SPD: 5 })],
+    [damage("ACC", 0.12, { poisonPower: 0.7 }), poison(18)]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "cursed_berserker") return skillFromSet(base, stage, [
+    [damage("PA", 1.1, { missingHpPower: 0.4 }), typedStatus("bleed", 5, 2, { target: "self" })],
+    [passive({ PA: 10, HP: 18 })],
+    [sacrifice(0.12), damage("PA", 1.5)]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 4 elemental specialists ──────────────────────────────────────
+  if (job.id === "fire_mage") return skillFromSet(base, stage, [
+    [damage("MA", 0.95, { aoe: true }), typedStatus("burn", 6, 3)],
+    [passive({ MA: 7, CRT: 4 })],
+    [damage("MA", 1.2, { aoe: true, consumeStatus: "burn", consumeStatusPower: 1.2 }), typedStatus("burn", 7, 3)]
+  ]);
+
+  if (job.id === "frost_mage") return skillFromSet(base, stage, [
+    [damage("MA", 0.88), typedStatus("freeze", 4, 3)],
+    [passive({ MA: 7, MD: 5 })],
+    [damage("MA", 1.05), typedStatus("freeze", 7, 3)]
+  ]);
+
+  if (job.id === "lightning_mage") return skillFromSet(base, stage, [
+    [damage("MA", 1.05), typedStatus("shock", 4, 3)],
+    [passive({ MA: 8, SPD: 4 })],
+    [damage("MA", 1.25), typedStatus("shock", 7, 3)]
+  ]);
+
+  if (job.id === "earth_mage") return skillFromSet(base, stage, [
+    [damage("MA", 0.9), typedStatus("fracture", 5, 4)],
+    [passive({ MA: 7, PD: 4 })],
+    [damage("MA", 1.05), typedStatus("fracture", 9, 4)]
   ]);
 
   // ── Tier 2 specific overrides ──────────────────────────────────────────
