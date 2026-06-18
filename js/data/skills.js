@@ -122,51 +122,8 @@ for (const job of Object.values(jobs)) {
   for (const stage of ["init", "core", "art"]) generatedSkills[`${job.id}_${stage}`] = makeSkill(job, stage);
 }
 
-const manualJobIds = new Set([
-  "paladin", "sage", "spellblade", "shadow_dancer", "poison_hunter", "cursed_berserker",
-  "fire_mage", "frost_mage", "lightning_mage", "earth_mage",
-  // warrior t4-6
-  "rage_fighter", "rage_lord", "rage_god",
-  "blade_duelist", "blade_master", "sword_saint",
-  "crusher", "ruiner", "collapse_lord",
-  "ironwall_knight", "guardian_lord", "immortal_guardian",
-  "dragonblood_knight", "dragon_king_knight", "sky_dragon_lord",
-  // rogue t4-6
-  "darkshade", "shadow_lord", "death_avatar",
-  "blood_salsoo", "no_shadow_salsoo", "end_salsoo",
-  "sword_dancer", "phantom_dancer", "heaven_dancer",
-  "clear_bard", "grand_bard", "legendary_bard",
-  "phantom_shadow_dancer", "moon_shadow_dancer",
-  // archer t4-6
-  "executor", "death_executor", "terminator",
-  "ballistic_engineer", "tactical_shooter", "bullet_overlord",
-  "beast_dominator", "beast_overlord", "king_of_beasts",
-  "head_chef", "gourmet_king", "legendary_chef",
-  "venom_hunter", "plague_hunter",
-  // cleric t4-6
-  "high_priest", "saint", "savior",
-  "fallen_priest", "abyss_priest", "calamity_prophet",
-  "skeleton_fighter", "skeleton_general", "skeleton_captain",
-  "crusader", "divine_punisher",
-  // mage t4-6
-  "fire_archmage", "sun_lord",
-  "frost_lord", "eternal_winter",
-  "storm_lord", "thunder_emperor",
-  "leyline_mage", "world_guardian",
-  "great_rune_mage", "rune_lord", "eternal_inscriber",
-  "great_warlock", "demon_lord", "abyss_lord",
-  "prophet", "fate_dominator", "heaven_executor",
-  "disaster_mage", "calamity_mage", "great_calamity",
-  "great_legion_mage", "legion_lord", "eternal_legion_commander",
-  "great_sage", "transcendent_sage",
-  "spellblade_master", "spell_saint",
-  "blaze_storm_mage", "lava_mage", "stormfrost_mage", "crystal_mage", "archmage",
-  // combo t4-6
-  "forbidden_warrior", "curse_avatar",
-  "sniper", "death_eye",
-]);
 const manualSkills = {};
-for (const job of Object.values(jobs).filter((item) => item.tier <= 3 || manualJobIds.has(item.id))) {
+for (const job of Object.values(jobs)) {
   for (const stage of ["init", "core", "art"]) {
     manualSkills[`${job.id}_${stage}`] = makeManualSkill(job, stage);
   }
