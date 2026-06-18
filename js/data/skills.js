@@ -148,6 +148,22 @@ const manualJobIds = new Set([
   "fallen_priest", "abyss_priest", "calamity_prophet",
   "skeleton_fighter", "skeleton_general", "skeleton_captain",
   "crusader", "divine_punisher",
+  // mage t4-6
+  "fire_archmage", "sun_lord",
+  "frost_lord", "eternal_winter",
+  "storm_lord", "thunder_emperor",
+  "leyline_mage", "world_guardian",
+  "great_rune_mage", "rune_lord", "eternal_inscriber",
+  "great_warlock", "demon_lord", "abyss_lord",
+  "prophet", "fate_dominator", "heaven_executor",
+  "disaster_mage", "calamity_mage", "great_calamity",
+  "great_legion_mage", "legion_lord", "eternal_legion_commander",
+  "great_sage", "transcendent_sage",
+  "spellblade_master", "spell_saint",
+  "blaze_storm_mage", "lava_mage", "stormfrost_mage", "crystal_mage", "archmage",
+  // combo t4-6
+  "forbidden_warrior", "curse_avatar",
+  "sniper", "death_eye",
 ]);
 const manualSkills = {};
 for (const job of Object.values(jobs).filter((item) => item.tier <= 3 || manualJobIds.has(item.id))) {
@@ -625,6 +641,245 @@ function makeManualSkill(job, stage) {
     [damage("EVA", 1.15, { evadeBonusPower: 0.25, critBonus: 18 })],
     [passive({ EVA: 14, CRT: 13, SPD: 10 })],
     [status("moon_veil", "self", 3, { guaranteedDodge: true, statMods: { EVA: 20, CRT: 18 } }), damage("EVA", 1.0, { evadeBonusPower: 0.22, critBonus: 16 }), damage("EVA", 1.0, { evadeBonusPower: 0.22, critBonus: 16 })]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 4-6 Mage: Fire lineage ──────────────────────────────────────
+  if (job.id === "fire_archmage") return skillFromSet(base, stage, [
+    [damage("MA", 1.1, { aoe: true }), typedStatus("burn", 8, 4)],
+    [passive({ MA: 10, CRT: 6 })],
+    [damage("MA", 1.0, { aoe: true }), typedStatus("burn", 12, 5)]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "sun_lord") return skillFromSet(base, stage, [
+    [damage("MA", 1.3, { aoe: true }), typedStatus("burn", 11, 4)],
+    [passive({ MA: 14, CRT: 8, MD: 5 })],
+    [damage("MA", 1.8, { aoe: true, consumeStatus: "burn", consumeStatusPower: 2.0 }), typedStatus("burn", 14, 4)]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 5-6 Mage: Frost lineage ─────────────────────────────────────
+  if (job.id === "frost_lord") return skillFromSet(base, stage, [
+    [damage("MA", 1.05), typedStatus("freeze", 6, 4)],
+    [passive({ MA: 10, MD: 8 })],
+    [shield(20, "MA", 0.35), typedStatus("freeze", 8, 4)]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "eternal_winter") return skillFromSet(base, stage, [
+    [damage("MA", 1.25), typedStatus("freeze", 9, 5)],
+    [passive({ MA: 14, MD: 11 })],
+    [damage("MA", 1.6, { guaranteedHit: true }), typedStatus("freeze", 14, 5), status("frozen_time", "foe", 1, { statMods: { SPD: -30 } })]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 5-6 Mage: Lightning lineage ─────────────────────────────────
+  if (job.id === "storm_lord") return skillFromSet(base, stage, [
+    [damage("MA", 1.2), typedStatus("shock", 6, 4)],
+    [passive({ MA: 11, SPD: 6, CRT: 4 })],
+    [damage("MA", 1.4), typedStatus("shock", 9, 4), extraAction(0.55, 3)]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "thunder_emperor") return skillFromSet(base, stage, [
+    [damage("MA", 1.4), typedStatus("shock", 9, 5), extraAction(0.35, 1)],
+    [passive({ MA: 16, SPD: 8, CRT: 7 })],
+    [damage("MA", 1.6), damage("MA", 1.6), damage("MA", 1.6), typedStatus("shock", 14, 5)]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 5-6 Mage: Earth lineage ─────────────────────────────────────
+  if (job.id === "leyline_mage") return skillFromSet(base, stage, [
+    [damage("MA", 1.1), typedStatus("fracture", 8, 5)],
+    [passive({ MA: 11, PD: 6, MD: 5 })],
+    [consumeStatus("fracture", 1.5), status("earth_scar", "foe", 999, { permanent: true, statMods: { PD: -20, MD: -12 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "world_guardian") return skillFromSet(base, stage, [
+    [damage("MA", 1.3), typedStatus("fracture", 12, 6)],
+    [passive({ MA: 15, PD: 9, MD: 9 })],
+    [consumeStatus("fracture", 2.0), status("tectonic_ruin", "foe", 999, { permanent: true, statMods: { PD: -30, MD: -20 } }), typedStatus("decay", 8, 4)]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 4-6 Mage: Rune lineage ──────────────────────────────────────
+  if (job.id === "great_rune_mage") return skillFromSet(base, stage, [
+    [rune("great_rune_attack", "after_damage", [damage("MA", 0.65)]), rune("guard_rune", "on_hit", [shield(8)])],
+    [passive({ MA: 9, MD: 7 })],
+    [damage("MA", 1.3, { runeCountPower: 0.15 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "rune_lord") return skillFromSet(base, stage, [
+    [rune("rune_lord_attack", "after_damage", [damage("MA", 0.8)]), rune("rune_lord_guard", "on_hit", [shield(10), damage("MA", 0.3)])],
+    [passive({ MA: 12, MD: 10, ACC: 4 })],
+    [damage("MA", 1.6, { runeCountPower: 0.22 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "eternal_inscriber") return skillFromSet(base, stage, [
+    [rune("eternal_rune", "after_damage", [damage("MA", 1.0)]), rune("eternal_guard", "on_hit", [shield(14), damage("MA", 0.5)])],
+    [passive({ MA: 16, MD: 14, ACC: 7 })],
+    [damage("MA", 2.0, { runeCountPower: 0.3 }), status("rune_overload", "self", 3, { statMods: { MA: 14 }, damageMultiplier: 1.4 })]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 4-6 Mage: Warlock lineage ───────────────────────────────────
+  if (job.id === "great_warlock") return skillFromSet(base, stage, [
+    [sacrifice(0.06), damage("MA", 1.5)],
+    [passive({ MA: 12, HP: 18 })],
+    [heal("HP", 0.25, { overheal: false }), sacrifice(0.02)]
+  ], { art: { maxUses: 2 } });
+
+  if (job.id === "demon_lord") return skillFromSet(base, stage, [
+    [sacrifice(0.08), damage("MA", 1.7)],
+    [passive({ MA: 16, HP: 25 })],
+    [status("demon_pact", "self", 999, { permanent: true, statMods: { MA: 18 }, damageMultiplier: 1.35 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "abyss_lord") return skillFromSet(base, stage, [
+    [sacrifice(0.1), damage("MA", 2.0)],
+    [passive({ MA: 22, HP: 32 })],
+    [sacrifice(0.6), damage("MA", 3.0, { absolute: true, guaranteedHit: true })]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 4-6 Mage: Fate Weaver lineage ───────────────────────────────
+  if (job.id === "prophet") return skillFromSet(base, stage, [
+    [damage("MA", 0.9), typedStatus("misfortune", 7, 4)],
+    [passive({ MA: 6, CRT: 8, EVA: 7 })],
+    [status("fate_shield", "self", 999, { permanent: true, statMods: { EVA: 18, CRD: 22 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "fate_dominator") return skillFromSet(base, stage, [
+    [damage("MA", 1.05), typedStatus("misfortune", 9, 4), status("cursed_fate", "foe", 3, { statMods: { CRT: -8, EVA: -10 } })],
+    [passive({ MA: 9, CRT: 11, EVA: 9 })],
+    [damage("MA", 1.3, { guaranteedHit: true }), typedStatus("misfortune", 12, 4), status("doomed", "foe", 3, { statMods: { CRT: -12, EVA: -18 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "heaven_executor") return skillFromSet(base, stage, [
+    [damage("MA", 1.25), typedStatus("misfortune", 12, 5), status("cursed_fate", "foe", 4, { statMods: { CRT: -14, EVA: -22 } })],
+    [passive({ MA: 12, CRT: 14, EVA: 12 })],
+    [damage("MA", 1.8, { guaranteedHit: true }), typedStatus("misfortune", 18, 6), status("heaven_sentence", "foe", 5, { statMods: { CRT: -20, EVA: -30 }, defenseMultiplier: 0.65 })]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 4-6 Mage: Hexer lineage ─────────────────────────────────────
+  if (job.id === "disaster_mage") return skillFromSet(base, stage, [
+    [damage("MA", 0.9), typedStatus("decay", 9, 5)],
+    [passive({ MA: 10, SPD: 7 })],
+    [typedStatus("decay", 16, 6), status("calamity_brand", "foe", 999, { permanent: true, defenseMultiplier: 0.8 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "calamity_mage") return skillFromSet(base, stage, [
+    [damage("MA", 1.05), typedStatus("decay", 12, 6), typedStatus("weaken", 4, 3)],
+    [passive({ MA: 13, SPD: 9 })],
+    [typedStatus("decay", 22, 7), typedStatus("weaken", 8, 4), status("great_curse", "foe", 999, { permanent: true, defenseMultiplier: 0.7 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "great_calamity") return skillFromSet(base, stage, [
+    [damage("MA", 1.25), typedStatus("decay", 16, 7), typedStatus("weaken", 6, 3)],
+    [passive({ MA: 17, SPD: 11 })],
+    [damage("MA", 2.2, { absolute: true, guaranteedHit: true }), typedStatus("decay", 30, 8), status("annihilation_curse", "foe", 999, { permanent: true, defenseMultiplier: 0.55, statMods: { PD: -25, MD: -20 } })]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 4-6 Mage: Legion lineage ────────────────────────────────────
+  if (job.id === "great_legion_mage") return skillFromSet(base, stage, [
+    [summon("great_legion_unit", "legion", 2, { stat: "MA" })],
+    [passive({ MA: 9, HP: 16 })],
+    [damage("MA", 1.0, { aoe: true }), damage("MA", 1.0, { aoe: true })]
+  ], {
+    init: { maxUses: 1 },
+    art: { maxUses: 1, condition: { type: "has_summon" } }
+  });
+
+  if (job.id === "legion_lord") return skillFromSet(base, stage, [
+    [summon("legion_lord_unit", "legion", 3, { stat: "MA" })],
+    [passive({ MA: 12, HP: 22, ACC: 4 })],
+    [status("legion_fortress", "self", 3, { statMods: { PD: 14, MD: 12 }, defenseMultiplier: 1.2 }), damage("MA", 0.8, { aoe: true })]
+  ], {
+    init: { maxUses: 1 },
+    art: { maxUses: 1 }
+  });
+
+  if (job.id === "eternal_legion_commander") return skillFromSet(base, stage, [
+    [summon("eternal_legion_unit", "legion", 4, { stat: "MA", elite: true })],
+    [passive({ MA: 16, HP: 30, ACC: 7 })],
+    [damage("MA", 1.2, { aoe: true }), damage("MA", 1.2, { aoe: true }), damage("MA", 1.2, { aoe: true })]
+  ], {
+    init: { maxUses: 1 },
+    art: { maxUses: 1, condition: { type: "has_summon" } }
+  });
+
+  // ── Tier 5-6 Mage: Sage lineage ──────────────────────────────────────
+  if (job.id === "great_sage") return skillFromSet(base, stage, [
+    [heal("MA", 2.8, { maxHpRatio: 0.05 }), typedStatus("regeneration", 16, 4, { target: "self" })],
+    [passive({ MA: 11, MD: 13 })],
+    [status("wisdom_burst", "self", 999, { permanent: true, statMods: { MA: 14 }, damageMultiplier: 1.18 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "transcendent_sage") return skillFromSet(base, stage, [
+    [heal("MA", 3.5, { maxHpRatio: 0.07, overheal: true }), typedStatus("regeneration", 22, 5, { target: "self" })],
+    [passive({ MA: 16, MD: 18 })],
+    [status("transcendence", "self", 999, { permanent: true, statMods: { MA: 22, MD: 16 }, damageMultiplier: 1.3 }), heal("MA", 1.5, { maxHpRatio: 0.06 })]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 5-6 Mage: Spellblade lineage ────────────────────────────────
+  if (job.id === "spellblade_master") return skillFromSet(base, stage, [
+    [damage("PA", 0.85, { balancePower: 0.06 }), damage("MA", 0.85, { balancePower: 0.06 })],
+    [passive({ PA: 10, MA: 10 })],
+    [status("yin_yang_harmony", "self", 3, { statMods: { PA: 12, MA: 12 }, damageMultiplier: 1.2 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "spell_saint") return skillFromSet(base, stage, [
+    [damage("PA", 1.0, { balancePower: 0.08 }), damage("MA", 1.0, { balancePower: 0.08 })],
+    [passive({ PA: 13, MA: 13, SPD: 6 })],
+    [damage("PA", 1.4, { absolute: true, balancePower: 0.15 }), damage("MA", 1.4, { absolute: true, balancePower: 0.15 })]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 5-6 Mage: Elemental Fusion (combo) ──────────────────────────
+  if (job.id === "blaze_storm_mage") return skillFromSet(base, stage, [
+    [damage("MA", 1.2, { aoe: true }), typedStatus("burn", 7, 3), typedStatus("shock", 5, 3)],
+    [passive({ MA: 12, CRT: 5, SPD: 5 })],
+    [damage("MA", 1.5, { aoe: true, consumeStatus: "burn", consumeStatusPower: 1.4 }), typedStatus("shock", 9, 3), extraAction(0.45, 2)]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "lava_mage") return skillFromSet(base, stage, [
+    [damage("MA", 1.15, { aoe: true }), typedStatus("burn", 7, 3), typedStatus("fracture", 6, 4)],
+    [passive({ MA: 11, PD: 5, MD: 4 })],
+    [damage("MA", 1.6, { aoe: true, consumeStatus: "burn", consumeStatusPower: 1.3 }), status("molten_earth", "foe", 999, { permanent: true, statMods: { PD: -18 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "stormfrost_mage") return skillFromSet(base, stage, [
+    [damage("MA", 1.2), typedStatus("shock", 6, 3), typedStatus("freeze", 5, 3)],
+    [passive({ MA: 11, SPD: 5, MD: 5 })],
+    [shield(16, "MA", 0.28), typedStatus("freeze", 8, 4), typedStatus("shock", 9, 3)]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "crystal_mage") return skillFromSet(base, stage, [
+    [damage("MA", 1.1), typedStatus("freeze", 6, 4), typedStatus("fracture", 7, 4)],
+    [passive({ MA: 10, PD: 6, MD: 7 })],
+    [consumeStatus("fracture", 1.4), typedStatus("freeze", 10, 5), status("crystal_shard", "foe", 999, { permanent: true, statMods: { MD: -16 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "archmage") return skillFromSet(base, stage, [
+    [damage("MA", 1.5), typedStatus("burn", 8, 3), typedStatus("freeze", 6, 3), typedStatus("shock", 6, 3)],
+    [passive({ MA: 18, MD: 10, ACC: 5 })],
+    [damage("MA", 2.5, { aoe: true, absolute: true, consumeStatus: "burn", consumeStatusPower: 1.8 }), typedStatus("freeze", 12, 4), typedStatus("shock", 12, 4)]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 5-6 Combo: Cursed Berserker lineage ──────────────────────────
+  if (job.id === "forbidden_warrior") return skillFromSet(base, stage, [
+    [damage("PA", 1.2, { missingHpPower: 0.55 }), typedStatus("bleed", 7, 3, { target: "self" }), typedStatus("decay", 5, 3, { target: "self" })],
+    [passive({ PA: 13, HP: 24 })],
+    [status("curse_armor", "self", 2, { statMods: { PD: 18, MD: 12 }, defenseMultiplier: 1.28 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "curse_avatar") return skillFromSet(base, stage, [
+    [damage("PA", 1.35, { missingHpPower: 0.7 }), typedStatus("bleed", 9, 3, { target: "self" }), typedStatus("decay", 7, 3, { target: "self" }), typedStatus("burn", 6, 2, { target: "self" })],
+    [passive({ PA: 16, HP: 30, CRD: 20 })],
+    [damage("PA", 2.2, { absolute: true, guaranteedHit: true, statusCountPower: 0.15 })]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 5-6 Combo: Sniper lineage ────────────────────────────────────
+  if (job.id === "sniper") return skillFromSet(base, stage, [
+    [damage("ACC", 0.14, { enemyCurrentHpPower: 0.15, critBonus: 18 })],
+    [passive({ ACC: 14, CRT: 10, CRD: 16 })],
+    [damage("ACC", 0.22, { enemyCurrentHpPower: 0.25, critBonus: 28, guaranteedHit: true }), status("vital_mark", "foe", 4, { statMods: { EVA: -40 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "death_eye") return skillFromSet(base, stage, [
+    [damage("ACC", 0.18, { enemyCurrentHpPower: 0.2, critBonus: 24 })],
+    [passive({ ACC: 20, CRT: 15, CRD: 28 })],
+    [damage("ACC", 0.3, { enemyCurrentHpPower: 0.35, critBonus: 40, guaranteedHit: true })]
   ], { art: { maxUses: 1 } });
 
   // ── Tier 4-6 Cleric: Pure Priest lineage ─────────────────────────────
