@@ -315,45 +315,45 @@ function makeManualSkill(job, stage) {
   // ── Tier 3 contract jobs ───────────────────────────────────────────────
   if (job.id === "wolf_contract") return skillFromSet(base, stage, [
     [summon("wolf_contract_wolf", "striker", 1, { stat: "SPD", contract: true })],
-    [passive({ SPD: 8, EVA: 6 })],
-    [status("wolf_speed", "self", 2, { statMods: { SPD: 14 } }), extraAction(0.7, 2)]
-  ]);
+    [passive({ SPD: 10, EVA: 7 })],
+    [status("wolf_pack_frenzy", "self", 3, { statMods: { SPD: 18, EVA: 6 } }), extraAction(0.75, 2)]
+  ], { art: { maxUses: 1 } });
 
   if (job.id === "bear_contract") return skillFromSet(base, stage, [
     [summon("bear_contract_bear", "tank", 1, { stat: "HP", contract: true })],
-    [passive({ HP: 26, PD: 7 })],
-    [status("bear_stance", "self", 2, { statMods: { PD: 16 }, defenseMultiplier: 1.2 })]
-  ]);
+    [passive({ HP: 30, PD: 8 })],
+    [damage("PA", 0.85, { currentHpPower: 0.16 }), status("bear_stance", "self", 3, { statMods: { PD: 18 }, defenseMultiplier: 1.25 })]
+  ], { art: { maxUses: 1 } });
 
   if (job.id === "fire_spirit_contract") return skillFromSet(base, stage, [
-    [summon("fire_spirit_contract_spirit", "striker", 1, { stat: "MA", contract: true })],
-    [passive({ MA: 12 })],
-    [damage("MA", 1.0), typedStatus("burn", 8, 3)]
-  ]);
+    [summon("fire_spirit_contract_spirit", "striker", 1, { stat: "MA", contract: true }), typedStatus("burn", 6, 3)],
+    [passive({ MA: 13, CRT: 4 })],
+    [damage("MA", 1.25, { consumeStatus: "burn", consumeStatusPower: 1.3 }), typedStatus("burn", 9, 3)]
+  ], { art: { maxUses: 1 } });
 
   if (job.id === "earth_spirit_contract") return skillFromSet(base, stage, [
-    [summon("earth_spirit_contract_spirit", "tank", 1, { stat: "MA", contract: true })],
-    [passive({ PD: 8, MA: 7 })],
-    [damage("MA", 0.85), typedStatus("fracture", 7, 3), status("earth_pact", "self", 2, { statMods: { PD: 12 } })]
-  ]);
+    [summon("earth_spirit_contract_spirit", "tank", 1, { stat: "MA", contract: true }), typedStatus("fracture", 6, 4)],
+    [passive({ PD: 9, MA: 8, MD: 5 })],
+    [damage("MA", 1.0, { targetStatus: "fracture", targetStatusPower: 1.5 }), typedStatus("fracture", 9, 4), status("earth_pact", "self", 3, { statMods: { PD: 14, MD: 8 } })]
+  ], { art: { maxUses: 1 } });
 
   if (job.id === "demon_contract") return skillFromSet(base, stage, [
     [summon("demon_contract_demon", "striker", 1, { stat: "MA", contract: true })],
-    [passive({ MA: 12, HP: 16 })],
-    [sacrifice(0.1), damage("MA", 1.3, { lifeSteal: 0.3 })]
-  ]);
+    [passive({ MA: 14, HP: 18 })],
+    [sacrifice(0.12), damage("MA", 1.45, { lifeSteal: 0.35 })]
+  ], { art: { maxUses: 1 } });
 
   if (job.id === "dragon_contract") return skillFromSet(base, stage, [
     [summon("dragon_contract_dragon", "tank", 1, { stat: "PD", contract: true })],
-    [passive({ PA: 6, MA: 8 })],
-    [damage("PA", 0.75), damage("MA", 0.75)]
-  ]);
+    [passive({ PA: 7, MA: 9 })],
+    [damage("PA", 0.9, { aoe: true }), damage("MA", 0.9, { aoe: true })]
+  ], { art: { maxUses: 1 } });
 
   if (job.id === "special_contract") return skillFromSet(base, stage, [
     [summon("special_contract_entity", "striker", 1, { stat: "MA", contract: true })],
-    [passive({ MA: 5, CRT: 5, SPD: 5 })],
-    [damage("MA", 1.0, { critBonus: 12 }), typedStatus("misfortune", 3, 2)]
-  ]);
+    [passive({ MA: 6, CRT: 6, SPD: 6 })],
+    [damage("MA", 1.2, { critBonus: 16 }), typedStatus("misfortune", 4, 3)]
+  ], { art: { maxUses: 1 } });
 
   // ── Tier 4 combo jobs ─────────────────────────────────────────────────
   if (job.id === "paladin") return skillFromSet(base, stage, [

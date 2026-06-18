@@ -10,6 +10,15 @@ const baseMilestones = (jobId) => {
   ];
 };
 
+// Contract jobs are weak right after the job change: skills unlock late
+// (50/70/90) so the contractor branch only blossoms in the back half.
+const contractMilestones = (jobId) => [
+  { percent: 50, type: "skill", skillId: `${jobId}_init` },
+  { percent: 70, type: "skill", skillId: `${jobId}_core` },
+  { percent: 90, type: "skill", skillId: `${jobId}_art` },
+  { percent: 100, type: "master" }
+];
+
 export const jobs = {
   warrior: {
     id: "warrior",
@@ -1264,7 +1273,7 @@ export const jobs = {
     requires: {"masteredAll":["contractor"]},
     revealHints: ["Contractor mastered"],
     growth: {"HP":16,"PA":3,"SPD":8,"EVA":5},
-    milestones: baseMilestones("wolf_contract")
+    milestones: contractMilestones("wolf_contract")
   },
   bear_contract: {
     id: "bear_contract",
@@ -1275,7 +1284,7 @@ export const jobs = {
     requires: {"masteredAll":["contractor"]},
     revealHints: ["Contractor mastered"],
     growth: {"HP":34,"PA":3,"PD":8,"MD":2},
-    milestones: baseMilestones("bear_contract")
+    milestones: contractMilestones("bear_contract")
   },
   fire_spirit_contract: {
     id: "fire_spirit_contract",
@@ -1286,7 +1295,7 @@ export const jobs = {
     requires: {"masteredAll":["contractor"]},
     revealHints: ["Contractor mastered"],
     growth: {"HP":14,"MA":8,"MD":3},
-    milestones: baseMilestones("fire_spirit_contract")
+    milestones: contractMilestones("fire_spirit_contract")
   },
   earth_spirit_contract: {
     id: "earth_spirit_contract",
@@ -1297,7 +1306,7 @@ export const jobs = {
     requires: {"masteredAll":["contractor"]},
     revealHints: ["Contractor mastered"],
     growth: {"HP":22,"MA":5,"PD":5,"MD":7},
-    milestones: baseMilestones("earth_spirit_contract")
+    milestones: contractMilestones("earth_spirit_contract")
   },
   demon_contract: {
     id: "demon_contract",
@@ -1308,7 +1317,7 @@ export const jobs = {
     requires: {"masteredAll":["contractor"]},
     revealHints: ["Contractor mastered"],
     growth: {"HP":24,"MA":10,"MD":2},
-    milestones: baseMilestones("demon_contract")
+    milestones: contractMilestones("demon_contract")
   },
   dragon_contract: {
     id: "dragon_contract",
@@ -1319,7 +1328,7 @@ export const jobs = {
     requires: {"masteredAll":["contractor"]},
     revealHints: ["Contractor mastered"],
     growth: {"HP":26,"PA":5,"PD":8,"MA":5},
-    milestones: baseMilestones("dragon_contract")
+    milestones: contractMilestones("dragon_contract")
   },
   special_contract: {
     id: "special_contract",
@@ -1330,7 +1339,7 @@ export const jobs = {
     requires: {"masteredAll":["contractor"]},
     revealHints: ["Contractor mastered"],
     growth: {"HP":18,"PA":4,"MA":4,"SPD":4,"EVA":4,"CRT":4},
-    milestones: baseMilestones("special_contract")
+    milestones: contractMilestones("special_contract")
   },
   paladin: {
     id: "paladin",
