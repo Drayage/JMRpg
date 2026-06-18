@@ -122,9 +122,17 @@ for (const job of Object.values(jobs)) {
   for (const stage of ["init", "core", "art"]) generatedSkills[`${job.id}_${stage}`] = makeSkill(job, stage);
 }
 
-const manualTier4Ids = new Set(["paladin", "sage", "spellblade", "shadow_dancer", "poison_hunter", "cursed_berserker", "fire_mage", "frost_mage", "lightning_mage", "earth_mage"]);
+const manualJobIds = new Set([
+  "paladin", "sage", "spellblade", "shadow_dancer", "poison_hunter", "cursed_berserker",
+  "fire_mage", "frost_mage", "lightning_mage", "earth_mage",
+  "rage_fighter", "rage_lord", "rage_god",
+  "blade_duelist", "blade_master", "sword_saint",
+  "crusher", "ruiner", "collapse_lord",
+  "ironwall_knight", "guardian_lord", "immortal_guardian",
+  "dragonblood_knight", "dragon_king_knight", "sky_dragon_lord",
+]);
 const manualSkills = {};
-for (const job of Object.values(jobs).filter((item) => item.tier <= 3 || manualTier4Ids.has(item.id))) {
+for (const job of Object.values(jobs).filter((item) => item.tier <= 3 || manualJobIds.has(item.id))) {
   for (const stage of ["init", "core", "art"]) {
     manualSkills[`${job.id}_${stage}`] = makeManualSkill(job, stage);
   }
@@ -417,6 +425,110 @@ function makeManualSkill(job, stage) {
     [passive({ MA: 7, PD: 4 })],
     [damage("MA", 1.05), typedStatus("fracture", 9, 4)]
   ]);
+
+  // ── Tier 4-6 Warrior: Rage lineage ───────────────────────────────────
+  if (job.id === "rage_fighter") return skillFromSet(base, stage, [
+    [damage("PA", 1.2, { missingHpPower: 0.85 })],
+    [passive({ PA: 9, HP: 16, MA: -3 })],
+    [status("undying_rage", "self", 1, { statMods: { PD: 22, MD: 12 }, defenseMultiplier: 1.4 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "rage_lord") return skillFromSet(base, stage, [
+    [damage("PA", 1.3, { missingHpPower: 1.0, statusCountPower: 0.1 })],
+    [passive({ PA: 11, CRT: 9, MA: -4 })],
+    [damage("PA", 1.4, { missingHpPower: 1.2, lifeSteal: 0.4 })]
+  ], { art: { maxUses: 1, condition: { type: "hp_below", value: 0.5 } } });
+
+  if (job.id === "rage_god") return skillFromSet(base, stage, [
+    [damage("PA", 1.5, { missingHpPower: 1.4, statusCountPower: 0.12 })],
+    [passive({ PA: 14, HP: 20, CRT: 12 })],
+    [status("divine_wrath", "self", 4, { statMods: { PA: 22, CRT: 18, CRD: 24, PD: -15 }, damageMultiplier: 1.6 })]
+  ], { art: { maxUses: 1, condition: { type: "hp_below", value: 0.25 } } });
+
+  // ── Tier 4-6 Warrior: Swordsman lineage ──────────────────────────────
+  if (job.id === "blade_duelist") return skillFromSet(base, stage, [
+    [damage("PA", 1.0), resource("swordsmanship", 1)],
+    [passive({ PA: 7, SPD: 5 })],
+    [status("ki_flow", "self", 3, { statMods: { PA: 7, ACC: 4 }, damageMultiplier: 1.15 })]
+  ], {
+    init: { apCost: 0, chance: 1, priority: false, basicAttackReplacement: true, hitBonus: 25 },
+    art: { maxUses: 3 }
+  });
+
+  if (job.id === "blade_master") return skillFromSet(base, stage, [
+    [damage("PA", 1.0), resource("swordsmanship", 1)],
+    [passive({ PA: 9, ACC: 8 })],
+    [damage("PA", 1.5, { guaranteedHit: true })]
+  ], {
+    init: { apCost: 0, chance: 1, priority: false, basicAttackReplacement: true, hitBonus: 25 },
+    art: { maxUses: 1, condition: { type: "has_resource", key: "swordsmanship", amount: 3 } }
+  });
+
+  if (job.id === "sword_saint") return skillFromSet(base, stage, [
+    [damage("PA", 1.0), resource("swordsmanship", 1)],
+    [passive({ PA: 12, SPD: 7, ACC: 6 })],
+    [damage("PA", 1.0), damage("PA", 1.0), damage("PA", 1.0), damage("PA", 1.0), damage("PA", 1.0), damage("PA", 1.0), damage("PA", 1.0)]
+  ], {
+    init: { apCost: 0, chance: 1, priority: false, basicAttackReplacement: true, hitBonus: 25 },
+    art: { maxUses: 1, condition: { type: "has_resource", key: "swordsmanship", amount: 5 } }
+  });
+
+  // ── Tier 4-6 Warrior: Destroyer lineage ──────────────────────────────
+  if (job.id === "crusher") return skillFromSet(base, stage, [
+    [damage("PA", 1.05, { shieldBreak: 26 })],
+    [passive({ PA: 9, ACC: 7 })],
+    [status("weakness_open", "foe", 999, { permanent: true, statMods: { PD: -22 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "ruiner") return skillFromSet(base, stage, [
+    [damage("PA", 1.15, { shieldBreak: 32, shieldPower: 0.4 })],
+    [passive({ PA: 11, PD: 6 })],
+    [damage("PA", 1.5, { shieldBreak: 50, guaranteedHit: true }), status("ruin_mark", "foe", 999, { permanent: true, statMods: { PD: -18 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "collapse_lord") return skillFromSet(base, stage, [
+    [damage("PA", 1.3, { shieldBreak: 44, shieldPower: 0.5 })],
+    [passive({ PA: 14, ACC: 8, PD: 6 })],
+    [status("total_ruin", "foe", 999, { permanent: true, statMods: { PD: -32, MD: -20 } }), damage("PA", 2.0, { absolute: true, guaranteedHit: true })]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 4-6 Warrior: Guardian Knight lineage ────────────────────────
+  if (job.id === "ironwall_knight") return skillFromSet(base, stage, [
+    [damage("PD", 0.8, { absolute: true }), shield(10, "PD", 0.22)],
+    [passive({ PD: 12, HP: 22, CRT: -5 })],
+    [shield(40, "PD", 0.6), status("iron_wall", "self", 2, { statMods: { PD: 12 }, defenseMultiplier: 1.2 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "guardian_lord") return skillFromSet(base, stage, [
+    [damage("PD", 1.1, { absolute: true, shieldPower: 0.3 })],
+    [passive({ PD: 15, MD: 6, CRT: -7 })],
+    [status("immovable_fortress", "self", 3, { statMods: { PD: 28, MD: 14 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "immortal_guardian") return skillFromSet(base, stage, [
+    [damage("PD", 1.3, { absolute: true, shieldPower: 0.45 })],
+    [passive({ PD: 19, HP: 30, MD: 8, CRT: -8 })],
+    [shield(80, "HP", 0.7), status("immortal_aegis", "self", 4, { statMods: { PD: 22, MD: 14 }, defenseMultiplier: 1.35 })]
+  ], { art: { maxUses: 1, condition: { type: "hp_below", value: 0.5 } } });
+
+  // ── Tier 4-6 Warrior: Dragon Knight lineage ──────────────────────────
+  if (job.id === "dragonblood_knight") return skillFromSet(base, stage, [
+    [damage("PA", 1.05, { absolute: true })],
+    [passive({ PD: 10, PA: 6 })],
+    [statTradeoff({ PD: -14, PA: 18 }, { id: "dragon_form", turns: 4 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "dragon_king_knight") return skillFromSet(base, stage, [
+    [damage("PA", 1.3, { absolute: true, guaranteedHit: true })],
+    [passive({ PD: 13, PA: 8, HP: 12 })],
+    [damage("PA", 1.8, { absolute: true, guaranteedHit: true }), statTradeoff({ PD: -10, PA: 14 }, { id: "dragon_form", turns: 3 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "sky_dragon_lord") return skillFromSet(base, stage, [
+    [damage("PA", 1.5, { absolute: true })],
+    [passive({ PD: 16, PA: 11, MD: 6 })],
+    [statTradeoff({ PD: -22, PA: 32 }, { id: "eternal_dragon_form", turns: 999 }), damage("PA", 2.2, { absolute: true, guaranteedHit: true })]
+  ], { art: { maxUses: 1 } });
 
   // ── Tier 2 specific overrides ──────────────────────────────────────────
   if (job.id === "assassin") return skillFromSet(base, stage, [
