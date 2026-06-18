@@ -143,6 +143,11 @@ const manualJobIds = new Set([
   "beast_dominator", "beast_overlord", "king_of_beasts",
   "head_chef", "gourmet_king", "legendary_chef",
   "venom_hunter", "plague_hunter",
+  // cleric t4-6
+  "high_priest", "saint", "savior",
+  "fallen_priest", "abyss_priest", "calamity_prophet",
+  "skeleton_fighter", "skeleton_general", "skeleton_captain",
+  "crusader", "divine_punisher",
 ]);
 const manualSkills = {};
 for (const job of Object.values(jobs).filter((item) => item.tier <= 3 || manualJobIds.has(item.id))) {
@@ -621,6 +626,94 @@ function makeManualSkill(job, stage) {
     [passive({ EVA: 14, CRT: 13, SPD: 10 })],
     [status("moon_veil", "self", 3, { guaranteedDodge: true, statMods: { EVA: 20, CRT: 18 } }), damage("EVA", 1.0, { evadeBonusPower: 0.22, critBonus: 16 }), damage("EVA", 1.0, { evadeBonusPower: 0.22, critBonus: 16 })]
   ], { art: { maxUses: 1 } });
+
+  // ── Tier 4-6 Cleric: Pure Priest lineage ─────────────────────────────
+  if (job.id === "high_priest") return skillFromSet(base, stage, [
+    [heal("MA", 2.5, { maxHpRatio: 0.08 }), typedStatus("regeneration", 6, 3, { target: "self" })],
+    [passive({ MA: 8, MD: 12 })],
+    [status("divine_barrier", "self", 2, { statMods: { MD: 20 }, defenseMultiplier: 1.3 }), heal("MA", 1.2, { maxHpRatio: 0.04 })]
+  ], {
+    init: { condition: { type: "hp_below", value: 0.6 }, minChance: 0.1, repeatChancePenalty: 0.08 },
+    art: { maxUses: 1 }
+  });
+
+  if (job.id === "saint") return skillFromSet(base, stage, [
+    [heal("MA", 3.0, { maxHpRatio: 0.1, overheal: true }), typedStatus("regeneration", 8, 3, { target: "self" })],
+    [passive({ MA: 10, MD: 16 })],
+    [heal("MA", 2.5, { maxHpRatio: 0.12, overheal: true }), status("holy_cleanse", "self", 999, { permanent: true, statMods: { MD: 12 } })]
+  ], {
+    init: { condition: { type: "hp_below", value: 0.55 }, minChance: 0.1, repeatChancePenalty: 0.08 },
+    art: { maxUses: 1 }
+  });
+
+  if (job.id === "savior") return skillFromSet(base, stage, [
+    [heal("MA", 3.5, { maxHpRatio: 0.12, overheal: true }), typedStatus("regeneration", 10, 3, { target: "self" })],
+    [passive({ MA: 13, MD: 20 })],
+    [heal("MA", 4.0, { maxHpRatio: 0.3, overheal: true }), status("salvation", "self", 1, { statMods: { MD: 30 }, defenseMultiplier: 1.5 })]
+  ], {
+    init: { condition: { type: "hp_below", value: 0.5 }, minChance: 0.1, repeatChancePenalty: 0.08 },
+    art: { maxUses: 1, condition: { type: "hp_below", value: 0.35 } }
+  });
+
+  // ── Tier 4-6 Cleric: Dark Priest lineage ─────────────────────────────
+  if (job.id === "fallen_priest") return skillFromSet(base, stage, [
+    [status("fallen_corruption", "self", 999, { permanent: true, statMods: { MA: 8 }, damageMultiplier: 1.3 }), resource("corruption", 1)],
+    [passive({ MA: 12, MD: 6 })],
+    [damage("MA", 1.3, { lifeSteal: 0.25 }), typedStatus("decay", 10, 5)]
+  ], {
+    init: { maxUses: 1 },
+    art: { condition: { type: "has_resource", key: "corruption", amount: 1 } }
+  });
+
+  if (job.id === "abyss_priest") return skillFromSet(base, stage, [
+    [status("abyss_corruption", "self", 999, { permanent: true, statMods: { MA: 12 }, damageMultiplier: 1.4 }), resource("corruption", 1)],
+    [passive({ MA: 15, MD: 10 })],
+    [damage("MA", 1.6, { lifeSteal: 0.35 }), typedStatus("decay", 14, 5), status("life_drain", "foe", 3, { statMods: { HP: -8 } })]
+  ], {
+    init: { maxUses: 1 },
+    art: { condition: { type: "has_resource", key: "corruption", amount: 1 } }
+  });
+
+  if (job.id === "calamity_prophet") return skillFromSet(base, stage, [
+    [status("calamity_curse", "self", 999, { permanent: true, statMods: { MA: 18 }, damageMultiplier: 1.6 }), resource("corruption", 1)],
+    [passive({ MA: 18, MD: 14 })],
+    [damage("MA", 2.0, { lifeSteal: 0.45 }), typedStatus("decay", 20, 6)]
+  ], {
+    init: { maxUses: 1 },
+    art: { condition: { type: "has_resource", key: "corruption", amount: 1 } }
+  });
+
+  // ── Tier 4-6 Cleric: Skeleton lineage ────────────────────────────────
+  if (job.id === "skeleton_fighter") return skillFromSet(base, stage, [
+    [damage("PA", 0.9)],
+    [passive({ HP: 38, PA: 6, PD: 4 })],
+    [sacrifice(0.18), status("bone_fortress", "self", 2, { statMods: { PD: 22 }, defenseMultiplier: 1.35 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "skeleton_general") return skillFromSet(base, stage, [
+    [damage("PA", 1.05), sacrifice(0.04)],
+    [passive({ HP: 52, PA: 8, PD: 6 })],
+    [sacrifice(0.2), heal("HP", 0.45, { overheal: false })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "skeleton_captain") return skillFromSet(base, stage, [
+    [damage("PA", 1.2), sacrifice(0.05)],
+    [passive({ HP: 70, PA: 11, PD: 9 })],
+    [sacrifice(0.5), damage("HP", 0.0, { maxHpPower: 0.45, absolute: true, guaranteedHit: true }), heal("HP", 0.5, { overheal: true })]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 5-6 Cleric: Paladin lineage ─────────────────────────────────
+  if (job.id === "crusader") return skillFromSet(base, stage, [
+    [damage("PD", 1.2, { absolute: true }), heal("MA", 0.5)],
+    [passive({ MA: 8, PD: 10, MD: 8 })],
+    [consumeResource("judgment", 1.1, { absolute: true, stat: "MD" }), shield(20, "PD", 0.35)]
+  ], { art: { maxUses: 1, condition: { type: "has_resource", key: "judgment", amount: 30 } } });
+
+  if (job.id === "divine_punisher") return skillFromSet(base, stage, [
+    [damage("PD", 1.4, { absolute: true }), heal("MA", 0.7)],
+    [passive({ MA: 10, PD: 13, MD: 10 })],
+    [consumeResource("judgment", 1.3, { absolute: true, stat: "MD" }), damage("PD", 0.8, { absolute: true }), damage("PD", 0.8, { absolute: true }), heal("MA", 1.0)]
+  ], { art: { maxUses: 1, condition: { type: "has_resource", key: "judgment", amount: 30 } } });
 
   // ── Tier 4-6 Archer: Executioner lineage ─────────────────────────────
   if (job.id === "executor") return skillFromSet(base, stage, [
