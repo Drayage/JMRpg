@@ -137,6 +137,12 @@ const manualJobIds = new Set([
   "sword_dancer", "phantom_dancer", "heaven_dancer",
   "clear_bard", "grand_bard", "legendary_bard",
   "phantom_shadow_dancer", "moon_shadow_dancer",
+  // archer t4-6
+  "executor", "death_executor", "terminator",
+  "ballistic_engineer", "tactical_shooter", "bullet_overlord",
+  "beast_dominator", "beast_overlord", "king_of_beasts",
+  "head_chef", "gourmet_king", "legendary_chef",
+  "venom_hunter", "plague_hunter",
 ]);
 const manualSkills = {};
 for (const job of Object.values(jobs).filter((item) => item.tier <= 3 || manualJobIds.has(item.id))) {
@@ -614,6 +620,104 @@ function makeManualSkill(job, stage) {
     [damage("EVA", 1.15, { evadeBonusPower: 0.25, critBonus: 18 })],
     [passive({ EVA: 14, CRT: 13, SPD: 10 })],
     [status("moon_veil", "self", 3, { guaranteedDodge: true, statMods: { EVA: 20, CRT: 18 } }), damage("EVA", 1.0, { evadeBonusPower: 0.22, critBonus: 16 }), damage("EVA", 1.0, { evadeBonusPower: 0.22, critBonus: 16 })]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 4-6 Archer: Executioner lineage ─────────────────────────────
+  if (job.id === "executor") return skillFromSet(base, stage, [
+    [damage("ACC", 0.1, { enemyMissingHpPower: 0.18 }), status("aiming_up", "self", 999, { permanent: true, stack: true, statMods: { ACC: 4 } })],
+    [passive({ ACC: 9, CRD: 14 })],
+    [damage("ACC", 0.14, { enemyMissingHpPower: 0.28, guaranteedHit: true }), status("execution_mark", "foe", 3, { statMods: { PD: -10 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "death_executor") return skillFromSet(base, stage, [
+    [damage("ACC", 0.12, { enemyMissingHpPower: 0.22 }), status("aiming_up", "self", 999, { permanent: true, stack: true, statMods: { ACC: 5 } })],
+    [passive({ ACC: 11, CRD: 18, PA: 5 })],
+    [damage("ACC", 0.18, { enemyMissingHpPower: 0.38, guaranteedHit: true }), status("death_mark", "foe", 4, { statMods: { PD: -15, MD: -8 } })]
+  ], { art: { maxUses: 1, condition: { type: "enemy_hp_below", value: 0.6 } } });
+
+  if (job.id === "terminator") return skillFromSet(base, stage, [
+    [damage("ACC", 0.14, { enemyMissingHpPower: 0.28, guaranteedHit: true }), status("aiming_up", "self", 999, { permanent: true, stack: true, statMods: { ACC: 6 } })],
+    [passive({ ACC: 14, CRD: 22, PA: 7 })],
+    [damage("ACC", 0.25, { enemyMissingHpPower: 0.55, guaranteedHit: true })]
+  ], { art: { maxUses: 1, condition: { type: "enemy_hp_below", value: 0.35 } } });
+
+  // ── Tier 4-6 Archer: Engineer lineage ────────────────────────────────
+  if (job.id === "ballistic_engineer") return skillFromSet(base, stage, [
+    [damage("ACC", 0.09), status("rapid_fire", "self", 999, { permanent: true, stack: true, statMods: { ACC: 7 } }), extraAction(0.38, 4)],
+    [passive({ ACC: 11, SPD: 6 })],
+    [damage("ACC", 0.22, { guaranteedHit: true }), status("rapid_fire", "self", 999, { permanent: true, stack: true, statMods: { ACC: 18 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "tactical_shooter") return skillFromSet(base, stage, [
+    [damage("ACC", 0.1), status("rapid_fire", "self", 999, { permanent: true, stack: true, statMods: { ACC: 8 } }), extraAction(0.45, 5)],
+    [passive({ ACC: 13, SPD: 8 })],
+    [status("tactical_reload", "self", 999, { permanent: true, statMods: { ACC: 28 } }), extraAction(1.0, 1), damage("ACC", 0.12)]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "bullet_overlord") return skillFromSet(base, stage, [
+    [damage("ACC", 0.12), status("rapid_fire", "self", 999, { permanent: true, stack: true, statMods: { ACC: 9 } }), extraAction(0.5, 6)],
+    [passive({ ACC: 16, SPD: 10 })],
+    [status("infinite_magazine", "self", 4, { statMods: { ACC: 40 } }), extraAction(1.0, 1), extraAction(1.0, 1)]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 4-6 Archer: Beast Lord lineage ──────────────────────────────
+  if (job.id === "beast_dominator") return skillFromSet(base, stage, [
+    [summon("beast_dominator_beast", "striker", 1, { stat: "ACC", elite: true })],
+    [passive({ ACC: 9, SPD: 7 })],
+    [status("beast_command", "self", 3, { statMods: { ACC: 10, PA: 6 }, damageMultiplier: 1.2 }), damage("ACC", 0.12)]
+  ], {
+    init: { maxUses: 1 },
+    art: { maxUses: 1, condition: { type: "has_summon" } }
+  });
+
+  if (job.id === "beast_overlord") return skillFromSet(base, stage, [
+    [summon("beast_overlord_beast", "striker", 2, { stat: "ACC", elite: true })],
+    [passive({ ACC: 11, PA: 5, SPD: 9 })],
+    [status("apex_instinct", "self", 3, { statMods: { ACC: 14, PA: 8, SPD: 6 }, damageMultiplier: 1.35 }), damage("ACC", 0.14, { enemyMissingHpPower: 0.15 })]
+  ], {
+    init: { maxUses: 1 },
+    art: { maxUses: 1 }
+  });
+
+  if (job.id === "king_of_beasts") return skillFromSet(base, stage, [
+    [summon("king_beast", "striker", 3, { stat: "ACC", elite: true })],
+    [passive({ ACC: 14, PA: 7, SPD: 10 })],
+    [damage("ACC", 0.18, { enemyMissingHpPower: 0.22 }), damage("ACC", 0.18, { enemyMissingHpPower: 0.22 }), damage("ACC", 0.18, { enemyMissingHpPower: 0.22 })]
+  ], {
+    init: { maxUses: 1 },
+    art: { maxUses: 1, condition: { type: "has_summon" } }
+  });
+
+  // ── Tier 4-6 Archer: Chef lineage ────────────────────────────────────
+  if (job.id === "head_chef") return skillFromSet(base, stage, [
+    [damage("PA", 0.85, { currentHpPower: 0.18 })],
+    [passive({ HP: 32, PD: 6, EVA: -5 })],
+    [status("feast_power", "self", 2, { statMods: { PA: 12 }, damageMultiplier: 1.3 })]
+  ], { art: { maxUses: 2 } });
+
+  if (job.id === "gourmet_king") return skillFromSet(base, stage, [
+    [damage("PA", 0.95, { currentHpPower: 0.24 }), heal("HP", 0.05, { overheal: true })],
+    [passive({ HP: 44, PD: 8, EVA: -7 })],
+    [heal("HP", 0.5, { overheal: true }), status("iron_body", "self", 3, { statMods: { PD: 16 }, defenseMultiplier: 1.25 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "legendary_chef") return skillFromSet(base, stage, [
+    [damage("PA", 1.1, { currentHpPower: 0.32 }), heal("HP", 0.07, { overheal: true })],
+    [passive({ HP: 60, PD: 11, EVA: -8, PA: 4 })],
+    [heal("HP", 1.0, { overheal: true }), status("undying_feast", "self", 999, { permanent: true, statMods: { HP: 20, PD: 8 } })]
+  ], { art: { maxUses: 1, condition: { type: "hp_below", value: 0.3 } } });
+
+  // ── Tier 5-6 Archer: Poison Hunter lineage (combo) ────────────────────
+  if (job.id === "venom_hunter") return skillFromSet(base, stage, [
+    [damage("ACC", 0.1, { poisonPower: 0.5 }), poison(20), status("aiming_up", "self", 999, { permanent: true, stack: true, statMods: { ACC: 4 } })],
+    [passive({ ACC: 11, SPD: 7 })],
+    [status("venom_coat", "self", 3, { statMods: { ACC: 8 } }), poison(25)]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "plague_hunter") return skillFromSet(base, stage, [
+    [damage("ACC", 0.12, { poisonPower: 0.8 }), poison(28), status("aiming_up", "self", 999, { permanent: true, stack: true, statMods: { ACC: 5 } })],
+    [passive({ ACC: 15, SPD: 9 })],
+    [damage("ACC", 0.2, { poisonPower: 1.5, guaranteedHit: true }), poison(35)]
   ], { art: { maxUses: 1 } });
 
   // ── Tier 4-6 Warrior: Dragon Knight lineage ──────────────────────────
