@@ -125,11 +125,18 @@ for (const job of Object.values(jobs)) {
 const manualJobIds = new Set([
   "paladin", "sage", "spellblade", "shadow_dancer", "poison_hunter", "cursed_berserker",
   "fire_mage", "frost_mage", "lightning_mage", "earth_mage",
+  // warrior t4-6
   "rage_fighter", "rage_lord", "rage_god",
   "blade_duelist", "blade_master", "sword_saint",
   "crusher", "ruiner", "collapse_lord",
   "ironwall_knight", "guardian_lord", "immortal_guardian",
   "dragonblood_knight", "dragon_king_knight", "sky_dragon_lord",
+  // rogue t4-6
+  "darkshade", "shadow_lord", "death_avatar",
+  "blood_salsoo", "no_shadow_salsoo", "end_salsoo",
+  "sword_dancer", "phantom_dancer", "heaven_dancer",
+  "clear_bard", "grand_bard", "legendary_bard",
+  "phantom_shadow_dancer", "moon_shadow_dancer",
 ]);
 const manualSkills = {};
 for (const job of Object.values(jobs).filter((item) => item.tier <= 3 || manualJobIds.has(item.id))) {
@@ -510,6 +517,104 @@ function makeManualSkill(job, stage) {
     [passive({ PD: 19, HP: 30, MD: 8, CRT: -8 })],
     [shield(80, "HP", 0.7), status("immortal_aegis", "self", 4, { statMods: { PD: 22, MD: 14 }, defenseMultiplier: 1.35 })]
   ], { art: { maxUses: 1, condition: { type: "hp_below", value: 0.5 } } });
+
+  // ── Tier 4-6 Rogue: Assassin lineage ─────────────────────────────────
+  if (job.id === "darkshade") return skillFromSet(base, stage, [
+    [damage("PA", 0.9, { enemyCurrentHpPower: 0.13, critBonus: 10 })],
+    [passive({ PA: 7, CRT: 9 })],
+    [damage("PA", 1.4, { enemyCurrentHpPower: 0.2, critBonus: 16, guaranteedHit: true })]
+  ], {
+    init: { condition: { type: "enemy_hp_above", value: 0.55 } },
+    art: { maxUses: 1, condition: { type: "enemy_hp_above", value: 0.55 } }
+  });
+
+  if (job.id === "shadow_lord") return skillFromSet(base, stage, [
+    [damage("PA", 1.0, { enemyCurrentHpPower: 0.16, critBonus: 12 })],
+    [passive({ PA: 9, CRT: 11 })],
+    [damage("PA", 1.6, { enemyCurrentHpPower: 0.25, critBonus: 20, guaranteedHit: true }), status("grievous_wound", "foe", 999, { permanent: true, statMods: { HP: -15 } })]
+  ], {
+    init: { condition: { type: "enemy_hp_above", value: 0.45 } },
+    art: { maxUses: 1, condition: { type: "enemy_hp_above", value: 0.45 } }
+  });
+
+  if (job.id === "death_avatar") return skillFromSet(base, stage, [
+    [damage("PA", 1.1, { enemyCurrentHpPower: 0.2, critBonus: 15 })],
+    [passive({ PA: 12, CRT: 13 })],
+    [damage("PA", 1.0, { enemyCurrentHpPower: 0.35, critBonus: 24, guaranteedHit: true })]
+  ], {
+    init: { condition: { type: "enemy_hp_above", value: 0.4 } },
+    art: { maxUses: 1 }
+  });
+
+  // ── Tier 4-6 Rogue: Salsoo (inverse-crit) lineage ────────────────────
+  if (job.id === "blood_salsoo") return skillFromSet(base, stage, [
+    [damage("PA", 1.0, { inverseCrit: true, inverseCritBase: 48, inverseCritFloor: 8 })],
+    [passive({ CRD: 22, CRT: -10 })],
+    [damage("PA", 1.1, { inverseCrit: true, inverseCritBase: 48, inverseCritFloor: 8 }), typedStatus("bleed", 8, 4)]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "no_shadow_salsoo") return skillFromSet(base, stage, [
+    [damage("PA", 1.0, { inverseCrit: true, inverseCritBase: 52, inverseCritFloor: 8 }), typedStatus("bleed", 6, 3)],
+    [passive({ CRD: 28, CRT: -14 })],
+    [status("lethal_focus", "self", 999, { permanent: true, statMods: { CRT: -12, CRD: 36 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "end_salsoo") return skillFromSet(base, stage, [
+    [damage("PA", 1.1, { inverseCrit: true, inverseCritBase: 58, inverseCritFloor: 8 }), typedStatus("bleed", 9, 3)],
+    [passive({ CRD: 36, CRT: -18 })],
+    [damage("PA", 1.6, { inverseCrit: true, inverseCritBase: 58, inverseCritFloor: 8, guaranteedHit: true }), typedStatus("bleed", 14, 4)]
+  ], { art: { maxUses: 1, condition: { type: "enemy_hp_above", value: 0.5 } } });
+
+  // ── Tier 4-6 Rogue: Blade Dancer lineage ─────────────────────────────
+  if (job.id === "sword_dancer") return skillFromSet(base, stage, [
+    [damage("EVA", 0.85, { evadeBonusPower: 0.22 })],
+    [passive({ EVA: 10, SPD: 6 })],
+    [damage("EVA", 1.0, { evadeBonusPower: 0.28 }), extraAction(0.35, 2)]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "phantom_dancer") return skillFromSet(base, stage, [
+    [damage("EVA", 0.95, { evadeBonusPower: 0.28 })],
+    [passive({ EVA: 13, PA: 5, SPD: 7 })],
+    [status("phantom_veil", "self", 1, { guaranteedDodge: true }), damage("EVA", 0.9, { evadeBonusPower: 0.3 }), extraAction(0.45, 2)]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "heaven_dancer") return skillFromSet(base, stage, [
+    [damage("EVA", 1.1, { evadeBonusPower: 0.35 })],
+    [passive({ EVA: 17, PA: 7, SPD: 8 })],
+    [status("heaven_step", "self", 1, { guaranteedDodge: true }), damage("EVA", 0.85, { evadeBonusPower: 0.35 }), damage("EVA", 0.85, { evadeBonusPower: 0.35 }), extraAction(0.55, 3)]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 4-6 Rogue: Bard lineage ─────────────────────────────────────
+  if (job.id === "clear_bard") return skillFromSet(base, stage, [
+    [damage("EVA", 0.65), status("melody_drain", "self", 1, { statMods: { EVA: -4 } })],
+    [passive({ EVA: 6, SPD: 5 })],
+    [status("grand_harmony", "self", 4, { statMods: { EVA: 22, SPD: 5 } })]
+  ]);
+
+  if (job.id === "grand_bard") return skillFromSet(base, stage, [
+    [damage("EVA", 0.7), status("melody_drain", "self", 1, { statMods: { EVA: -5 } })],
+    [passive({ EVA: 5, SPD: 7 })],
+    [status("epic_melody", "self", 3, { statMods: { EVA: 28, SPD: 8, CRT: 6, CRD: 14 } })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "legendary_bard") return skillFromSet(base, stage, [
+    [damage("EVA", 0.75, { evadeBonusPower: 0.12 }), status("melody_drain", "self", 1, { statMods: { EVA: -5 } })],
+    [passive({ EVA: 5, SPD: 9 })],
+    [status("legendary_overture", "self", 5, { statMods: { EVA: 40, SPD: 12, CRT: 10, CRD: 22, ACC: 8 } })]
+  ], { art: { maxUses: 1 } });
+
+  // ── Tier 5-6 Rogue: Shadow Dancer (combo) ────────────────────────────
+  if (job.id === "phantom_shadow_dancer") return skillFromSet(base, stage, [
+    [damage("EVA", 1.0, { evadeBonusPower: 0.2, critBonus: 14 })],
+    [passive({ EVA: 10, CRT: 10 })],
+    [status("phantom_convergence", "self", 3, { statMods: { EVA: 14, CRT: 14 } }), damage("EVA", 0.8, { evadeBonusPower: 0.18, critBonus: 12 })]
+  ], { art: { maxUses: 1 } });
+
+  if (job.id === "moon_shadow_dancer") return skillFromSet(base, stage, [
+    [damage("EVA", 1.15, { evadeBonusPower: 0.25, critBonus: 18 })],
+    [passive({ EVA: 14, CRT: 13, SPD: 10 })],
+    [status("moon_veil", "self", 3, { guaranteedDodge: true, statMods: { EVA: 20, CRT: 18 } }), damage("EVA", 1.0, { evadeBonusPower: 0.22, critBonus: 16 }), damage("EVA", 1.0, { evadeBonusPower: 0.22, critBonus: 16 })]
+  ], { art: { maxUses: 1 } });
 
   // ── Tier 4-6 Warrior: Dragon Knight lineage ──────────────────────────
   if (job.id === "dragonblood_knight") return skillFromSet(base, stage, [
