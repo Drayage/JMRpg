@@ -2,7 +2,7 @@ import { jobs } from "../data/jobs.js?v=20260607-15";
 import { skills } from "../data/skills.js?v=20260607-15";
 import { getDamageMultiplier, getPoisonMultiplier, getRelicIncomingDamageMultiplier } from "./relics.js";
 import { getEffectiveActivationChance } from "./skills.js";
-import { getEffectiveStats } from "./stats.js";
+import { getEffectiveStats, addStats } from "./stats.js";
 
 export function estimateWinRate(state, enemy, options = {}) {
   const samples = options.samples ?? getWinRateSamples(options);
@@ -19,7 +19,7 @@ export function estimateWinRate(state, enemy, options = {}) {
 
 export function createBattle(state, enemy, options = {}) {
   const playerStats = scaleBattleStats(getEffectiveStats(state), 1.75);
-  const enemyStats = scaleEnemyStats(enemy.stats, options);
+  const enemyStats = scaleEnemyStats(getEnemyBaseStats(enemy), options);
   const order = playerStats.SPD >= enemyStats.SPD ? ["player", "enemy"] : ["enemy", "player"];
 
   return {
@@ -30,7 +30,7 @@ export function createBattle(state, enemy, options = {}) {
     boss: Boolean(options.boss),
     final: Boolean(options.final),
     difficultyScale: options.difficultyScale ?? 1,
-    traits: enemy.traits ?? [],
+    traits: getEnemyTraits(enemy),
     turn: options.showReadyTurn ? 0 : 1,
     readyActionShown: !options.showReadyTurn,
     actorIndex: 0,
@@ -361,11 +361,13 @@ function getEnemySkills(battle) {
   const battleChanceBonus = (battle.final ? 0.24 : battle.boss ? 0.18 : battle.elite ? 0.14 : 0.04) + difficultyChanceBonus;
   const battlePowerBonus = (battle.final ? 0.34 : battle.boss ? 0.25 : battle.elite ? 0.18 : 0.06) + difficultyPowerBonus;
 
-  return enemySkillList.map((skill) => ({
-    ...skill,
-    chance: Math.min(0.96, skill.chance + battleChanceBonus),
-    effects: (skill.effects ?? []).map((effect) => effect.type === "damage" ? { ...effect, power: effect.power + battlePowerBonus } : effect)
-  }));
+  return enemySkillList
+    .filter((skill) => skill.type !== "passive" && !skill.basicAttackReplacement)
+    .map((skill) => ({
+      ...skill,
+      chance: Math.min(0.96, skill.chance + battleChanceBonus),
+      effects: (skill.effects ?? []).map((effect) => effect.type === "damage" ? { ...effect, power: effect.power + battlePowerBonus } : effect)
+    }));
 }
 
 function getEnemyJobSkills(enemy) {
@@ -379,6 +381,84 @@ function getEnemyJobSkills(enemy) {
       .filter((milestone) => milestone.type === "skill")
       .map((milestone) => milestone.skillId);
   return skillIds.map((skillId) => skills[skillId]).filter(Boolean);
+}
+
+// Hybrid stats: hand-authored monster stats + the job's passive stat block
+// layered on, before difficulty scaling. Passives never enter the active
+// skill pool (getEnemySkills filters type === "passive").
+function getEnemyBaseStats(enemy) {
+  const base = { ...enemy.stats };
+  if (!enemy.jobId) {
+    return base;
+  }
+  for (const skill of getEnemyJobSkills(enemy)) {
+    if (skill.type === "passive") {
+      addStats(base, skill.passiveStats ?? {});
+    }
+  }
+  return base;
+}
+
+// Merge hand-authored traits with weaknesses/resistances auto-derived from
+// the assigned job's themes, so a job-bearing enemy enters the counter web.
+function getEnemyTraits(enemy) {
+  return [...new Set([...(enemy.traits ?? []), ...deriveJobTraits(jobs[enemy.jobId])])];
+}
+
+function deriveJobTraits(job) {
+  if (!job) {
+    return [];
+  }
+  const themes = job.themes ?? [];
+  const has = (theme) => themes.includes(theme);
+  const traits = new Set();
+
+  // Damage axis: a job resists the axis it specializes in and is weak to the
+  // other. A pure-physical job (or a status it shares with physical bruisers,
+  // e.g. fracture/shield_break) must not be classed as a caster.
+  const isMagic = has("magic") || has("ma");
+  const isPhysical = has("physical") || has("pd") || has("shield") || has("frontline")
+    || has("absolute") || has("swordsmanship") || has("shield_break") || has("evasion")
+    || has("ranged") || has("reverse_crit") || has("enemy_current_hp");
+  if (isMagic && !isPhysical) {
+    traits.add("magic_resistance");
+    traits.add("physical_weakness");
+  } else if (isPhysical && !isMagic) {
+    traits.add("physical_resistance");
+    traits.add("magic_weakness");
+  }
+
+  // Flavor overlays, independent of the damage axis.
+  if (has("decay") || has("dark") || has("life_cost") || has("max_hp") || has("curse") || has("weaken")) {
+    traits.add("dark_resistance");
+    traits.add("poison_immunity");
+    traits.add("holy_vulnerability");
+  }
+  if (has("heal") || has("holy") || has("judgment")) {
+    traits.add("magic_resistance");
+    traits.add("dark_weakness");
+  }
+  if (has("evasion") || has("rhythm")) {
+    traits.add("critical_weakness");
+  }
+  if (has("dragon") || has("pd_to_pa")) {
+    traits.add("dragon_resistance");
+  }
+  if (has("summon") || has("legion") || has("contract")) {
+    traits.add("summon_resistance");
+  }
+  if (has("poison")) {
+    traits.add("poison_immunity");
+  }
+
+  // Resolve same-axis contradictions: resistance wins over weakness.
+  if (traits.has("physical_resistance")) {
+    traits.delete("physical_weakness");
+  }
+  if (traits.has("magic_resistance")) {
+    traits.delete("magic_weakness");
+  }
+  return [...traits];
 }
 
 function getDefaultEnemySkills(enemy, battle) {
@@ -1267,6 +1347,9 @@ function getTraitDamageMultiplier(skill, traits) {
   }
   if (traits.includes("summon_weakness") && skill.tags?.includes("summon")) {
     multiplier *= 1.3;
+  }
+  if (traits.includes("physical_weakness") && skill.tags?.includes("physical")) {
+    multiplier *= 1.25;
   }
   if (traits.includes("physical_resistance") && skill.tags?.includes("physical")) {
     multiplier *= 0.72;
