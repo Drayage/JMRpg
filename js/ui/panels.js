@@ -48,6 +48,7 @@ export function bossPanel(state) {
     </div>
     <h3>${bossName(boss.id)}</h3>
     <div class="tag-list">
+      ${boss.jobId ? tag(ko.jobs[boss.jobId]?.name ?? boss.jobId) : ""}
       ${boss.traits.map((trait) => tag(ko.traits[trait] ?? trait, "danger")).join("")}
     </div>
   `);
@@ -254,7 +255,15 @@ function battlePanel(state) {
     </div>
     <div class="battle-board">
       ${fighterBox(ko.ui.player, battle.player, "player")}
-      ${fighterBox(monsterOrBossName(battle.enemyId), battle.foe, "enemy")}
+      ${fighterBox(
+        monsterOrBossName(battle.enemyId),
+        battle.foe,
+        "enemy",
+        battle.enemy?.jobId ? {
+          jobName: ko.jobs[battle.enemy.jobId]?.name ?? battle.enemy.jobId,
+          traits: battle.traits ?? []
+        } : null
+      )}
     </div>
     <div class="card">
       <div class="split-row"><strong>${ko.ui.turn} ${battle.turn}</strong><span class="tag warn">${ko.ui.actor}: ${actorName(action.actor)}</span></div>
@@ -522,11 +531,21 @@ function pendingRelicChoice(relicId) {
   `;
 }
 
-function fighterBox(name, fighter, tone) {
+function fighterBox(name, fighter, tone, enemyInfo = null) {
   return `
     <div class="card fighter ${tone}">
-      <div class="split-row"><h3>${name}</h3><strong>${Math.max(0, Math.ceil(fighter.hp))}/${fighter.stats.HP}</strong></div>
+      <div class="split-row">
+        <div>
+          <h3>${name}</h3>
+          ${enemyInfo?.jobName ? `<span class="tag">${enemyInfo.jobName}</span>` : ""}
+        </div>
+        <strong>${Math.max(0, Math.ceil(fighter.hp))}/${fighter.stats.HP}</strong>
+      </div>
       ${progressBar(fighter.hp, fighter.stats.HP, tone)}
+      ${enemyInfo?.traits?.length ? `<div class="tag-list">${enemyInfo.traits.map((t) => {
+        const t2 = t.includes("resistance") || t.includes("immunity") ? "ok" : t.includes("weakness") || t.includes("vulnerability") ? "danger" : "";
+        return tag(ko.traits[t] ?? t, t2);
+      }).join("")}</div>` : ""}
       <div class="tag-list">
         ${fighter.guard ? tag(`${ko.ui.block} ${fighter.guard}`, "ok") : ""}
         ${fighter.poison ? tag(`${ko.statuses?.poison ?? "독"} ${fighter.poison}`, "warn") : ""}
