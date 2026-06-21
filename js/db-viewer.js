@@ -1,7 +1,7 @@
 import { jobs } from "./data/jobs.js?v=20260621-1";
 import { relics } from "./data/relics.js?v=20260621-1";
 import { monsters } from "./data/monsters.js?v=20260621-1";
-import { bosses } from "./data/bosses.js";
+import { bosses } from "./data/bosses.js?v=20260621-1";
 import { skills } from "./data/skills.js?v=20260621-1";
 import { ko } from "./i18n/ko.js?v=20260621-1";
 

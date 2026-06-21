@@ -1,4 +1,4 @@
-import { bosses } from "./data/bosses.js";
+import { bosses } from "./data/bosses.js?v=20260621-1";
 import { createBaseStats } from "./systems/stats.js";
 
 export function createInitialState() {

@@ -1,4 +1,4 @@
-import { bosses } from "../data/bosses.js";
+import { bosses } from "../data/bosses.js?v=20260621-1";
 import { eventTemplates } from "../data/events.js?v=20260621-1";
 import { jobs } from "../data/jobs.js?v=20260621-1";
 import { monsters } from "../data/monsters.js?v=20260621-1";
