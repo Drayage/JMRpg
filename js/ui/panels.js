@@ -255,15 +255,7 @@ function battlePanel(state) {
     </div>
     <div class="battle-board">
       ${fighterBox(ko.ui.player, battle.player, "player")}
-      ${fighterBox(
-        monsterOrBossName(battle.enemyId),
-        battle.foe,
-        "enemy",
-        battle.enemy?.jobId ? {
-          jobName: ko.jobs[battle.enemy.jobId]?.name ?? battle.enemy.jobId,
-          traits: battle.traits ?? []
-        } : null
-      )}
+      ${fighterBox(monsterOrBossName(battle.enemyId), battle.foe, "enemy")}
     </div>
     <div class="card">
       <div class="split-row"><strong>${ko.ui.turn} ${battle.turn}</strong><span class="tag warn">${ko.ui.actor}: ${actorName(action.actor)}</span></div>
@@ -429,9 +421,16 @@ function choiceButton(choice, state) {
 }
 
 function monsterChoiceButton(choice, state) {
+  const monster = monsters[choice.monsterId];
+  const jobId = monster?.jobId;
+  const traitList = monster?.traits ?? [];
   return `
     <button class="choice" data-action="choose-monster" data-monster-choice-id="${choice.id}">
       <div class="split-row"><h3>${monsterName(choice.monsterId)}</h3><span class="tag warn">${ko.ui.choose}</span></div>
+      ${jobId || traitList.length ? `<div class="tag-list">
+        ${jobId ? tag(ko.jobs[jobId]?.name ?? jobId) : ""}
+        ${traitList.map((t) => tag(ko.traits[t] ?? t, t.includes("weakness") || t.includes("vulnerability") ? "danger" : "ok")).join("")}
+      </div>` : ""}
       <p class="small muted">${eventName(choice.templateId)}</p>
       <div class="meta">
         ${choicePreviewTags(choice, state)}
@@ -531,21 +530,11 @@ function pendingRelicChoice(relicId) {
   `;
 }
 
-function fighterBox(name, fighter, tone, enemyInfo = null) {
+function fighterBox(name, fighter, tone) {
   return `
     <div class="card fighter ${tone}">
-      <div class="split-row">
-        <div>
-          <h3>${name}</h3>
-          ${enemyInfo?.jobName ? `<span class="tag">${enemyInfo.jobName}</span>` : ""}
-        </div>
-        <strong>${Math.max(0, Math.ceil(fighter.hp))}/${fighter.stats.HP}</strong>
-      </div>
+      <div class="split-row"><h3>${name}</h3><strong>${Math.max(0, Math.ceil(fighter.hp))}/${fighter.stats.HP}</strong></div>
       ${progressBar(fighter.hp, fighter.stats.HP, tone)}
-      ${enemyInfo?.traits?.length ? `<div class="tag-list">${enemyInfo.traits.map((t) => {
-        const t2 = t.includes("resistance") || t.includes("immunity") ? "ok" : t.includes("weakness") || t.includes("vulnerability") ? "danger" : "";
-        return tag(ko.traits[t] ?? t, t2);
-      }).join("")}</div>` : ""}
       <div class="tag-list">
         ${fighter.guard ? tag(`${ko.ui.block} ${fighter.guard}`, "ok") : ""}
         ${fighter.poison ? tag(`${ko.statuses?.poison ?? "독"} ${fighter.poison}`, "warn") : ""}
