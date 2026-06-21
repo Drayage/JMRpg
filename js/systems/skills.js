@@ -1,5 +1,5 @@
-import { jobs } from "../data/jobs.js?v=20260607-15";
-import { skills } from "../data/skills.js?v=20260607-15";
+import { jobs } from "../data/jobs.js?v=20260621-1";
+import { skills } from "../data/skills.js?v=20260621-1";
 import { getMasteryMultiplier, getRelicActivationBonus } from "./relics.js";
 import { getEffectiveStats } from "./stats.js";
 

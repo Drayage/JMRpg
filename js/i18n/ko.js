@@ -1,9 +1,9 @@
 import { bosses } from "../data/bosses.js";
-import { eventTemplates } from "../data/events.js?v=20260607-15";
-import { jobs } from "../data/jobs.js?v=20260607-15";
-import { monsters } from "../data/monsters.js?v=20260607-15";
-import { relics } from "../data/relics.js?v=20260607-15";
-import { skills } from "../data/skills.js?v=20260607-15";
+import { eventTemplates } from "../data/events.js?v=20260621-1";
+import { jobs } from "../data/jobs.js?v=20260621-1";
+import { monsters } from "../data/monsters.js?v=20260621-1";
+import { relics } from "../data/relics.js?v=20260621-1";
+import { skills } from "../data/skills.js?v=20260621-1";
 
 const jobNames = {
   warrior: "전사", fighter: "전투가", berserker: "광전사", rage_fighter: "광전투사", rage_lord: "광전군주", rage_god: "광폭신",

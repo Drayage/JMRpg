@@ -1,5 +1,5 @@
-import { relics } from "../data/relics.js?v=20260607-15";
-import { skills } from "../data/skills.js?v=20260607-15";
+import { relics } from "../data/relics.js?v=20260621-1";
+import { skills } from "../data/skills.js?v=20260621-1";
 
 export function getRelicsByCategory(category) {
   return Object.values(relics).filter((relic) => relic.category === category);

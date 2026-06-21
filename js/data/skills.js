@@ -1,4 +1,4 @@
-import { jobs } from "./jobs.js?v=20260607-15";
+import { jobs } from "./jobs.js?v=20260621-1";
 
 const damage = (stat, power, extra = {}) => ({ type: "damage", stat, power, ...extra });
 const heal = (stat, power, extra = {}) => ({ type: "heal", stat, power, ...extra });

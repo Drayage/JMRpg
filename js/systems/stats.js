@@ -1,4 +1,4 @@
-import { skills } from "../data/skills.js?v=20260607-15";
+import { skills } from "../data/skills.js?v=20260621-1";
 
 export const statKeys = ["HP", "PA", "PD", "MA", "MD", "SPD", "ACC", "EVA", "CRT", "CRD"];
 

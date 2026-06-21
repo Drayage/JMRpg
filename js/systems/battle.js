@@ -1,5 +1,5 @@
-import { jobs } from "../data/jobs.js?v=20260607-15";
-import { skills } from "../data/skills.js?v=20260607-15";
+import { jobs } from "../data/jobs.js?v=20260621-1";
+import { skills } from "../data/skills.js?v=20260621-1";
 import { getDamageMultiplier, getPoisonMultiplier, getRelicIncomingDamageMultiplier } from "./relics.js";
 import { getEffectiveActivationChance } from "./skills.js";
 import { getEffectiveStats, addStats } from "./stats.js";

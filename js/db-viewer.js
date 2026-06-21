@@ -1,9 +1,9 @@
-import { jobs } from "./data/jobs.js?v=20260607-15";
-import { relics } from "./data/relics.js?v=20260607-15";
-import { monsters } from "./data/monsters.js?v=20260607-15";
+import { jobs } from "./data/jobs.js?v=20260621-1";
+import { relics } from "./data/relics.js?v=20260621-1";
+import { monsters } from "./data/monsters.js?v=20260621-1";
 import { bosses } from "./data/bosses.js";
-import { skills } from "./data/skills.js?v=20260607-15";
-import { ko } from "./i18n/ko.js?v=20260607-15";
+import { skills } from "./data/skills.js?v=20260621-1";
+import { ko } from "./i18n/ko.js?v=20260621-1";
 
 const app = document.querySelector("#db-app");
 const params = new URLSearchParams(window.location.search);
@@ -29,7 +29,7 @@ function render() {
           <h1>RPG Database Viewer</h1>
           <p class="small muted">Jobs ${Object.keys(jobs).length} / Skills ${Object.keys(skills).length} / Relics ${Object.keys(relics).length} / Monsters ${Object.keys(monsters).length}</p>
         </div>
-        <a class="button-link" href="./index.html?v=20260607-15">Game</a>
+        <a class="button-link" href="./index.html?v=20260621-1">Game</a>
       </header>
       <div class="db-controls panel">
         <div class="segmented">
